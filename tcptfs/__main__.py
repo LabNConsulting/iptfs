@@ -6,16 +6,19 @@ from __future__ import absolute_import, division, unicode_literals, print_functi
 
 import argparse
 import fcntl
+import logging
 import os
 import socket
 import struct
 import sys
-import tcptfs
+from . import tcptfs
 
 TUNSETIFF = 0x400454ca
 IFF_TUN = 0x0001
 IFF_TAP = 0x0002
-IFF_NO_PI = 0x0004
+IFF_NO_PI = 0x1000
+
+logger = logging.getLogger(__file__)
 
 
 def usage():
@@ -25,8 +28,9 @@ def usage():
 
 def tun_alloc(devname):
     f = os.open("/dev/net/tun", os.O_RDWR)
-    ifs = fcntl.ioctl(f, TUNSETIFF, struct.pack("16sH", devname, IFF_TUN | IFF_NO_PI))
-    devname = ifs[:16].strip("\x00")
+    ifs = fcntl.ioctl(f, TUNSETIFF, struct.pack("16sH", devname.encode(), IFF_TUN | IFF_NO_PI))
+    devname = ifs[:16]
+    devname = devname.strip(b"\x00")
     return f, devname
 
 
@@ -47,7 +51,8 @@ def accept(sname, service):
             s = socket.socket(*hent[0:3])
             s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             s.bind(hent[4])
-            return s
+            s.listen(5)
+            return s.accept()
         except socket.error:
             continue
     return None
@@ -59,19 +64,28 @@ def main(*margs):
     parser.add_argument("-d", "--dev", default="vtun%d", help="Name of tun interface.")
     parser.add_argument("-l", "--listen", default="::", help="Server listen on this address")
     parser.add_argument("-p", "--port", default="8001", help="TCP port to use.")
+    parser.add_argument("-v", "--verbose", action="store_true", help="Name of tun interface.")
     args = parser.parse_args(*margs)
 
-    tunfd = tun_alloc(args.dev)
-    print("opened tun device: {}", tunfd)
+    if args.verbose:
+        logging.basicConfig(level=logging.DEBUG)
+    else:
+        logging.basicConfig(level=logging.INFO)
+
+    tunfd, devname = tun_alloc(args.dev)
+    print("opened tun device: {} {} ", devname, tunfd)
 
     if not args.connect:
-        s = tcptfs.accept(args.listen, args.port)
+        s, _ = accept(args.listen, args.port)
         print("accepted from client: {}", s)
     else:
-        s = tcptfs.connect(args.listen, args.port)
+        s = connect(args.connect, args.port)
         print("connected to server: {}", s)
 
-    tcptfs.tunnel(tunfd, s)
+    threads = tcptfs.tunnel(tunfd, s)
+    for thread in threads:
+        thread.join()
+
     return 0
 
 

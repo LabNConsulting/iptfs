@@ -16,6 +16,7 @@
  */
 #include <Python.h>
 #include <sys/uio.h>
+#include <sys/types.h>
 #include <sys/socket.h>
 
 static char module_docstring[] =
@@ -183,7 +184,7 @@ bstr_sendv (PyObject *self, PyObject *args)
     niov = 0;
 
     /* Parse the input tuple */
-    if (!PyArg_ParseTuple(args, "OO:writev", &fdobj, &seq))
+    if (!PyArg_ParseTuple(args, "OO:sendv", &fdobj, &seq))
         goto out;
     if ((fd = PyObject_AsFileDescriptor(fdobj)) == -1)
         goto out;
@@ -209,6 +210,84 @@ bstr_sendv (PyObject *self, PyObject *args)
 #endif
 out:
     release_iov(niov, bufobj, iovbuf);
+    return rv;
+}
+
+#define MIN(x, y) ((x) <= (y) ? (x) : (y))
+
+static char bstr_read_docstring[] =
+    "Fill a buffer with bytes from a file descriptor";
+
+static PyObject *
+bstr_read (PyObject *self, PyObject *args)
+{
+    PyObject *fdobj, *rv;
+    Py_buffer buf;
+    Py_ssize_t n;
+    int fd;
+
+    rv = NULL;
+
+    /* Parse the input tuple */
+    /* XXX could use "Ow*|n" but then need default value for n */
+    if (!PyArg_ParseTuple(args, "Ow*n:read", &fdobj, &buf, &n))
+        return NULL;
+    if ((fd = PyObject_AsFileDescriptor(fdobj)) == -1)
+        goto out;
+
+    /* read from the file descriptor */
+    Py_BEGIN_ALLOW_THREADS
+    n = read(fd, buf.buf, MIN(n, buf.len));
+    Py_END_ALLOW_THREADS
+
+#if PY_MAJOR_VERSION >= 3
+    rv = PyLong_FromSsize_t(n);
+#else
+    rv = PyInt_FromSsize_t(n);
+#endif
+out:
+    PyBuffer_Release(&buf);
+
+    return rv;
+}
+
+static char bstr_recv_docstring[] =
+    "Fill a buffer with bytes from a file descriptor";
+
+static PyObject *
+bstr_recv (PyObject *self, PyObject *args)
+{
+    PyObject *fdobj, *rv;
+    Py_buffer buf;
+    Py_ssize_t n;
+    int fd;
+
+    rv = NULL;
+
+    /* Parse the input tuple */
+    /* XXX could use "Ow*|n" but then need default value for n */
+    if (!PyArg_ParseTuple(args, "Ow*n:recv", &fdobj, &buf, &n))
+        return NULL;
+    if ((fd = PyObject_AsFileDescriptor(fdobj)) == -1)
+        goto out;
+
+    /* recv from the file descriptor */
+    Py_BEGIN_ALLOW_THREADS
+    n = recv(fd, buf.buf, MIN(n, buf.len), MSG_WAITALL);
+    Py_END_ALLOW_THREADS
+
+    if (n == -1) {
+        fprintf(stderr, "recv error: %d %s\n", errno, strerror(errno));
+    }
+
+#if PY_MAJOR_VERSION >= 3
+    rv = PyLong_FromSsize_t(n);
+#else
+    rv = PyInt_FromSsize_t(n);
+#endif
+out:
+    PyBuffer_Release(&buf);
+
     return rv;
 }
 
@@ -267,6 +346,8 @@ out:
 static PyMethodDef module_methods[] = {
     { "bchr", bstr_bchr, METH_VARARGS, bstr_bchr_docstring },
     { "memspan", bstr_memspan, METH_VARARGS, bstr_memspan_docstring },
+    { "read", bstr_read, METH_VARARGS, bstr_read_docstring },
+    { "recv", bstr_recv, METH_VARARGS, bstr_recv_docstring },
     { "sendv", bstr_sendv, METH_VARARGS, bstr_sendv_docstring },
     { "writev", bstr_writev, METH_VARARGS, bstr_writev_docstring },
     { NULL, NULL, 0, NULL },
