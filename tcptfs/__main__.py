@@ -5,8 +5,17 @@
 from __future__ import absolute_import, division, unicode_literals, print_function, nested_scopes
 
 import argparse
+import fcntl
+import os
+import socket
+import struct
 import sys
 import tcptfs
+
+TUNSETIFF = 0x400454ca
+IFF_TUN = 0x0001
+IFF_TAP = 0x0002
+IFF_NO_PI = 0x0004
 
 
 def usage():
@@ -14,7 +23,37 @@ def usage():
     sys.exit(1)
 
 
-def main():
+def tun_alloc(devname):
+    f = os.open("/dev/net/tun", os.O_RDWR)
+    ifs = fcntl.ioctl(f, TUNSETIFF, struct.pack("16sH", devname, IFF_TUN | IFF_NO_PI))
+    devname = ifs[:16].strip("\x00")
+    return f, devname
+
+
+def connect(sname, service):
+    for hent in socket.getaddrinfo(sname, service):
+        try:
+            s = socket.socket(*hent[0:3])
+            s.connect(hent[4])
+            return s
+        except socket.error:
+            continue
+    return None
+
+
+def accept(sname, service):
+    for hent in socket.getaddrinfo(sname, service):
+        try:
+            s = socket.socket(*hent[0:3])
+            s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            s.bind(hent[4])
+            return s
+        except socket.error:
+            continue
+    return None
+
+
+def main(*margs):
     parser = argparse.ArgumentParser()
     parser.add_argument("-c", "--connect", help="Connect to server")
     parser.add_argument("-d", "--dev", default="vtun%d", help="Name of tun interface.")

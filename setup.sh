@@ -48,4 +48,5 @@ else
     ip link set tfs0 up
 fi
 
-tcpdump -vvv -i tfs0
+#tcpdump -vvv -i tfs0
+wait $tfspid

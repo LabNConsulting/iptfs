@@ -28,6 +28,9 @@
 #define RINGSZ 4
 uint8_t dropbuf[MAXBUF];
 
+//#define DBG(x...) printf(x)
+#define DBG(x...)
+
 #define MBUF_AVAIL(m) ((m)->espace - (m)->end)
 #define MBUF_LEN(m) ((m)->end - (m)->start)
 
@@ -152,7 +155,7 @@ read_packet(int fd, struct ring *r)
 		m = &r->mbuf[r->mcount];
 	}
 	n = read(fd, m->start, r->maxbuf - r->hdrspace);
-	printf("read_packet: read() returns %ld on %s\n", n, r->name);
+	DBG("read_packet: read() returns %ld on %s\n", n, r->name);
 	if (n <= 0) {
 		if (n < 0)
 			warn("bad read on %s for packet read", r->name);
@@ -179,7 +182,7 @@ write_packet(int fd, struct ring *r)
 		return;
 	}
 	ssize_t n = write(fd, m.start, len);
-	printf("write_packet: write() returns %ld on %s\n", n, r->name);
+	DBG("write_packet: write() returns %ld on %s\n", n, r->name);
 	if (n != len) {
 		warn("short write (%ld of %ld) on %s for packet write", n, len,
 		     r->name);
@@ -207,34 +210,41 @@ read_stream(int s, struct ring *r)
 		n = m->left;
 	}
 
-	if ((n = read(s, m->end, n)) < 0) {
-		warn("bad read on %s for packet read", r->name);
-		return;
-	}
-	if (n == 0) {
-		err(1, "TCP closed on %s\n", r->name);
-	}
-	printf("read_stream: read() returns %ld on %s\n", n, r->name);
+	/* Get the packet length */
+	if (m->left == -1) {
+		int ll = MBUF_LEN(m);
+		if ((n = read(s, m->end, 2 - ll)) <= 0) {
+			if (n < 0)
+				err(1, "bad read on %s", r->name);
+			else
+				err(1, "TCP closed on %s\n", r->name);
+		}
+		m->end += n;
+		mlen = MBUF_LEN(m);
+		if (mlen < 2)
+			return;
 
-	m->end += n;
-	mlen = MBUF_LEN(m);
-	if (m->left == -1 && mlen >= 2) {
-		/* we've now got at least 2 bytes -- grab pkt len */
+		/* we've now got our 2 bytes -- grab pkt len */
 		m->left = ((int)m->start[0] << 8) + m->start[1];
 		assert(m->left < MAXBUF);
-		m->start += 2;
-		n = MBUF_LEN(m);
-		printf("read_stream: got m->left %d on %s (n:%ld)\n", m->left,
-		       r->name, n);
+		m->end = m->start;
+		DBG("read_stream: got m->left %d on %s\n", m->left, r->name);
 	}
-	if (m->left != -1) {
-		m->left -= n;
-		assert(m->left >= 0);
+
+	if ((n = read(s, m->end, n)) <= 0) {
+		if (n < 0)
+			err(1, "bad read on %s", r->name);
+		else
+			err(1, "TCP closed on %s\n", r->name);
 	}
+
+	DBG("read_stream: read() returns %ld on %s\n", n, r->name);
+	m->end += n;
+	m->left -= n;
+	assert(m->left >= 0);
 	/* If we finished reading this packet then try and advance ring */
-	if (m->left == 0) {
+	if (m->left == 0)
 		(void)ring_nextrbuf(r);
-	}
 }
 
 static void
@@ -264,7 +274,7 @@ write_stream(int s, struct ring *r)
 		warn("short write (%ld of %d) on %s for stream write", n,
 		     m->left, r->name);
 	}
-	printf("write_stream: write() returns %ld on %s\n", n, r->name);
+	DBG("write_stream: write() returns %ld on %s\n", n, r->name);
 
 	m->left += n;
 
@@ -290,33 +300,33 @@ tfs_tunnel(int fd, int s)
 		FD_ZERO(&wfds);
 		if (!ring_isempty(&rred)) {
 			/* have packet from red (vtun) send to black (tcp) */
-			printf("%s: not empty get write ready\n", rred.name);
+			DBG("%s: not empty get write ready\n", rred.name);
 			FD_SET(s, &wfds);
 		} else {
-			printf("%s: empty\n", rred.name);
+			DBG("%s: empty\n", rred.name);
 		}
 		if (!ring_isempty(&rblack)) {
 			/* have packet from black (tcp) send to red (vtun) */
-			printf("%s: not empty get write ready\n", rblack.name);
+			DBG("%s: not empty get write ready\n", rblack.name);
 			FD_SET(fd, &wfds);
 		} else {
-			printf("%s: empty\n", rblack.name);
+			DBG("%s: empty\n", rblack.name);
 		}
 
 		FD_ZERO(&rfds);
 		if (!ring_isfull(&rred)) {
 			/* have room in red get packet (vtun) */
-			printf("%s: not full get read ready\n", rred.name);
+			DBG("%s: not full get read ready\n", rred.name);
 			FD_SET(fd, &rfds);
 		} else {
-			printf("%s: full\n", rred.name);
+			DBG("%s: full\n", rred.name);
 		}
 		if (!ring_isfull(&rblack)) {
 			/* have room in black get packet (tcp) */
-			printf("%s: not full get read ready\n", rblack.name);
+			DBG("%s: not full get read ready\n", rblack.name);
 			FD_SET(s, &rfds);
 		} else {
-			printf("%s: full\n", rblack.name);
+			DBG("%s: full\n", rblack.name);
 		}
 
 		if (select(FD_SETSIZE, &rfds, &wfds, NULL, NULL) < 0)
