@@ -12,7 +12,7 @@ $(OBJDIR):
 	mkdir -p $(OBJDIR)
 
 $(BIN): $(OBJDIR) $(OBJ)
-	gcc -o $@ $(OBJ)
+	gcc -o $@ $(OBJ) -lpthread
 
 $(OBJ): $(SRC)
 

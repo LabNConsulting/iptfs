@@ -33,16 +33,16 @@ MAXAGG=$((1000000 / 1000))
 if (( VMID == 2 )); then
     OVMID=3
     sleep 1
-    venv/bin/tcptfs --dev tfs0 --connect 192.168.10.$((OVMID + 64)) --port 8001 &
-    # build/tcptfs --dev tfs0 --connect 192.168.10.$((OVMID + 64)) --port 8001 &
+    # venv/bin/tcptfs --dev tfs0 --connect 192.168.10.$((OVMID + 64)) --port 8001 &
+    build/tcptfs --dev tfs0 --connect 192.168.10.$((OVMID + 64)) --port 8001 &
     tfspid=$!
     sleep 1
     sysctl -w net.ipv6.conf.tfs0.disable_ipv6=1
     ip addr add 192.168.30.$IPID/24 dev tfs0
     ip link set tfs0 up
 else
-    venv/bin/tcptfs --dev tfs0 --listen 192.168.10.$IPID --port 8001 &
-    # build/tcptfs --dev tfs0 --listen 192.168.10.$IPID --port 8001 &
+    # venv/bin/tcptfs --dev tfs0 --listen 192.168.10.$IPID --port 8001 &
+    build/tcptfs --dev tfs0 --listen 192.168.10.$IPID --port 8001 &
     tfspid=$!
     sleep 1
     sysctl -w net.ipv6.conf.tfs0.disable_ipv6=1

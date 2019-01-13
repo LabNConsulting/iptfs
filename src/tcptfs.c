@@ -13,13 +13,14 @@
 //#include <linux/if.h>
 //#include <linux/if_tun.h>
 //#include <netdb.h>
+#include <pthread.h>
+#include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-//#include <sys/ioctl.h>
-#include <stdbool.h>
 #include <sys/select.h>
+#include <sys/socket.h>
 #include <sys/types.h>
 #include <unistd.h>
 
@@ -39,19 +40,23 @@ struct mbuf {
 	uint8_t *espace; /* The end of the buffer. */
 	uint8_t *start;  /* The start of the packet */
 	uint8_t *end;    /* The end (one past) of the packet */
-	int left;	/* left to read, or sent based on reading/writing */
 };
 
-struct mbuf mdrop = {dropbuf, &dropbuf[MAXBUF], &dropbuf[HDRSPACE],
-		     &dropbuf[HDRSPACE], -1};
+static void
+mbuf_reset(struct mbuf *m, int hdrspace)
+{
+	m->end = m->start = &m->space[hdrspace];
+}
 
 struct ring {
 	const char *name;
-	uint8_t *space;
-	struct mbuf *mbuf;
-	struct mbuf *dropping;
-	int reading; /* index of mbuf currently reading into */
-	int writing; /* index of mbuf to write, if == reading then none */
+	struct mbuf *mbuf; /* array of mbufs using up buffer space */
+	uint8_t *space;    /* actual buffer space for all mbufs */
+	int reading;       /* index of mbuf currently reading into */
+	int writing;       /* index of mbuf to write, if == reading then none */
+	pthread_mutex_t lock;
+	pthread_cond_t rcv, wcv;
+	// Immutable.
 	int hdrspace;
 	int maxbuf;
 	int mcount;
@@ -77,115 +82,65 @@ ring_init(struct ring *r, const char *name, int count, int maxbuf, int hdrspace)
 		m->espace = m->space + maxbuf;
 		m->start = &m->space[hdrspace];
 		m->end = m->start;
-		m->left = -1;
 	}
 	r->reading = r->writing = 0;
+
+	pthread_mutex_init(&r->lock, NULL);
+	pthread_cond_init(&r->rcv, NULL);
+	pthread_cond_init(&r->wcv, NULL);
 }
 
+/* call when locked */
 static bool
 ring_isempty(struct ring *r)
 {
 	return r->reading == r->writing;
 }
 
+/* call when locked */
 static bool
 ring_isfull(struct ring *r)
 {
 	return ((r->reading + 1) % r->mcount) == r->writing;
 }
 
-static struct mbuf *
-ring_nextrbuf(struct ring *r)
+static void
+ring_rdone(struct ring *r)
 {
-	struct mbuf *m, *om;
-	int old = r->reading;
-	int next = (old + 1) % r->mcount;
-
-	om = &r->mbuf[old];
-	if (om->left == -1) {
-		m = om;
-	} else if (next == r->writing) {
-		return NULL;
-	} else {
-		r->reading = next;
-		m = &r->mbuf[next];
+	pthread_mutex_lock(&r->lock);
+	{
+		r->reading = (r->reading + 1) % r->mcount;
+		pthread_cond_signal(&r->wcv);
 	}
-
-	// We should only need to initialize after the buffer is written;
-	assert(r->mbuf[old].left == 0 || r->mbuf[old].left == -1);
-	assert(m->start == &m->space[r->hdrspace]);
-	assert(m->start == m->end);
-	assert(m->left < 0);
-	return m;
+	pthread_mutex_unlock(&r->lock);
 }
 
 static void
-ring_resetread(struct ring *r)
+ring_wdone(struct ring *r)
 {
-	if (--r->reading < 0)
-		r->reading = r->mcount - 1;
-}
-
-static bool
-ring_nextwbuf(struct ring *r, struct mbuf *m)
-{
-	struct mbuf *mi;
-	if (r->writing == r->reading)
-		return false;
-	mi = &r->mbuf[r->writing];
-	r->writing = (r->writing + 1) % r->mcount;
-
-	/* copy to user buffer and reset */
-	if (m != NULL)
-		*m = *mi;
-	mi->start = &mi->space[r->hdrspace];
-	mi->end = mi->start;
-	mi->left = -1;
-
-	return true;
+	pthread_mutex_lock(&r->lock);
+	{
+		mbuf_reset(&r->mbuf[r->writing], r->hdrspace);
+		r->writing = (r->writing + 1) % r->mcount;
+		pthread_cond_signal(&r->rcv);
+	}
+	pthread_mutex_unlock(&r->lock);
 }
 
 static void
 read_packet(int fd, struct ring *r)
 {
-	ssize_t n = r->maxbuf;
-	struct mbuf *m;
-	if ((m = ring_nextrbuf(r)) == NULL) {
-		warn("no buffers on %s for packet read", r->name);
-		m = &r->mbuf[r->mcount];
-	}
-	n = read(fd, m->start, r->maxbuf - r->hdrspace);
+	struct mbuf *m = &r->mbuf[r->reading];
+	ssize_t n = m->espace - m->start;
+	n = read(fd, m->end, n);
 	DBG("read_packet: read() returns %ld on %s\n", n, r->name);
 	if (n <= 0) {
-		if (n < 0)
-			warn("bad read on %s for packet read", r->name);
-		ring_resetread(r);
+		if (n == 0)
+			err(1, "EOF on intf tunnel %d on %s", fd, r->name);
+		warn("bad read on %s for packet read", r->name);
 	} else {
-		m->end = m->start + n;
-		m->left = 0;
-		/* We finished reading this try and advance ring */
-		(void)ring_nextrbuf(r);
-	}
-}
-
-static void
-write_packet(int fd, struct ring *r)
-{
-	struct mbuf m;
-	if (!ring_nextwbuf(r, &m)) {
-		warn("no write buffers on %s for packet write", r->name);
-		return;
-	}
-	ssize_t len = m.end - m.start;
-	if (len == 0) {
-		warn("zero len buffer on %s for packet write", r->name);
-		return;
-	}
-	ssize_t n = write(fd, m.start, len);
-	DBG("write_packet: write() returns %ld on %s\n", n, r->name);
-	if (n != len) {
-		warn("short write (%ld of %ld) on %s for packet write", n, len,
-		     r->name);
+		m->end += n;
+		ring_rdone(r);
 	}
 }
 
@@ -193,94 +148,120 @@ static void
 read_stream(int s, struct ring *r)
 {
 	struct mbuf *m = &r->mbuf[r->reading];
-	ssize_t n;
-	int mlen;
+	ssize_t n, pktlen;
+	uint8_t *lenbuf = m->start - 2;
 
-	if (m->left == 0 && (m = ring_nextrbuf(r)) == NULL) {
-		warn("no buffers available on %s for stream read", r->name);
-		return;
-	}
-	n = MBUF_AVAIL(m);
-
-	assert(n > 0);
-	assert(m->left != 0);
-
-	/* If we are continuing only read what we need to for this packet. */
-	if (m->left > 0 && m->left < n) {
-		n = m->left;
+	n = recv(s, lenbuf, 2, 0);
+	if (n != 2) {
+		err(1, "read_stream: short read of len %ld on %s", n, r->name);
 	}
 
-	/* Get the packet length */
-	if (m->left == -1) {
-		int ll = MBUF_LEN(m);
-		if ((n = read(s, m->end, 2 - ll)) <= 0) {
-			if (n < 0)
-				err(1, "bad read on %s", r->name);
-			else
-				err(1, "TCP closed on %s\n", r->name);
+	pktlen = (lenbuf[0] << 8) + lenbuf[1];
+	DBG("read_stream: pktlen %ld on %s\n", pktlen, r->name);
+
+	while (pktlen > 0) {
+		if ((n = recv(s, m->end, pktlen, 0)) <= 0) {
+			err(1, "read_stream: bad read %ld from socket on %s", n,
+			    r->name);
 		}
 		m->end += n;
-		mlen = MBUF_LEN(m);
-		if (mlen < 2)
-			return;
-
-		/* we've now got our 2 bytes -- grab pkt len */
-		m->left = ((int)m->start[0] << 8) + m->start[1];
-		assert(m->left < MAXBUF);
-		m->end = m->start;
-		DBG("read_stream: got m->left %d on %s\n", m->left, r->name);
+		pktlen -= n;
 	}
 
-	if ((n = read(s, m->end, n)) <= 0) {
-		if (n < 0)
-			err(1, "bad read on %s", r->name);
-		else
-			err(1, "TCP closed on %s\n", r->name);
-	}
-
-	DBG("read_stream: read() returns %ld on %s\n", n, r->name);
-	m->end += n;
-	m->left -= n;
-	assert(m->left >= 0);
-	/* If we finished reading this packet then try and advance ring */
-	if (m->left == 0)
-		(void)ring_nextrbuf(r);
+	ring_rdone(r);
 }
 
 static void
-write_stream(int s, struct ring *r)
+write_packet(int fd, struct ring *r, bool issock)
 {
+	const char *dname = issock ? "write_stream" : "write_packet";
 	struct mbuf *m = &r->mbuf[r->writing];
-	int mlen, sent, togo;
-	ssize_t n;
+	ssize_t n, mlen;
+	uint8_t *span;
 
 	assert(r->writing != r->reading);
-	assert(m->left != -1);
 
-	sent = m->left;
 	mlen = MBUF_LEN(m);
-	if (sent == 0) {
-		/* start with the length which we stored earlier */
-		m->start -= 2;
-		m->start[0] = (uint8_t)(mlen >> 8);
-		m->start[1] = (uint8_t)mlen;
+	if (!issock) {
+		span = m->start;
+	} else {
+		span = m->start - 2;
+		span[0] = (uint8_t)(mlen >> 8);
+		span[1] = (uint8_t)mlen;
 		mlen += 2;
 	}
-	togo = mlen - sent;
-	if ((n = write(s, m->start + sent, togo)) < 0) {
-		warn("bad write on %s for stream write", r->name);
-		return;
-	} else if (n != togo) {
-		warn("short write (%ld of %d) on %s for stream write", n,
-		     m->left, r->name);
+	if ((n = write(fd, span, mlen)) < 0) {
+		warn("%s: bad write on %s for write_packet", dname, r->name);
+	} else if (n != mlen) {
+		if (issock)
+			err(1,
+			    "%s: short write (%ld of %ld) on "
+			    "%s for stream "
+			    "write",
+			    dname, n, mlen, r->name);
+		warn("%s: short write (%ld of %ld) on %s for "
+		     "stream write",
+		     dname, n, mlen, r->name);
 	}
-	DBG("write_stream: write() returns %ld on %s\n", n, r->name);
 
-	m->left += n;
+	DBG("%s: write() returns %ld on %s\n", dname, n, r->name);
+	ring_wdone(r);
+}
 
-	if (m->left == mlen) {
-		(void)ring_nextwbuf(r, m);
+struct thread_args {
+	struct ring *r;
+	int fd;
+	int s;
+};
+
+void *
+write_packets(void *_arg)
+{
+	struct thread_args *args = (struct thread_args *)_arg;
+	struct ring *r = args->r;
+	bool issock = (args->fd == -1);
+	int fd = (args->fd == -1 ? args->s : args->fd);
+
+	while (true) {
+		pthread_mutex_lock(&r->lock);
+		while (ring_isempty(r)) {
+			pthread_cond_wait(&r->rcv, &r->lock);
+		}
+		pthread_mutex_unlock(&r->lock);
+
+		if (issock) {
+			write_packet(fd, r, true);
+		} else {
+			write_packet(fd, r, false);
+		}
 	}
+
+	return NULL;
+}
+
+void *
+read_packets(void *_arg)
+{
+	struct thread_args *args = (struct thread_args *)_arg;
+	struct ring *r = args->r;
+	bool issock = (args->fd == -1);
+	int fd = (args->fd == -1 ? args->s : args->fd);
+
+	while (true) {
+		pthread_mutex_lock(&r->lock);
+		while (ring_isfull(r)) {
+			pthread_cond_wait(&r->rcv, &r->lock);
+		}
+		pthread_mutex_unlock(&r->lock);
+
+		if (issock) {
+			read_stream(fd, r);
+		} else {
+			read_packet(fd, r);
+		}
+	}
+
+	return NULL;
 }
 
 /*
@@ -289,60 +270,38 @@ write_stream(int s, struct ring *r)
 void
 tfs_tunnel(int fd, int s)
 {
-	struct ring rred;   // packets from red for black
-	struct ring rblack; // packets from black for red
-	fd_set rfds, wfds;
+	static struct thread_args args[4];
+	static struct ring red, black;
+	pthread_t threads[4];
+	void *rv;
 
-	ring_init(&rred, "RED RECV RING", RINGSZ, MAXBUF, HDRSPACE);
-	ring_init(&rblack, "BLACK RECV RING", RINGSZ, MAXBUF, HDRSPACE);
+	ring_init(&red, "RED RECV RING", RINGSZ, MAXBUF, HDRSPACE);
+	ring_init(&black, "BLACK RECV RING", RINGSZ, MAXBUF, HDRSPACE);
 
-	while (1) {
-		FD_ZERO(&wfds);
-		if (!ring_isempty(&rred)) {
-			/* have packet from red (vtun) send to black (tcp) */
-			DBG("%s: not empty get write ready\n", rred.name);
-			FD_SET(s, &wfds);
-		} else {
-			DBG("%s: empty\n", rred.name);
-		}
-		if (!ring_isempty(&rblack)) {
-			/* have packet from black (tcp) send to red (vtun) */
-			DBG("%s: not empty get write ready\n", rblack.name);
-			FD_SET(fd, &wfds);
-		} else {
-			DBG("%s: empty\n", rblack.name);
-		}
+	args[0].r = &black;
+	args[0].fd = fd;
+	args[0].s = -1;
+	pthread_create(&threads[0], NULL, write_packets, &args[0]);
 
-		FD_ZERO(&rfds);
-		if (!ring_isfull(&rred)) {
-			/* have room in red get packet (vtun) */
-			DBG("%s: not full get read ready\n", rred.name);
-			FD_SET(fd, &rfds);
-		} else {
-			DBG("%s: full\n", rred.name);
-		}
-		if (!ring_isfull(&rblack)) {
-			/* have room in black get packet (tcp) */
-			DBG("%s: not full get read ready\n", rblack.name);
-			FD_SET(s, &rfds);
-		} else {
-			DBG("%s: full\n", rblack.name);
-		}
+	args[1].r = &red;
+	args[3].fd = -1;
+	args[1].s = s;
+	pthread_create(&threads[1], NULL, write_packets, &args[1]);
 
-		if (select(FD_SETSIZE, &rfds, &wfds, NULL, NULL) < 0)
-			err(1, "tunnel select");
+	args[2].r = &red;
+	args[2].fd = fd;
+	args[0].s = -1;
+	pthread_create(&threads[2], NULL, read_packets, &args[2]);
 
-		/* write first to free up mbufs */
-		if (FD_ISSET(s, &wfds))
-			write_stream(s, &rred);
-		if (FD_ISSET(fd, &wfds))
-			write_packet(fd, &rblack);
+	args[3].r = &black;
+	args[3].fd = -1;
+	args[3].s = s;
+	pthread_create(&threads[3], NULL, read_packets, &args[3]);
 
-		if (FD_ISSET(s, &rfds))
-			read_stream(s, &rblack);
-		if (FD_ISSET(fd, &rfds))
-			read_packet(fd, &rred);
-	}
+	pthread_join(threads[3], &rv);
+	pthread_join(threads[2], &rv);
+	pthread_join(threads[1], &rv);
+	pthread_join(threads[0], &rv);
 }
 
 /* Local Variables: */
