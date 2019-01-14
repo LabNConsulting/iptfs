@@ -9,7 +9,7 @@
     [  3] local 192.168.30.66 port 33854 connected with 192.168.30.67 port 5001
     [ ID] Interval       Transfer     Bandwidth
     [  3]  0.0-10.3 sec   479 KBytes   381 Kbits/sec
-** Python threaded.
+** Python TCP threaded.
 *** 1500 MTU
     (venv) 00:08 [22:04:41 dpdk2:~/w/tcptfs]$ iperf -c 192.168.30.67
     ------------------------------------------------------------
@@ -36,7 +36,7 @@
     [ ID] Interval       Transfer     Bandwidth
     [  3]  0.0-10.0 sec   636 MBytes   533 Mbits/sec
 
-** C threaded.
+** C TCP threaded.
 *** 1500 MTU
     (venv) 00:02 [03:22:52 dpdk2:~/w/tcptfs]$ iperf -c 192.168.30.67
     ------------------------------------------------------------
@@ -56,3 +56,37 @@
     [  3] local 192.168.30.66 port 34056 connected with 192.168.30.67 port 5001
     [ ID] Interval       Transfer     Bandwidth
     [  3]  0.0-10.0 sec  3.04 GBytes  2.61 Gbits/sec
+** C UDP Threaded.
+*** 1500 MTU (transport is UDP on 9000 MTU)
+    ------------------------------------------------------------
+    Client connecting to 192.168.30.67, TCP port 5001
+    TCP window size: 85.0 KByte (default)
+    ------------------------------------------------------------
+    [  3] local 192.168.30.66 port 34100 connected with 192.168.30.67 port 5001
+    [ ID] Interval       Transfer     Bandwidth
+    [  3]  0.0-10.0 sec  1.27 GBytes  1.09 Gbits/sec
+
+*** 9000 MTU (transport is UDP on 9000 MTU interface)
+    ------------------------------------------------------------
+    Client connecting to 192.168.30.67, TCP port 5001
+    TCP window size:  325 KByte (default)
+    ------------------------------------------------------------
+    [  3] local 192.168.30.66 port 34098 connected with 192.168.30.67 port 5001
+    [ ID] Interval       Transfer     Bandwidth
+    [  3]  0.0-10.0 sec  2.66 GBytes  2.28 Gbits/sec
+
+*** 8970 MTU (transport is UDP on 9000 MTU interface)
+    ------------------------------------------------------------
+    Client connecting to 192.168.30.67, TCP port 5001
+    TCP window size:  325 KByte (default)
+    ------------------------------------------------------------
+    [  3] local 192.168.30.66 port 34102 connected with 192.168.30.67 port 5001
+    [ ID] Interval       Transfer     Bandwidth
+    [  3]  0.0-10.0 sec  4.00 GBytes  3.43 Gbits/sec
+    ------------------------------------------------------------
+    Client connecting to 192.168.30.67, TCP port 5001
+    TCP window size:  325 KByte (default)
+    ------------------------------------------------------------
+    [  3] local 192.168.30.66 port 34104 connected with 192.168.30.67 port 5001
+    [ ID] Interval       Transfer     Bandwidth
+    [  3]  0.0-10.0 sec  3.82 GBytes  3.28 Gbits/sec
