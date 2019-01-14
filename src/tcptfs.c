@@ -26,7 +26,7 @@
 
 #define HDRSPACE 18
 #define MAXBUF 9000 + HDRSPACE
-#define RINGSZ 4
+#define RINGSZ 32
 uint8_t dropbuf[MAXBUF];
 
 //#define DBG(x...) printf(x)

@@ -1,0 +1,58 @@
+
+* Results
+** C w/ select (1 pp)
+    00:00 [10:17:20 dpdk2:~/w/tcptfs]$ iperf -c 192.168.30.67
+    ------------------------------------------------------------
+    Client connecting to 192.168.30.67, TCP port 5001
+    TCP window size: 85.0 KByte (default)
+    ------------------------------------------------------------
+    [  3] local 192.168.30.66 port 33854 connected with 192.168.30.67 port 5001
+    [ ID] Interval       Transfer     Bandwidth
+    [  3]  0.0-10.3 sec   479 KBytes   381 Kbits/sec
+** Python threaded.
+*** 1500 MTU
+    (venv) 00:08 [22:04:41 dpdk2:~/w/tcptfs]$ iperf -c 192.168.30.67
+    ------------------------------------------------------------
+    Client connecting to 192.168.30.67, TCP port 5001
+    TCP window size: 85.0 KByte (default)
+    ------------------------------------------------------------
+    [  3] local 192.168.30.66 port 34010 connected with 192.168.30.67 port 5001
+    [ ID] Interval       Transfer     Bandwidth
+    [  3]  0.0-10.0 sec   107 MBytes  89.6 Mbits/sec
+    (venv) 00:10 [22:05:14 dpdk2:~/w/tcptfs]$ iperf -c 192.168.30.67
+    ------------------------------------------------------------
+    Client connecting to 192.168.30.67, TCP port 5001
+    TCP window size: 85.0 KByte (default)
+    ------------------------------------------------------------
+    [  3] local 192.168.30.66 port 34014 connected with 192.168.30.67 port 5001
+    [ ID] Interval       Transfer     Bandwidth
+    [  3]  0.0-10.0 sec   116 MBytes  97.0 Mbits/sec
+*** 9000 MTU
+    ------------------------------------------------------------
+    Client connecting to 192.168.30.67, TCP port 5001
+    TCP window size:  325 KByte (default)
+    ------------------------------------------------------------
+    [  3] local 192.168.30.66 port 34060 connected with 192.168.30.67 port 5001
+    [ ID] Interval       Transfer     Bandwidth
+    [  3]  0.0-10.0 sec   636 MBytes   533 Mbits/sec
+
+** C threaded.
+*** 1500 MTU
+    (venv) 00:02 [03:22:52 dpdk2:~/w/tcptfs]$ iperf -c 192.168.30.67
+    ------------------------------------------------------------
+    Client connecting to 192.168.30.67, TCP port 5001
+    TCP window size: 85.0 KByte (default)
+    ------------------------------------------------------------
+    [  3] local 192.168.30.66 port 34038 connected with 192.168.30.67 port 5001
+    [ ID] Interval       Transfer     Bandwidth
+    [  3]  0.0-10.0 sec  1.01 GBytes   866 Mbits/sec
+
+*** 9000 MTU
+    (venv) 00:10 [03:30:55 dpdk2:~/w/tcptfs]$ iperf -c 192.168.30.67
+    ------------------------------------------------------------
+    Client connecting to 192.168.30.67, TCP port 5001
+    TCP window size:  325 KByte (default)
+    ------------------------------------------------------------
+    [  3] local 192.168.30.66 port 34056 connected with 192.168.30.67 port 5001
+    [ ID] Interval       Transfer     Bandwidth
+    [  3]  0.0-10.0 sec  3.04 GBytes  2.61 Gbits/sec
