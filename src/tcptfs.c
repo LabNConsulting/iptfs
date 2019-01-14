@@ -160,10 +160,10 @@ read_stream(int s, struct ring *r)
 	DBG("read_stream: pktlen %ld on %s\n", pktlen, r->name);
 
 	while (pktlen > 0) {
-		if ((n = recv(s, m->end, pktlen, 0)) <= 0) {
+		if ((n = recv(s, m->end, pktlen, 0)) <= 0)
 			err(1, "read_stream: bad read %ld from socket on %s", n,
 			    r->name);
-		}
+		DBG("read_stream: read %ld of %ld on %s\n", n, pktlen, r->name);
 		m->end += n;
 		pktlen -= n;
 	}
@@ -184,14 +184,17 @@ write_packet(int fd, struct ring *r, bool issock)
 	mlen = MBUF_LEN(m);
 	if (!issock) {
 		span = m->start;
+		n = write(fd, span, mlen);
 	} else {
 		span = m->start - 2;
 		span[0] = (uint8_t)(mlen >> 8);
 		span[1] = (uint8_t)mlen;
 		mlen += 2;
+		n = send(fd, span, mlen, 0);
 	}
-	if ((n = write(fd, span, mlen)) < 0) {
-		warn("%s: bad write on %s for write_packet", dname, r->name);
+	if (n < 0) {
+		warn("%s: bad write on %s %d for write_packet", dname, r->name,
+		     fd);
 	} else if (n != mlen) {
 		if (issock)
 			err(1,
@@ -220,14 +223,16 @@ write_packets(void *_arg)
 	struct thread_args *args = (struct thread_args *)_arg;
 	struct ring *r = args->r;
 	bool issock = (args->fd == -1);
-	int fd = (args->fd == -1 ? args->s : args->fd);
+	int fd = (issock ? args->s : args->fd);
 
 	while (true) {
 		pthread_mutex_lock(&r->lock);
 		while (ring_isempty(r)) {
-			pthread_cond_wait(&r->rcv, &r->lock);
+			DBG("write_packets: ring %s is empty\n", r->name);
+			pthread_cond_wait(&r->wcv, &r->lock);
 		}
 		pthread_mutex_unlock(&r->lock);
+		DBG("write_packets: ready on %s\n", r->name);
 
 		if (issock) {
 			write_packet(fd, r, true);
@@ -245,14 +250,16 @@ read_packets(void *_arg)
 	struct thread_args *args = (struct thread_args *)_arg;
 	struct ring *r = args->r;
 	bool issock = (args->fd == -1);
-	int fd = (args->fd == -1 ? args->s : args->fd);
+	int fd = (issock ? args->s : args->fd);
 
 	while (true) {
 		pthread_mutex_lock(&r->lock);
 		while (ring_isfull(r)) {
+			DBG("read_packets: ring %s is full\n", r->name);
 			pthread_cond_wait(&r->rcv, &r->lock);
 		}
 		pthread_mutex_unlock(&r->lock);
+		DBG("read_packets: ready on ring %s\n", r->name);
 
 		if (issock) {
 			read_stream(fd, r);
@@ -275,6 +282,7 @@ tfs_tunnel(int fd, int s)
 	pthread_t threads[4];
 	void *rv;
 
+	DBG("tfs_tunnel: fd: %d s: %d\n", fd, s);
 	ring_init(&red, "RED RECV RING", RINGSZ, MAXBUF, HDRSPACE);
 	ring_init(&black, "BLACK RECV RING", RINGSZ, MAXBUF, HDRSPACE);
 
@@ -284,13 +292,13 @@ tfs_tunnel(int fd, int s)
 	pthread_create(&threads[0], NULL, write_packets, &args[0]);
 
 	args[1].r = &red;
-	args[3].fd = -1;
+	args[1].fd = -1;
 	args[1].s = s;
 	pthread_create(&threads[1], NULL, write_packets, &args[1]);
 
 	args[2].r = &red;
 	args[2].fd = fd;
-	args[0].s = -1;
+	args[2].s = -1;
 	pthread_create(&threads[2], NULL, read_packets, &args[2]);
 
 	args[3].r = &black;
@@ -298,10 +306,10 @@ tfs_tunnel(int fd, int s)
 	args[3].s = s;
 	pthread_create(&threads[3], NULL, read_packets, &args[3]);
 
-	pthread_join(threads[3], &rv);
-	pthread_join(threads[2], &rv);
-	pthread_join(threads[1], &rv);
 	pthread_join(threads[0], &rv);
+	pthread_join(threads[1], &rv);
+	pthread_join(threads[2], &rv);
+	pthread_join(threads[3], &rv);
 }
 
 /* Local Variables: */
