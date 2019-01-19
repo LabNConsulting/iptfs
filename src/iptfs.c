@@ -259,15 +259,7 @@ write_packets(void *_arg)
 		pthread_mutex_unlock(&r->lock);
 		DBG("write_packets: ready on %s\n", r->name);
 
-		switch (fdtype) {
-		case FDT_TCP:
-			write_packet(fd, r, true, false);
-			break;
-		case FDT_UDP:
-		case FDT_FILE:
-			write_packet(fd, r, false, fdtype == FDT_UDP);
-			break;
-		}
+		write_packet(fd, r, fdtype == FDT_TCP, fdtype == FDT_UDP);
 	}
 
 	return NULL;

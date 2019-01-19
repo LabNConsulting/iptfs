@@ -2,7 +2,7 @@
 OBJDIR ?= build
 SRC := $(wildcard src/*.c)
 OBJ := $(patsubst src/%.c,$(OBJDIR)/%.o,$(SRC))
-BIN := $(OBJDIR)/tcptfs
+BIN := $(OBJDIR)/iptfs
 
 all: $(BIN)
 

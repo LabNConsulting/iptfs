@@ -11,7 +11,7 @@ import os
 import socket
 import struct
 import sys
-from . import tcptfs
+from . import iptfs
 
 TUNSETIFF = 0x400454ca
 IFF_TUN = 0x0001
@@ -34,10 +34,13 @@ def tun_alloc(devname):
     return f, devname
 
 
-def connect(sname, service):
+def connect(sname, service, isudp):
     for hent in socket.getaddrinfo(sname, service):
         try:
             s = socket.socket(*hent[0:3])
+            if isudp:
+                # Save the peer address
+                iptfs.peeraddr = hent[4]
             s.connect(hent[4])
             return s
         except socket.error:
@@ -45,12 +48,16 @@ def connect(sname, service):
     return None
 
 
-def accept(sname, service):
+def accept(sname, service, isudp):
     for hent in socket.getaddrinfo(sname, service):
         try:
             s = socket.socket(*hent[0:3])
             s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             s.bind(hent[4])
+            if isudp:
+                # Do PEEK to get first UDP address from client.
+                logger.info("Server: waiting on initial UDP packet %s:%s", sname, service)
+                (_, iptfs.peeraddr) = s.recvfrom_into(None, 0, socket.MSG_PEEK)
             s.listen(5)
             return s.accept()
         except socket.error:
@@ -64,6 +71,7 @@ def main(*margs):
     parser.add_argument("-d", "--dev", default="vtun%d", help="Name of tun interface.")
     parser.add_argument("-l", "--listen", default="::", help="Server listen on this address")
     parser.add_argument("-p", "--port", default="8001", help="TCP port to use.")
+    parser.add_argument("-u", "--udp", action="store_true", help="Use UDP instead of TCP")
     parser.add_argument("-v", "--verbose", action="store_true", help="Name of tun interface.")
     args = parser.parse_args(*margs)
 
@@ -76,13 +84,13 @@ def main(*margs):
     print("opened tun device: {} {} ", devname, tunfd)
 
     if not args.connect:
-        s, _ = accept(args.listen, args.port)
+        s, _ = accept(args.listen, args.port, args.udp)
         print("accepted from client: {}", s)
     else:
-        s = connect(args.connect, args.port)
+        s = connect(args.connect, args.port, args.udp)
         print("connected to server: {}", s)
 
-    threads = tcptfs.tunnel(tunfd, s)
+    threads = iptfs.tunnel(tunfd, s, args.udp)
     for thread in threads:
         thread.join()
 
