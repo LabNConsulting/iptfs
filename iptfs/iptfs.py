@@ -60,19 +60,23 @@ class Ring:
     def rdone(self):
         if DEBUG:
             logger.debug("rdone on %s", self.name)
+
         with self.lock:
             self.reading = (self.reading + 1) % self.mcount
             self.write_cv.notify()
+
         if DEBUG:
             logger.debug("rdone complete on %s", self.name)
 
     def wdone(self):
         if DEBUG:
             logger.debug("wdone on %s", self.name)
+
         self.mbufs[self.writing].reset(self.hdrspace)
         with self.lock:
             self.writing = (self.writing + 1) % self.mcount
             self.read_cv.notify()
+
         if DEBUG:
             logger.debug("wdone complete on %s", self.name)
 
@@ -101,12 +105,19 @@ def read_packet(fd, ring, isfile, isudp):
 def read_stream(s, ring):
     m = ring.mbufs[ring.reading]
 
-    lenbuf = m.space[ring.hdrspace - 2:]
-    n = s.recv_into(lenbuf, 2)
-    if n != 2:
+    n = s.recv_into(m.end, 6)
+    if n != 6:
         logger.critical("read_stream: short read %d from stream on %s exiting", n, ring.name)
         sys.exit(1)
-    left = (lenbuf[0] << 8) + lenbuf[1]
+
+    # Get length from the IP header.
+    iphdr = m.start
+    if (iphdr[0] & 0xf0) == 0x40:
+        left = (iphdr[2] << 8) + iphdr[3]
+    else:
+        left = (iphdr[4] << 8) + iphdr[5]
+    left -= 6
+    m.end = m.end[6:]
 
     if DEBUG:
         logger.debug("read_stream: pktlen %d on %s", left, ring.name)
@@ -125,35 +136,22 @@ def read_stream(s, ring):
     ring.rdone()
 
 
-def write_packet(fd, ring, isfile, isudp):
-    if DEBUG:
-        dname = "write_stream" if not isfile else "write_packets"
-
+def write_packet(fd, ring):
     m = ring.mbufs[ring.writing]
     mlen = m.len()
 
     if DEBUG:
-        logger.debug("%s: got buf mlen %d on %s", dname, mlen, ring.name)
+        logger.debug("write_packet: got buf mlen %d on %s", mlen, ring.name)
 
-    if isfile or isudp:
-        span = m.start[:mlen]
-    else:
-        span = m.space[ring.hdrspace - 2:]
-        span[0] = (mlen >> 8) & 0xFF
-        span[1] = mlen & 0xFF
-        mlen += 2
-        span = span[:mlen]
-
-    n = os.write(fd, span)
+    n = os.write(fd, m.start[:mlen])
     if n != mlen:
         if n < 0:
             logger.error("write_packet: bad write to interface on %s", ring.name)
         else:
             logger.warning("write_packet: short write %d to interface on %s", n, ring.name)
     elif DEBUG:
-        logger.debug("%s: wrote %d bytes (%s) on %s ", dname, n, binascii.hexlify(span[:8]),
+        logger.debug("write_packet: wrote %d bytes (%s) on %s ", n, binascii.hexlify(span[:8]),
                      ring.name)
-
     ring.wdone()
 
 
@@ -176,23 +174,18 @@ def read_packets(fd, ring, isfile, isudp):
             read_stream(fd, ring)
 
 
-def write_packets(fd, ring, isfile, isudp):
-    dname = "write_stream" if not isfile else "write_packets"
-    logger.info("%s: start from %s isfile %d", dname, ring.name, isfile)
-
-    if not isfile:
-        fd = fd.fileno()
-
+def write_packets(fd, ring):
+    logger.info("write_packets: start from %s", ring.name)
     while True:
         with ring.write_cv:
             while ring.empty():
                 if DEBUG:
-                    logger.debug("%s: ring %s is empty", dname, ring.name)
+                    logger.debug("write_packets: ring %s is empty", ring.name)
                 ring.write_cv.wait()
         if DEBUG:
-            logger.debug("%s: ready on %s", dname, ring.name)
+            logger.debug("write_packets: ready on %s", ring.name)
 
-        write_packet(fd, ring, isfile, isudp)
+        write_packet(fd, ring)
 
 
 def thread_catch(func, *args):
@@ -211,8 +204,8 @@ def tunnel(iffd, s, udp):
     black = Ring("BLACK RECV RING", RINGSZ, MAXBUF, HDRSPACE)
 
     threads = [
-        thread_catch(write_packets, iffd, black, True, udp),
-        thread_catch(write_packets, s, red, False, udp),
+        thread_catch(write_packets, iffd, black),
+        thread_catch(write_packets, s.fileno(), red),
         thread_catch(read_packets, iffd, red, True, udp),
         thread_catch(read_packets, s, black, False, udp),
     ]
