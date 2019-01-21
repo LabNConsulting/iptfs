@@ -5,6 +5,4 @@
 #
 from setuptools import setup, Extension
 
-bstr = Extension('iptfs.bstr', sources=['iptfs/bstr.c'])
-
-setup(setup_requires=['pbr'], pbr=True, ext_modules=[bstr], inplace=1)
+setup(setup_requires=['pbr'], pbr=True)

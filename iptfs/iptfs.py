@@ -5,14 +5,11 @@
 from __future__ import absolute_import, division, unicode_literals, print_function, nested_scopes
 
 import binascii
+import io
 import logging
 import os
-import io
 import sys
 import threading
-# from .bstr import read, recv, memspan, writev  # pylint: disable=E0611
-# from .bstr import memspan, read, write
-from .bstr import memspan, read
 
 HDRSPACE = 18
 MAXBUF = 9000 + HDRSPACE
@@ -35,7 +32,7 @@ class MBuf:
         self.end = self.start = self.space[hdrspace:]
 
     def len(self):
-        return memspan(self.start, self.end)
+        return self.start.nbytes - self.end.nbytes
 
 
 class Ring:
@@ -82,19 +79,11 @@ class Ring:
 
 def read_packet(fd, ring, isfile, isudp):
     m = ring.mbufs[ring.reading]
-    # n = read(fd, m.end, len(m.end))
     if isfile:
-        # n = read(fd.fileno(), m.end, len(m.end))
-        # n = fd.readinto(m.end, len(m.end))
         n = fd.readinto(m.end)
-    # elif isudp:
-    #     # n = recv(fd, m.end, len(m.end))
-
-    #     (n, addr) = fd.recvfrom_into(m.end)
-    #     assert (addr == peeraddr)
-
-    #     # # We have connected the UDP socket so we can do this?
-    #     # n = fd.recv_into(m.end)
+    elif isudp:
+        (n, addr) = fd.recvfrom_into(m.end)
+        assert (addr == peeraddr)
     else:
         n = fd.recv_into(m.end)
 
@@ -110,7 +99,6 @@ def read_packet(fd, ring, isfile, isudp):
 
 
 def read_stream(s, ring):
-    # logger.info("read_stream start into %s", ring.name)
     m = ring.mbufs[ring.reading]
 
     lenbuf = m.space[ring.hdrspace - 2:]
@@ -137,33 +125,6 @@ def read_stream(s, ring):
     ring.rdone()
 
 
-def _read_packets(fd, ring, isfile, isudp):
-    with ring.read_cv:
-        while ring.full():
-            if DEBUG:
-                logger.debug("read_packets: ring %s is full", ring.name)
-            ring.read_cv.wait()
-    if DEBUG:
-        logger.debug("read_packets: ready on %s", ring.name)
-
-    if isfile or isudp:
-        read_packet(fd, ring, isfile, isudp)
-    else:
-        read_stream(fd, ring)
-
-
-def read_packets(fd, ring, isfile, isudp):
-    logger.info("read_packets start into %s", ring.name)
-    if isfile:
-        fd = io.open(fd, "rb", buffering=0)
-    try:
-        while True:
-            _read_packets(fd, ring, isfile, isudp)
-    except Exception as e:  # pylint: disable=W0612  # pylint: disable=W0703
-        logger.critical("read_packets: uncaught exception on %s: \"%s\"", ring.name, repr(e))
-        sys.exit(1)
-
-
 def write_packet(fd, ring, isfile, isudp):
     if DEBUG:
         dname = "write_stream" if not isfile else "write_packets"
@@ -183,17 +144,7 @@ def write_packet(fd, ring, isfile, isudp):
         mlen += 2
         span = span[:mlen]
 
-    # if not isfile and isudp:
-    #     # n = socket.sendto(fd, span, 0, peeraddr)
-    #     n = fd.sendto(span, peeraddr)
-    #     # XXX need a custom function for this, why convert addrs each time??.
-    # else:
-    # n = writev(fd, [span])
-    if isfile:
-        n = os.write(fd, span)
-    else:
-        n = os.write(fd.fileno(), span)
-    # n = write(fd, span)
+    n = os.write(fd, span)
     if n != mlen:
         if n < 0:
             logger.error("write_packet: bad write to interface on %s", ring.name)
@@ -206,22 +157,53 @@ def write_packet(fd, ring, isfile, isudp):
     ring.wdone()
 
 
+def read_packets(fd, ring, isfile, isudp):
+    if isfile:
+        fd = io.open(fd, "rb", buffering=0)
+
+    while True:
+        with ring.read_cv:
+            while ring.full():
+                if DEBUG:
+                    logger.debug("read_packets: ring %s is full", ring.name)
+                ring.read_cv.wait()
+        if DEBUG:
+            logger.debug("read_packets: ready on %s", ring.name)
+
+        if isfile or isudp:
+            read_packet(fd, ring, isfile, isudp)
+        else:
+            read_stream(fd, ring)
+
+
 def write_packets(fd, ring, isfile, isudp):
     dname = "write_stream" if not isfile else "write_packets"
     logger.info("%s: start from %s isfile %d", dname, ring.name, isfile)
-    try:
-        while True:
-            with ring.write_cv:
-                while ring.empty():
-                    if DEBUG:
-                        logger.debug("%s: ring %s is empty", dname, ring.name)
-                    ring.write_cv.wait()
-            if DEBUG:
-                logger.debug("%s: ready on %s", dname, ring.name)
-            write_packet(fd, ring, isfile, isudp)
-    except Exception as e:  # pylint: disable=W0612  # pylint: disable=W0703
-        logger.critical("%s: uncaught exception on %s: \"%s\"", dname, ring.name, repr(e))
-        sys.exit(1)
+
+    if not isfile:
+        fd = fd.fileno()
+
+    while True:
+        with ring.write_cv:
+            while ring.empty():
+                if DEBUG:
+                    logger.debug("%s: ring %s is empty", dname, ring.name)
+                ring.write_cv.wait()
+        if DEBUG:
+            logger.debug("%s: ready on %s", dname, ring.name)
+
+        write_packet(fd, ring, isfile, isudp)
+
+
+def thread_catch(func, *args):
+    def thread_main():
+        try:
+            func(*args)
+        except Exception as e:  # pylint: disable=W0612  # pylint: disable=W0703
+            logger.critical("%s%s: Uncaught exception: \"%s\"", func.__name__, str(args), repr(e))
+            sys.exit(1)
+
+    return threading.Thread(target=thread_main)
 
 
 def tunnel(iffd, s, udp):
@@ -229,10 +211,10 @@ def tunnel(iffd, s, udp):
     black = Ring("BLACK RECV RING", RINGSZ, MAXBUF, HDRSPACE)
 
     threads = [
-        threading.Thread(target=write_packets, args=(iffd, black, True, udp)),
-        threading.Thread(target=write_packets, args=(s, red, False, udp)),
-        threading.Thread(target=read_packets, args=(iffd, red, True, udp)),
-        threading.Thread(target=read_packets, args=(s, black, False, udp)),
+        thread_catch(write_packets, iffd, black, True, udp),
+        thread_catch(write_packets, s, red, False, udp),
+        thread_catch(read_packets, iffd, red, True, udp),
+        thread_catch(read_packets, s, black, False, udp),
     ]
     for t in threads:
         logger.debug("Starting thread %s", str(t))
