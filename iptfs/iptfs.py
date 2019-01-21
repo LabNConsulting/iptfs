@@ -6,10 +6,13 @@ from __future__ import absolute_import, division, unicode_literals, print_functi
 
 import binascii
 import logging
+import os
+import io
 import sys
 import threading
 # from .bstr import read, recv, memspan, writev  # pylint: disable=E0611
-from .bstr import memspan
+# from .bstr import memspan, read, write
+from .bstr import memspan, read
 
 HDRSPACE = 18
 MAXBUF = 9000 + HDRSPACE
@@ -79,21 +82,29 @@ class Ring:
 
 def read_packet(fd, ring, isfile, isudp):
     m = ring.mbufs[ring.reading]
-    if isudp:
-        # n = recv(fd, m.end, len(m.end))
-        (n, _) = fd.recvfrom_into(m.end)
-        # XXX check the address is the same?
+    # n = read(fd, m.end, len(m.end))
+    if isfile:
+        # n = read(fd.fileno(), m.end, len(m.end))
+        # n = fd.readinto(m.end, len(m.end))
+        n = fd.readinto(m.end)
+    # elif isudp:
+    #     # n = recv(fd, m.end, len(m.end))
+
+    #     (n, addr) = fd.recvfrom_into(m.end)
+    #     assert (addr == peeraddr)
+
+    #     # # We have connected the UDP socket so we can do this?
+    #     # n = fd.recv_into(m.end)
     else:
-        # n = read(fd, m.end, len(m.end))
-        if isfile:
-            n = fd.readinto(m.end)
-        else:
-            n = fd.recv_into(m.end)
+        n = fd.recv_into(m.end)
+
     if n <= 0:
-        logger.critical("read_packets: bad read %d on %s", n, ring.name)
+        logger.critical("read_packets: bad read %d on %s isfile %d isudp %d", n, ring.name, isfile,
+                        isudp)
         sys.exit(1)
-    if DEBUG:
+    elif DEBUG:
         logger.debug("read_packets: read %d bytes on %s", n, ring.name)
+
     m.end = m.end[n:]
     ring.rdone()
 
@@ -127,8 +138,6 @@ def read_stream(s, ring):
 
 
 def _read_packets(fd, ring, isfile, isudp):
-    # if DEBUG:
-    #     logger.debug("read_packets start into %s", ring.name)
     with ring.read_cv:
         while ring.full():
             if DEBUG:
@@ -144,11 +153,14 @@ def _read_packets(fd, ring, isfile, isudp):
 
 
 def read_packets(fd, ring, isfile, isudp):
+    logger.info("read_packets start into %s", ring.name)
+    if isfile:
+        fd = io.open(fd, "rb", buffering=0)
     try:
         while True:
             _read_packets(fd, ring, isfile, isudp)
     except Exception as e:  # pylint: disable=W0612  # pylint: disable=W0703
-        logger.critical("read_packets: uncaught exception on %s: %s", ring.name, str(e))
+        logger.critical("read_packets: uncaught exception on %s: \"%s\"", ring.name, repr(e))
         sys.exit(1)
 
 
@@ -170,18 +182,24 @@ def write_packet(fd, ring, isfile, isudp):
         span[1] = mlen & 0xFF
         mlen += 2
         span = span[:mlen]
-    if isudp:
-        # n = socket.sendto(fd, span, 0, peeraddr)
-        n = fd.sendto(span, peeraddr)
-    else:
-        # n = writev(fd, [span])
-        n = fd.write(span)
 
-    if n < 0:
-        logger.error("write_packet: bad write to interface on %s", ring.name)
-    elif n != mlen:
-        logger.warning("write_packet: short write %d to interface on %s", n, ring.name)
-    if DEBUG:
+    # if not isfile and isudp:
+    #     # n = socket.sendto(fd, span, 0, peeraddr)
+    #     n = fd.sendto(span, peeraddr)
+    #     # XXX need a custom function for this, why convert addrs each time??.
+    # else:
+    # n = writev(fd, [span])
+    if isfile:
+        n = os.write(fd, span)
+    else:
+        n = os.write(fd.fileno(), span)
+    # n = write(fd, span)
+    if n != mlen:
+        if n < 0:
+            logger.error("write_packet: bad write to interface on %s", ring.name)
+        else:
+            logger.warning("write_packet: short write %d to interface on %s", n, ring.name)
+    elif DEBUG:
         logger.debug("%s: wrote %d bytes (%s) on %s ", dname, n, binascii.hexlify(span[:8]),
                      ring.name)
 
@@ -202,7 +220,7 @@ def write_packets(fd, ring, isfile, isudp):
                 logger.debug("%s: ready on %s", dname, ring.name)
             write_packet(fd, ring, isfile, isudp)
     except Exception as e:  # pylint: disable=W0612  # pylint: disable=W0703
-        logger.critical("%s: uncaught exception on %s: %s", dname, ring.name, str(e))
+        logger.critical("%s: uncaught exception on %s: \"%s\"", dname, ring.name, repr(e))
         sys.exit(1)
 
 

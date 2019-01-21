@@ -7,6 +7,7 @@ from __future__ import absolute_import, division, unicode_literals, print_functi
 import argparse
 import fcntl
 import logging
+import io
 import os
 import socket
 import struct
@@ -27,15 +28,19 @@ def usage():
 
 
 def tun_alloc(devname):
-    f = os.open("/dev/net/tun", os.O_RDWR)
-    ifs = fcntl.ioctl(f, TUNSETIFF, struct.pack("16sH", devname.encode(), IFF_TUN | IFF_NO_PI))
+    fd = os.open("/dev/net/tun", os.O_RDWR)
+    # ff = io.open(fd, "rb")
+    # f = io.open("/dev/net/tun", "rb", buffering=0)
+    ifs = fcntl.ioctl(fd, TUNSETIFF, struct.pack("16sH", devname.encode(), IFF_TUN | IFF_NO_PI))
     devname = ifs[:16]
     devname = devname.strip(b"\x00")
-    return f, devname
+    return fd, devname
 
 
 def connect(sname, service, isudp):
-    for hent in socket.getaddrinfo(sname, service):
+    # stype = socket.SOCK_DGRAM if isudp else socket.SOCK_STREAM
+    proto = socket.IPPROTO_UDP if isudp else socket.IPPROTO_TCP
+    for hent in socket.getaddrinfo(sname, service, 0, 0, proto):
         try:
             s = socket.socket(*hent[0:3])
             if isudp:
@@ -49,20 +54,40 @@ def connect(sname, service, isudp):
 
 
 def accept(sname, service, isudp):
-    for hent in socket.getaddrinfo(sname, service):
+    # stype = socket.SOCK_DGRAM if isudp else socket.SOCK_STREAM
+    proto = socket.IPPROTO_UDP if isudp else socket.IPPROTO_TCP
+    for hent in socket.getaddrinfo(sname, service, 0, 0, proto):
         try:
+            logger.info("Get socket")
             s = socket.socket(*hent[0:3])
+            logger.info("Set socketopt")
             s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            logger.info("Try to bind to: %s", str(hent[4]))
             s.bind(hent[4])
-            if isudp:
-                # Do PEEK to get first UDP address from client.
-                logger.info("Server: waiting on initial UDP packet %s:%s", sname, service)
-                (_, iptfs.peeraddr) = s.recvfrom_into(None, 0, socket.MSG_PEEK)
-            s.listen(5)
-            return s.accept()
-        except socket.error:
+            break
+        except socket.error as e:
+            logger.info("Got exception for %s: %s", str(hent), str(e))
             continue
-    return None
+        except Exception as e:
+            logger.info("Got unexpected exception for %s: %s", str(hent), str(e))
+            continue
+    else:
+        logger.info("Can't bind to %s:%s", sname, service)
+        return None
+
+    if isudp:
+        # Do PEEK to get first UDP address from client.
+        logger.info("Server: waiting on initial UDP packet %s:%s:%s", sname, service, str(hent))
+        b = bytearray(9170)
+        (n, iptfs.peeraddr) = s.recvfrom_into(b, 0, socket.MSG_PEEK)
+        logger.info("Server: Got UDP packet from %s of len %d", iptfs.peeraddr, n)
+        s.connect(iptfs.peeraddr)
+        return (s, iptfs.peeraddr)
+
+    logger.info("Listen 5 on %s", str(iptfs.peeraddr))
+    s.listen(5)
+    logger.info("Doing accept.")
+    return s.accept()
 
 
 def main(*margs):
@@ -81,14 +106,18 @@ def main(*margs):
         logging.basicConfig(level=logging.INFO)
 
     tunfd, devname = tun_alloc(args.dev)
-    print("opened tun device: {} {} ", devname, tunfd)
+    print("opened tun device: {} {} ".format(devname, tunfd))
 
-    if not args.connect:
-        s, _ = accept(args.listen, args.port, args.udp)
-        print("accepted from client: {}", s)
-    else:
-        s = connect(args.connect, args.port, args.udp)
-        print("connected to server: {}", s)
+    try:
+        if not args.connect:
+            s, _ = accept(args.listen, args.port, args.udp)
+            print("accepted from client: %s", str(s))
+        else:
+            s = connect(args.connect, args.port, args.udp)
+            print("connected to server: %s", str(s))
+    except Exception as e:
+        print("Unexpected exception: %s", str(e))
+        sys.exit(1)
 
     threads = iptfs.tunnel(tunfd, s, args.udp)
     for thread in threads:
