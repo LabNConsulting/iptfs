@@ -97,6 +97,7 @@ def main(*margs):
     parser.add_argument("-l", "--listen", default="::", help="Server listen on this address")
     parser.add_argument("-p", "--port", default="8001", help="TCP port to use.")
     parser.add_argument("-u", "--udp", action="store_true", help="Use UDP instead of TCP")
+    parser.add_argument("-r", "--rx-rate", type=int, default=0, help="Maximum RX rate in Megabits")
     parser.add_argument("-v", "--verbose", action="store_true", help="Name of tun interface.")
     args = parser.parse_args(*margs)
 
@@ -119,7 +120,7 @@ def main(*margs):
         print("Unexpected exception: %s", str(e))
         sys.exit(1)
 
-    threads = iptfs.tunnel(tunfd, s, args.udp)
+    threads = iptfs.tunnel(tunfd, s, args.udp, args.rx_rate * 1000000)
     for thread in threads:
         thread.join()
 
