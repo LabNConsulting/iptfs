@@ -35,6 +35,10 @@ uint8_t dropbuf[MAXBUF];
 extern struct sockaddr_in peeraddr; /* XXX remove */
 extern bool verbose;
 
+struct ratelimit;
+struct ratelimit *new_ratelimit(uint32_t, uint, uint);
+bool limit(struct ratelimit *, uint);
+
 #define DBG(x...)
 #define _DBG(x...)                                                             \
 	if (verbose)                                                           \
@@ -62,13 +66,15 @@ struct ring {
 	pthread_mutex_t lock;
 	pthread_cond_t rcv, wcv;
 	// Immutable.
+	uint64_t rxrate;
 	int hdrspace;
 	int maxbuf;
 	int mcount;
 };
 
 void
-ring_init(struct ring *r, const char *name, int count, int maxbuf, int hdrspace)
+ring_init(struct ring *r, const char *name, int count, int maxbuf, int hdrspace,
+	  uint64_t rxrate)
 {
 	int i, bi;
 
@@ -76,6 +82,7 @@ ring_init(struct ring *r, const char *name, int count, int maxbuf, int hdrspace)
 	r->name = name;
 	r->maxbuf = maxbuf;
 	r->hdrspace = hdrspace;
+	r->rxrate = rxrate;
 	r->mcount = count++;
 	if ((r->space = malloc(count * maxbuf)) == NULL)
 		err(1, "ring_init");
@@ -132,7 +139,7 @@ ring_wdone(struct ring *r)
 	pthread_mutex_unlock(&r->lock);
 }
 
-static void
+static ssize_t
 read_packet(int fd, struct ring *r, bool udp)
 {
 	struct sockaddr_in sin;
@@ -156,14 +163,15 @@ read_packet(int fd, struct ring *r, bool udp)
 		if (udp) {
 			exit(1);
 		}
+		return 0;
 	} else {
 		/* XXX UDP validate the recvfrom addr */
 		m->end += n;
-		ring_rdone(r);
+		return n;
 	}
 }
 
-static void
+static ssize_t
 read_stream(int s, struct ring *r)
 {
 	struct mbuf *m = &r->mbuf[r->reading];
@@ -186,8 +194,7 @@ read_stream(int s, struct ring *r)
 		m->end += n;
 		pktlen -= n;
 	}
-
-	ring_rdone(r);
+	return (m->end - m->start);
 }
 
 static void
@@ -268,10 +275,17 @@ write_packets(void *_arg)
 void *
 read_packets(void *_arg)
 {
+	struct ratelimit *rl = NULL;
 	struct thread_args *args = (struct thread_args *)_arg;
 	struct ring *r = args->r;
 	enum fdtype fdtype = args->type;
 	int fd = args->fd;
+	size_t n;
+
+	if (r->rxrate > 0) {
+		// uint overhead = 20 + 8 + 20 + 20 + 12;
+		rl = new_ratelimit(r->rxrate, 0, 10);
+	}
 
 	while (true) {
 		pthread_mutex_lock(&r->lock);
@@ -284,15 +298,17 @@ read_packets(void *_arg)
 
 		switch (fdtype) {
 		case FDT_TCP:
-			read_stream(fd, r);
+			n = read_stream(fd, r);
 			break;
 		case FDT_UDP:
-			read_packet(fd, r, true);
+			n = read_packet(fd, r, true);
 			break;
 		case FDT_FILE:
-			read_packet(fd, r, false);
+			n = read_packet(fd, r, false);
 			break;
 		}
+		if (rl == NULL || (n > 0 && !limit(rl, n)))
+			ring_rdone(r);
 	}
 
 	return NULL;
@@ -302,7 +318,7 @@ read_packets(void *_arg)
  * tunnel - tunnel from tun intf over a TCP connection.
  */
 void
-tfs_tunnel(int fd, int s, bool udp)
+tfs_tunnel(int fd, int s, bool udp, uint64_t rxrate)
 {
 	static struct thread_args args[4];
 	static struct thread_args *ap = args;
@@ -311,8 +327,8 @@ tfs_tunnel(int fd, int s, bool udp)
 	void *rv;
 
 	DBG("tfs_tunnel: fd: %d s: %d\n", fd, s);
-	ring_init(&red, "RED RECV RING", RINGSZ, MAXBUF, HDRSPACE);
-	ring_init(&black, "BLACK RECV RING", RINGSZ, MAXBUF, HDRSPACE);
+	ring_init(&red, "RED RECV RING", RINGSZ, MAXBUF, HDRSPACE, 0);
+	ring_init(&black, "BLACK RECV RING", RINGSZ, MAXBUF, HDRSPACE, rxrate);
 
 	ap->r = &black;
 	ap->fd = fd;

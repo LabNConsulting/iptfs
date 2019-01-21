@@ -10,7 +10,7 @@ import logging
 import os
 import sys
 import threading
-import time
+from .util import Limit
 
 HDRSPACE = 18
 MAXBUF = 9000 + HDRSPACE
@@ -36,8 +36,9 @@ def put32(m, i):
 
 
 class MBuf:
-    def __init__(self, size, hdrspace):
-        self.space = memoryview(bytearray(size))
+    def __init__(self, mv, hdrspace):
+        # self.space = memoryview(bytearray(size))
+        self.space = mv
         self.reset(hdrspace)
 
     def reset(self, hdrspace):
@@ -61,9 +62,11 @@ class Ring:
         self.wseq = 1
         count += 1
 
+        self.bufspace = bytearray(count * maxbuf)
         self.mbufs = []
-        for _ in range(0, count):
-            self.mbufs.append(MBuf(maxbuf, hdrspace))
+        for i in range(0, count):
+            mv = memoryview(self.bufspace[i * maxbuf:(i + 1) * maxbuf])
+            self.mbufs.append(MBuf(mv, hdrspace))
 
     def empty(self):
         return self.reading == self.writing
@@ -185,12 +188,9 @@ def read_packets(fd, ring, isfile, isudp, max_rxrate):
     if isfile:
         fd = io.open(fd, "rb", buffering=0)
 
-    # array of packet size and times
-    RXQSZ = 10
-    pkttimes = [(0, 0) for x in range(0, RXQSZ)]
-    totb = 0
-    pktidx = 0
-    dropcnt = 0
+    # IP/UDP + IP/TCP + TCP timestamps
+    overhead = 20 + 8 + 20 + 20 + 12
+    rxlimit = Limit(max_rxrate, overhead, 10) if max_rxrate else None
 
     while True:
         with ring.read_cv:
@@ -206,35 +206,8 @@ def read_packets(fd, ring, isfile, isudp, max_rxrate):
         else:
             n = read_stream(fd, ring)
 
-        # We only track RX rate for our tunnel.
-        if not max_rxrate:
+        if not rxlimit or not rxlimit.limit(n):
             ring.rdone()
-            continue
-
-        # Size of all packets currently in the RXQ
-        n *= 8
-        otime = pkttimes[pktidx][1]
-        ntotb = totb + n - pkttimes[pktidx][0]
-        ntime = time.perf_counter()
-
-        if otime:
-            delta = ntime - otime
-            rxrate = ntotb / delta
-        else:
-            rxrate = 0
-
-        if rxrate > max_rxrate:
-            # Drop the packet! (no rdone)
-            dropcnt += 1
-            continue
-
-        # if otime and int(ntime) != int(otime):
-        #     logger.info("read_packets: RXRate: %f dropcnt %d on %s", rxrate, dropcnt, ring.name)
-
-        totb = ntotb
-        pkttimes[pktidx] = (n, ntime)
-        pktidx = (pktidx + 1) % RXQSZ
-        ring.rdone()
 
 
 def write_packets(fd, ring, isfile):

@@ -19,7 +19,7 @@
 #include <sys/ioctl.h>
 #include <unistd.h>
 
-void tfs_tunnel(int, int, bool);
+void tfs_tunnel(int, int, bool, uint64_t);
 struct sockaddr_in peeraddr; /* XXX remove */
 bool verbose;
 
@@ -139,6 +139,7 @@ tfs_accept(const char *sname, const char *service, bool udp)
 		if (recvfrom(s, NULL, 0, MSG_PEEK, (struct sockaddr *)&peeraddr,
 			     &alen) < 0)
 			err(1, "recvfrom for first UDP packet");
+		printf("server got initial UDP packet %s:%s\n", sname, service);
 		return s;
 	}
 
@@ -160,6 +161,7 @@ main(int argc, char **argv)
 	    {"dev", required_argument, 0, 'd'},
 	    {"listen", required_argument, 0, 'l'},
 	    {"port", required_argument, 0, 'p'},
+	    {"rx-rate", required_argument, 0, 'r'},
 	    {"udp", no_argument, 0, 'u'},
 	    {"verbose", no_argument, 0, 'v'},
 	    {0, 0, 0, 0},
@@ -170,6 +172,7 @@ main(int argc, char **argv)
 	char devname[IFNAMSIZ + 1] = "vtun%d";
 	int fd, s, opt, li;
 	bool udp = false;
+	uint64_t rxrate = 0;
 
 	strncpy(progname, argv[0], sizeof(progname) - 1);
 
@@ -192,6 +195,11 @@ main(int argc, char **argv)
 		case 'p':
 			/* port */
 			sport = optarg;
+			break;
+		case 'r':
+			/* port */
+			rxrate = (uint64_t)atoi(optarg) * 1000000ULL;
+			printf("RxRate: %lu\n", rxrate);
 			break;
 		case 'u':
 			udp = true;
@@ -219,7 +227,7 @@ main(int argc, char **argv)
 		printf("connected to server %d\n", s);
 	}
 
-	tfs_tunnel(fd, s, udp);
+	tfs_tunnel(fd, s, udp, rxrate);
 
 	sleep(10);
 
