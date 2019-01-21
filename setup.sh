@@ -30,7 +30,7 @@ FRAMESZ=1400
 TXRATEKb=$((10 * 1000 * 1000))
 MAXAGG=$((1000000 / 1000))
 
-COMMON="--udp --dev tfs0 --port 8001"
+COMMON=" -v --udp --dev tfs0 --port 8001"
 # COMMON="--dev tfs0 --port 8001"
 if (( VMID == 2 )); then
     OVMID=3
