@@ -113,7 +113,7 @@ def read_packet(fd, ring, isfile, isudp):
             m.start = m.start[4:]
             n -= 4
     else:
-        n = fd.recv_into(m.start)
+        assert (False)
 
     if n <= 0:
         logger.critical("read_packets: bad read %d on %s isfile %d isudp %d", n, ring.name, isfile,
@@ -126,45 +126,11 @@ def read_packet(fd, ring, isfile, isudp):
     return m.len()
 
 
-def read_stream(s, ring):
-    m = ring.mbufs[ring.reading]
-
-    n = s.recv_into(m.start, 6)
-    if n != 6:
-        logger.critical("read_stream: short read %d from stream on %s exiting", n, ring.name)
-        sys.exit(1)
-
-    # Get length from the IP header.
-    iphdr = m.start
-    if (iphdr[0] & 0xf0) == 0x40:
-        left = (iphdr[2] << 8) + iphdr[3]
-    else:
-        left = (iphdr[4] << 8) + iphdr[5]
-    left -= 6
-    m.end = m.start[6:]
-
-    if DEBUG:
-        logger.debug("read_stream: pktlen %d on %s", left, ring.name)
-
-    while (left > 0):
-        n = s.recv_into(m.end, left)
-        if n == 0:
-            logger.critical("read_stream: zero read from interface on %s", ring.name)
-            sys.exit(1)
-        m.end = m.end[n:]
-        left -= n
-
-    if DEBUG:
-        logger.debug("read_stream: bytes %s on %s", binascii.hexlify(m.start[:8]), ring.name)
-
-    return m.len()
-
-
-def write_packet(fd, ring, isfile):
+def write_packet(fd, ring, isfile, isudp):
     m = ring.mbufs[ring.writing]
     wseq = ring.wseq
     mlen = m.len()
-    if not isfile:
+    if isudp and not isfile:
         # Prepend sequence number on tunnel.
         m.start = m.space[ring.hdrspace - 4:]
         put32(m.start, wseq)
@@ -201,16 +167,12 @@ def read_packets(fd, ring, isfile, isudp, max_rxrate):
         if DEBUG:
             logger.debug("read_packets: ready on %s", ring.name)
 
-        if isfile or isudp:
-            n = read_packet(fd, ring, isfile, isudp)
-        else:
-            n = read_stream(fd, ring)
-
+        n = read_packet(fd, ring, isfile, isudp)
         if not rxlimit or not rxlimit.limit(n):
             ring.rdone()
 
 
-def write_packets(fd, ring, isfile):
+def write_packets(fd, ring, isfile, isudp):
     logger.info("write_packets: start from %s", ring.name)
     while True:
         with ring.write_cv:
@@ -221,7 +183,7 @@ def write_packets(fd, ring, isfile):
         if DEBUG:
             logger.debug("write_packets: ready on %s", ring.name)
 
-        write_packet(fd, ring, isfile)
+        write_packet(fd, ring, isfile, isudp)
 
 
 def thread_catch(func, *args):
@@ -240,8 +202,8 @@ def tunnel(iffd, s, udp, rxrate):
     black = Ring("BLACK RECV RING", RINGSZ, MAXBUF, HDRSPACE)
 
     threads = [
-        thread_catch(write_packets, iffd, black, True),
-        thread_catch(write_packets, s.fileno(), red, False),
+        thread_catch(write_packets, iffd, black, True, udp),
+        thread_catch(write_packets, s.fileno(), red, False, udp),
         thread_catch(read_packets, iffd, red, True, udp, None),
         thread_catch(read_packets, s, black, False, udp, rxrate),
     ]

@@ -19,7 +19,7 @@
 #include <sys/ioctl.h>
 #include <unistd.h>
 
-void tfs_tunnel(int, int, bool, uint64_t);
+void tfs_tunnel(int, int, uint64_t);
 struct sockaddr_in peeraddr; /* XXX remove */
 bool verbose;
 
@@ -61,17 +61,14 @@ tun_alloc(char *dev)
 }
 
 int
-tfs_connect(const char *sname, const char *service, bool udp)
+tfs_connect(const char *sname, const char *service)
 {
 	struct addrinfo hints;
 	struct addrinfo *result, *rp;
 	int s;
 
 	memset(&hints, 0, sizeof(hints));
-	if (udp)
-		hints.ai_socktype = SOCK_DGRAM;
-	else
-		hints.ai_socktype = SOCK_STREAM;
+	hints.ai_socktype = SOCK_DGRAM;
 
 	if (getaddrinfo(sname, service, &hints, &result))
 		err(1, "client getaddrinfo");
@@ -79,13 +76,10 @@ tfs_connect(const char *sname, const char *service, bool udp)
 		s = socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol);
 		if (s < 0)
 			continue;
-		if (udp) {
-			if (rp->ai_addrlen > sizeof(peeraddr))
-				continue;
-			memcpy(&peeraddr, rp->ai_addr, rp->ai_addrlen);
-			/* XXX Hmm just accept first? */
-			/* break; */
-		}
+		if (rp->ai_addrlen > sizeof(peeraddr))
+			continue;
+		memcpy(&peeraddr, rp->ai_addr, rp->ai_addrlen);
+		/* break; */
 		if (connect(s, rp->ai_addr, rp->ai_addrlen) != -1)
 			break;
 	}
@@ -97,21 +91,16 @@ tfs_connect(const char *sname, const char *service, bool udp)
 }
 
 int
-tfs_accept(const char *sname, const char *service, bool udp)
+tfs_accept(const char *sname, const char *service)
 {
 	struct addrinfo hints;
 	struct addrinfo *result, *rp;
-	struct sockaddr_in sin;
-	int optval, s, ss;
-	socklen_t slen;
+	int optval, s;
 
 	memset(&hints, 0, sizeof(hints));
-	if (udp)
-		hints.ai_socktype = SOCK_DGRAM;
-	else
-		hints.ai_socktype = SOCK_STREAM;
+	hints.ai_socktype = SOCK_DGRAM;
 	/*
-	 * Bind to TCP/UDP port
+	 * Bind to UDP port
 	 */
 	if (getaddrinfo(sname, service, &hints, &result))
 		err(1, "server getaddrinfo");
@@ -131,25 +120,14 @@ tfs_accept(const char *sname, const char *service, bool udp)
 		err(1, "server can't bind to %s:%s", sname, service);
 	freeaddrinfo(result);
 
-	if (udp) {
-		/* Do a PEEK to get first UDP packet client addr. */
-		printf("server waiting on initial UDP packet %s:%s\n", sname,
-		       service);
-		socklen_t alen = sizeof(peeraddr);
-		if (recvfrom(s, NULL, 0, MSG_PEEK, (struct sockaddr *)&peeraddr,
-			     &alen) < 0)
-			err(1, "recvfrom for first UDP packet");
-		printf("server got initial UDP packet %s:%s\n", sname, service);
-		return s;
-	}
-
-	if (listen(s, 5) < 0)
-		err(1, "server TCP listen");
-
-	slen = sizeof(sin);
-	if ((ss = accept(s, (struct sockaddr *)&sin, &slen)) < 0)
-		err(1, "server accept");
-	return ss;
+	/* Do a PEEK to get first UDP packet client addr. */
+	printf("server waiting on initial UDP packet %s:%s\n", sname, service);
+	socklen_t alen = sizeof(peeraddr);
+	if (recvfrom(s, NULL, 0, MSG_PEEK, (struct sockaddr *)&peeraddr,
+		     &alen) < 0)
+		err(1, "recvfrom for first UDP packet");
+	printf("server got initial UDP packet %s:%s\n", sname, service);
+	return s;
 }
 
 int
@@ -162,7 +140,6 @@ main(int argc, char **argv)
 	    {"listen", required_argument, 0, 'l'},
 	    {"port", required_argument, 0, 'p'},
 	    {"rx-rate", required_argument, 0, 'r'},
-	    {"udp", no_argument, 0, 'u'},
 	    {"verbose", no_argument, 0, 'v'},
 	    {0, 0, 0, 0},
 	};
@@ -171,7 +148,6 @@ main(int argc, char **argv)
 	const char *sport = NULL;
 	char devname[IFNAMSIZ + 1] = "vtun%d";
 	int fd, s, opt, li;
-	bool udp = false;
 	uint64_t rxrate = 0;
 
 	strncpy(progname, argv[0], sizeof(progname) - 1);
@@ -201,9 +177,6 @@ main(int argc, char **argv)
 			rxrate = (uint64_t)atoi(optarg) * 1000000ULL;
 			printf("RxRate: %lu\n", rxrate);
 			break;
-		case 'u':
-			udp = true;
-			break;
 		case 'v':
 			verbose = true;
 			break;
@@ -217,17 +190,14 @@ main(int argc, char **argv)
 	printf("opened tun device: %s fd: %d\n", devname, fd);
 
 	if (server == NULL) {
-		s = tfs_accept(listen, sport, udp);
-		if (!udp)
-			printf("accepted from client %d\n", s);
-		else
-			printf("bound udp socket %d\n", s);
+		s = tfs_accept(listen, sport);
+		printf("bound udp socket %d\n", s);
 	} else {
-		s = tfs_connect(server, sport, udp);
+		s = tfs_connect(server, sport);
 		printf("connected to server %d\n", s);
 	}
 
-	tfs_tunnel(fd, s, udp, rxrate);
+	tfs_tunnel(fd, s, rxrate);
 
 	sleep(10);
 

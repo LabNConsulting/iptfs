@@ -171,78 +171,33 @@ read_packet(int fd, struct ring *r, bool udp)
 	}
 }
 
-static ssize_t
-read_stream(int s, struct ring *r)
-{
-	struct mbuf *m = &r->mbuf[r->reading];
-	ssize_t n, pktlen;
-	uint8_t *lenbuf = m->start - 2;
-
-	n = recv(s, lenbuf, 2, 0);
-	if (n != 2) {
-		err(1, "read_stream: short read of len %ld on %s", n, r->name);
-	}
-
-	pktlen = (lenbuf[0] << 8) + lenbuf[1];
-	DBG("read_stream: pktlen %ld on %s\n", pktlen, r->name);
-
-	while (pktlen > 0) {
-		if ((n = recv(s, m->end, pktlen, 0)) <= 0)
-			err(1, "read_stream: bad read %ld from socket on %s", n,
-			    r->name);
-		DBG("read_stream: read %ld of %ld on %s\n", n, pktlen, r->name);
-		m->end += n;
-		pktlen -= n;
-	}
-	return (m->end - m->start);
-}
-
 static void
-write_packet(int fd, struct ring *r, bool istcp, bool isudp)
+write_packet(int fd, struct ring *r, bool isudp)
 {
-	const char *dname = istcp ? "write_stream" : "write_packet";
 	struct mbuf *m = &r->mbuf[r->writing];
 	ssize_t n, mlen;
-	uint8_t *span;
 
 	assert(r->writing != r->reading);
 
 	mlen = MBUF_LEN(m);
-	if (!istcp) {
-		span = m->start;
-		if (isudp)
-			n = sendto(fd, span, mlen, 0,
-				   (struct sockaddr *)&peeraddr,
-				   sizeof(peeraddr));
-		else
-			n = write(fd, span, mlen);
-	} else {
-		span = m->start - 2;
-		span[0] = (uint8_t)(mlen >> 8);
-		span[1] = (uint8_t)mlen;
-		mlen += 2;
-		n = send(fd, span, mlen, 0);
-	}
+	if (isudp)
+		n = sendto(fd, m->start, mlen, 0, (struct sockaddr *)&peeraddr,
+			   sizeof(peeraddr));
+	else
+		n = write(fd, m->start, mlen);
 	if (n < 0) {
-		warn("%s: bad write on %s %d for write_packet", dname, r->name,
-		     fd);
+		warn("write_packet: bad write on %s %d for write_packet",
+		     r->name, fd);
 	} else if (n != mlen) {
-		if (istcp)
-			err(1,
-			    "%s: short write (%ld of %ld) on "
-			    "%s for stream "
-			    "write",
-			    dname, n, mlen, r->name);
-		warn("%s: short write (%ld of %ld) on %s for "
-		     "stream write",
-		     dname, n, mlen, r->name);
+		warn("write_packet: short write (%ld of %ld) on %s for ", n,
+		     mlen, r->name);
 	}
 
-	DBG("%s: write() returns %ld on %s\n", dname, n, r->name);
+	DBG("write_packet: write() returns %ld on %s\n", n, r->name);
 	ring_wdone(r);
 }
 
-enum fdtype { FDT_FILE = 0, FDT_TCP, FDT_UDP };
+enum fdtype { FDT_FILE = 0, FDT_UDP };
 struct thread_args {
 	struct ring *r;
 	int fd;
@@ -266,7 +221,7 @@ write_packets(void *_arg)
 		pthread_mutex_unlock(&r->lock);
 		DBG("write_packets: ready on %s\n", r->name);
 
-		write_packet(fd, r, fdtype == FDT_TCP, fdtype == FDT_UDP);
+		write_packet(fd, r, fdtype == FDT_UDP);
 	}
 
 	return NULL;
@@ -297,9 +252,6 @@ read_packets(void *_arg)
 		DBG("read_packets: ready on ring %s\n", r->name);
 
 		switch (fdtype) {
-		case FDT_TCP:
-			n = read_stream(fd, r);
-			break;
 		case FDT_UDP:
 			n = read_packet(fd, r, true);
 			break;
@@ -318,7 +270,7 @@ read_packets(void *_arg)
  * tunnel - tunnel from tun intf over a TCP connection.
  */
 void
-tfs_tunnel(int fd, int s, bool udp, uint64_t rxrate)
+tfs_tunnel(int fd, int s, uint64_t rxrate)
 {
 	static struct thread_args args[4];
 	static struct thread_args *ap = args;
@@ -337,7 +289,7 @@ tfs_tunnel(int fd, int s, bool udp, uint64_t rxrate)
 
 	ap->r = &red;
 	ap->fd = s;
-	ap->type = udp ? FDT_UDP : FDT_TCP;
+	ap->type = FDT_UDP;
 	pthread_create(&threads[1], NULL, write_packets, ap++);
 
 	ap->r = &red;
@@ -347,7 +299,7 @@ tfs_tunnel(int fd, int s, bool udp, uint64_t rxrate)
 
 	ap->r = &black;
 	ap->fd = s;
-	ap->type = udp ? FDT_UDP : FDT_TCP;
+	ap->type = FDT_UDP;
 	pthread_create(&threads[3], NULL, read_packets, ap++);
 
 	pthread_join(threads[0], &rv);
