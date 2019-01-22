@@ -4,5 +4,6 @@ target/
 __pycache__/
 *.egg-info/
 *.so
+avenv
 venv
 .#*
