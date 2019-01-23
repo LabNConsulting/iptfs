@@ -1,73 +1,79 @@
 
 * Packet Format
+** IPsec
+*** Payload Frame Format
 
-#+begin_src artist
+#+begin_example
 
-  IPsec Payload Frame Format
-        0                   1                   2                   3
-        0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
-       +-----------------------------------------------------------------+
-     0 |V|          Reserved           |          BlockOffset            |
-       +-----------------------------------------------------------------+
-     4 |       Data Blocks ...
-       +---------------
+     0                   1                   2                   3
+     0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
+    +-----------------------------------------------------------------+
+  0 |V|          Reserved           |          BlockOffset            |
+    +-----------------------------------------------------------------+
+  4 |       Data Blocks ...
+    +---------------
 
-     V - Version, must be set to zero and dropped if set to 1.
-     Reserved  - set to 0 ignored on receipt.
-     BlockOffset - This is the number of bytes before the next IP/IPv6 data
-                   block. It can point past the end of the containing packet in
-                   which case this packet is the continuation of a preivous
-                   one and possibly padding.
-     Data Blocks - variable number of bytes that constitute the start or
-                   continuation of a previous data block.
-#+end_src
+#+end_example
 
-#+begin_src artist
+    - V :: Version, must be set to zero and dropped if set to 1.
+    - Reserved  :: set to 0 ignored on receipt.
+    - BlockOffset :: This is the number of bytes before the next IP/IPv6 data
+      block. It can point past the end of the containing packet in which case
+      this packet is the continuation of a preivous one and possibly padding.
+    - Data Blocks :: variable number of bytes that constitute the start or
+      continuation of a previous data block.
 
-  Data Block
-        0                   1                   2                   3
-        0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
-       +-----------------------------------------------------------------+
-     0 | Version | rest of IPv4, IPv6 or pad.
-       +----------
+*** Data Block
 
-     Version - 0x0 for pad, 0x4 for IPv4, 0x6 for IPv6. If padding then its length
-               extends to the end of the containing packet and is unspecified
-               data. For IPv4 and IPv6 the length field must at least be present.
-               It is fine and expected that the packet data may span multiple
-               containing packets. Subsequent packets will have their offset set
-               to point past this IP data.
+#+begin_example
 
-#+end_src
+     0                   1                   2                   3
+     0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
+    +-----------------------------------------------------------------+
+  0 | Version | rest of IPv4, IPv6 or pad.
+    +----------
 
-#+begin_src artist
+#+end_example
 
-  IKEv2 Informational ACK Notification
+    - Version :: 0x0 for pad, 0x4 for IPv4, 0x6 for IPv6. If padding then its
+      length extends to the end of the containing packet and is unspecified
+      data. For IPv4 and IPv6 the length field must at least be present. It is
+      fine and expected that the packet data may span multiple containing
+      packets. Subsequent packets will have their offset set to point past this
+      IP data.
 
-         0                   1                   2                   3
-         0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
-        +-----------------------------------------------------------------+
-     0  |V|  Reserved   |                     DrpCnt                      |
-        +-----------------------------------------------------------------+
-     4  |                          Timestamp...
-        +-----------------------------------------------------------------+
-     8                          ...Timestamp                              |
-        +-----------------------------------------------------------------+
-     12 |                          AckSeqStart                            |
-        +-----------------------------------------------------------------+
-     16 |                          AckSeqEnd                              |
-        +-----------------------------------------------------------------+
+** IKEv2
+***  IKEv2 Informational ACK Notification
 
-     V - Version, must be set to zero and dropped if set to 1.
-     Reserved  - set to 0 ignored on receipt.
-     DrpCnt - For ack data block this is the drop count between AckSeqStart and
-              AckSeqEnd, If the drops exceed the resolution of the counter then
-              set to the max value.
+#+begin_example
 
-#+end_src
+      0                   1                   2                   3
+      0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
+     +-----------------------------------------------------------------+
+  0  |V|  Reserved   |                     DrpCnt                      |
+     +-----------------------------------------------------------------+
+  4  |                          Timestamp...
+     +-----------------------------------------------------------------+
+  8                          ...Timestamp                              |
+     +-----------------------------------------------------------------+
+  12 |                          AckSeqStart                            |
+     +-----------------------------------------------------------------+
+  16 |                          AckSeqEnd                              |
+     +-----------------------------------------------------------------+
+
+#+end_example
+
+    - V :: Version, must be set to zero and dropped if set to 1.
+    - Reserved :: set to 0 ignored on receipt.
+    - DrpCnt :: For ack data block this is the drop count between AckSeqStart and
+      AckSeqEnd, If the drops exceed the resolution of the counter then set to
+      the max value.
+
 
 * Results
 ** C w/ select (1 pp)
+#+begin_src bash
+
     00:00 [10:17:20 dpdk2:~/w/tcptfs]$ iperf -c 192.168.30.67
     ------------------------------------------------------------
     Client connecting to 192.168.30.67, TCP port 5001
@@ -76,8 +82,10 @@
     [  3] local 192.168.30.66 port 33854 connected with 192.168.30.67 port 5001
     [ ID] Interval       Transfer     Bandwidth
     [  3]  0.0-10.3 sec   479 KBytes   381 Kbits/sec
+#+end_src
 ** Python TCP threaded.
 *** 1500 MTU
+#+begin_src bash
     (venv) 00:08 [22:04:41 dpdk2:~/w/tcptfs]$ iperf -c 192.168.30.67
     ------------------------------------------------------------
     Client connecting to 192.168.30.67, TCP port 5001
@@ -94,7 +102,9 @@
     [  3] local 192.168.30.66 port 34014 connected with 192.168.30.67 port 5001
     [ ID] Interval       Transfer     Bandwidth
     [  3]  0.0-10.0 sec   116 MBytes  97.0 Mbits/sec
+#+end_src
 *** 9000 MTU
+#+begin_src bash
     ------------------------------------------------------------
     Client connecting to 192.168.30.67, TCP port 5001
     TCP window size:  325 KByte (default)
@@ -102,9 +112,11 @@
     [  3] local 192.168.30.66 port 34060 connected with 192.168.30.67 port 5001
     [ ID] Interval       Transfer     Bandwidth
     [  3]  0.0-10.0 sec   636 MBytes   533 Mbits/sec
+#+end_src
 
 ** C TCP threaded.
 *** 1500 MTU
+#+begin_src bash
     (venv) 00:02 [03:22:52 dpdk2:~/w/tcptfs]$ iperf -c 192.168.30.67
     ------------------------------------------------------------
     Client connecting to 192.168.30.67, TCP port 5001
@@ -113,8 +125,10 @@
     [  3] local 192.168.30.66 port 34038 connected with 192.168.30.67 port 5001
     [ ID] Interval       Transfer     Bandwidth
     [  3]  0.0-10.0 sec  1.01 GBytes   866 Mbits/sec
+#+end_src
 
 *** 9000 MTU
+#+begin_src bash
     (venv) 00:10 [03:30:55 dpdk2:~/w/tcptfs]$ iperf -c 192.168.30.67
     ------------------------------------------------------------
     Client connecting to 192.168.30.67, TCP port 5001
@@ -123,8 +137,10 @@
     [  3] local 192.168.30.66 port 34056 connected with 192.168.30.67 port 5001
     [ ID] Interval       Transfer     Bandwidth
     [  3]  0.0-10.0 sec  3.04 GBytes  2.61 Gbits/sec
+#+end_src
 ** C UDP Threaded.
 *** 1500 MTU (transport is UDP on 9000 MTU)
+#+begin_src bash
     ------------------------------------------------------------
     Client connecting to 192.168.30.67, TCP port 5001
     TCP window size: 85.0 KByte (default)
@@ -132,8 +148,10 @@
     [  3] local 192.168.30.66 port 34100 connected with 192.168.30.67 port 5001
     [ ID] Interval       Transfer     Bandwidth
     [  3]  0.0-10.0 sec  1.27 GBytes  1.09 Gbits/sec
+#+end_src
 
 *** 9000 MTU (transport is UDP on 9000 MTU interface)
+#+begin_src bash
     ------------------------------------------------------------
     Client connecting to 192.168.30.67, TCP port 5001
     TCP window size:  325 KByte (default)
@@ -141,8 +159,10 @@
     [  3] local 192.168.30.66 port 34098 connected with 192.168.30.67 port 5001
     [ ID] Interval       Transfer     Bandwidth
     [  3]  0.0-10.0 sec  2.66 GBytes  2.28 Gbits/sec
+#+end_src
 
 *** 8970 MTU (transport is UDP on 9000 MTU interface)
+#+begin_src bash
     ------------------------------------------------------------
     Client connecting to 192.168.30.67, TCP port 5001
     TCP window size:  325 KByte (default)
@@ -157,3 +177,5 @@
     [  3] local 192.168.30.66 port 34104 connected with 192.168.30.67 port 5001
     [ ID] Interval       Transfer     Bandwidth
     [  3]  0.0-10.0 sec  3.82 GBytes  3.28 Gbits/sec
+
+#+end_src
