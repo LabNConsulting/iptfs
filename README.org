@@ -1,4 +1,71 @@
 
+* Packet Format
+
+#+begin_src artist
+
+  IPsec Payload Frame Format
+        0                   1                   2                   3
+        0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
+       +-----------------------------------------------------------------+
+     0 |V|          Reserved           |          BlockOffset            |
+       +-----------------------------------------------------------------+
+     4 |       Data Blocks ...
+       +---------------
+
+     V - Version, must be set to zero and dropped if set to 1.
+     Reserved  - set to 0 ignored on receipt.
+     BlockOffset - This is the number of bytes before the next IP/IPv6 data
+                   block. It can point past the end of the containing packet in
+                   which case this packet is the continuation of a preivous
+                   one and possibly padding.
+     Data Blocks - variable number of bytes that constitute the start or
+                   continuation of a previous data block.
+#+end_src
+
+#+begin_src artist
+
+  Data Block
+        0                   1                   2                   3
+        0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
+       +-----------------------------------------------------------------+
+     0 | Version | rest of IPv4, IPv6 or pad.
+       +----------
+
+     Version - 0x0 for pad, 0x4 for IPv4, 0x6 for IPv6. If padding then its length
+               extends to the end of the containing packet and is unspecified
+               data. For IPv4 and IPv6 the length field must at least be present.
+               It is fine and expected that the packet data may span multiple
+               containing packets. Subsequent packets will have their offset set
+               to point past this IP data.
+
+#+end_src
+
+#+begin_src artist
+
+  IKEv2 Informational ACK Notification
+
+         0                   1                   2                   3
+         0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
+        +-----------------------------------------------------------------+
+     0  |V|  Reserved   |                     DrpCnt                      |
+        +-----------------------------------------------------------------+
+     4  |                          Timestamp...
+        +-----------------------------------------------------------------+
+     8                          ...Timestamp                              |
+        +-----------------------------------------------------------------+
+     12 |                          AckSeqStart                            |
+        +-----------------------------------------------------------------+
+     16 |                          AckSeqEnd                              |
+        +-----------------------------------------------------------------+
+
+     V - Version, must be set to zero and dropped if set to 1.
+     Reserved  - set to 0 ignored on receipt.
+     DrpCnt - For ack data block this is the drop count between AckSeqStart and
+              AckSeqEnd, If the drops exceed the resolution of the counter then
+              set to the max value.
+
+#+end_src
+
 * Results
 ** C w/ select (1 pp)
     00:00 [10:17:20 dpdk2:~/w/tcptfs]$ iperf -c 192.168.30.67
