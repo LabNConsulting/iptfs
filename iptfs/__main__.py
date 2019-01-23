@@ -120,7 +120,8 @@ def main(*margs):
         print("Unexpected exception: %s", str(e))
         sys.exit(1)
 
-    threads = iptfs.tunnel(tunfd, s, True, args.rx_rate * 1000000)
+    threads = iptfs.tunnel(tunfd, s, args.rx_rate * 1000000)
+    threads.extend(iptfs.tunnel(s, tunfd, args.rx_rate * 1000000))
     for thread in threads:
         thread.join()
 
