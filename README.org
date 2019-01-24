@@ -5,11 +5,11 @@
    we use a constant send IPsec tunnel of same sized packets. The tunnel
    bandwidth is an input to the algorithm. Additionally the Path MTU is also an
    input to the algorithm. Given those inputs we can calculate the frequency of
-   max MTU tunnel packets we can send in order to achieve the reqeusted
+   max MTU tunnel packets we can send in order to achieve the requested
    bandwidth.
 
-   We must also adapt to network congestion and downgrade the bandwidth to
-   accommodate. If congestion were handled in the network on a byte level we
+   We may also wish to adapt to network congestion and downgrade the bandwidth
+   to accommodate. If congestion were handled in the network on a byte level we
    might could lower the IPsec (encap) packet size to adjust; however, as
    congestion is normally handled in the network by dropping packets we instead
    choose to lower the frequency we send our max MTU encap packets to align with
@@ -20,6 +20,10 @@
    control algorithm will adjust the frequency that we send our packets until
    the congestion is accommodated. We do not standardize the congestion control
    algorithm, although we have described an algorithm that one could use.
+
+   Congestion control is an optional feature. The system can also operate in an
+   inelastic configuration where the bandwidth required is assumed to be
+   available.
 
 ** IPsec
 *** Payload Frame Format
@@ -91,6 +95,9 @@
     - DrpCnt :: For ack data block this is the drop count between AckSeqStart and
       AckSeqEnd, If the drops exceed the resolution of the counter then set to
       the max value.
+    - AckSeqStart :: The first SeqNum of the range that this information relates to.
+    - AckSeqEnd :: The last SeqNum of the range that this information relates to.
+    - Timestamp :: The time when this notification was created and sent.
 
 
 * Results
