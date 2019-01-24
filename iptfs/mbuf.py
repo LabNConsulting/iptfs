@@ -29,6 +29,9 @@ class MBuf:
     def hdrspace(self):
         return self.space.nbytes - self.start.nbytes
 
+    def after(self):
+        return self.end.nbytes
+
     def len(self):
         return self.start.nbytes - self.end.nbytes
 

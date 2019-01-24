@@ -45,10 +45,14 @@
     - V :: Version, must be set to zero and dropped if set to 1.
     - Reserved  :: set to 0 ignored on receipt.
     - BlockOffset :: This is the number of bytes before the next IP/IPv6 data
-      block. It can point past the end of the containing packet in which case
-      this packet is the continuation of a preivous one and possibly padding.
+                     block. It can point past the end of the containing packet
+                     in which case this packet is the continuation of a preivous
+                     one and possibly padding. NOTE: This can point into the
+                     next packet and yet the current packet can end with padding.
+                     This will happen if there's not enough bytes to start a
+                     new inner packet in the current outer packet.
     - Data Blocks :: variable number of bytes that constitute the start or
-      continuation of a previous data block.
+                     continuation of a previous data block.
 
 *** Data Block
 
@@ -63,11 +67,11 @@
 #+end_example
 
     - Version :: 0x0 for pad, 0x4 for IPv4, 0x6 for IPv6. If padding then its
-      length extends to the end of the containing packet and is unspecified
-      data. For IPv4 and IPv6 the length field must at least be present. It is
-      fine and expected that the packet data may span multiple containing
-      packets. Subsequent packets will have their offset set to point past this
-      IP data.
+                 length extends to the end of the containing packet and is
+                 unspecified data. For IPv4 and IPv6 the length field must at
+                 least be present. It is fine and expected that the packet data
+                 may span multiple containing packets. Subsequent packets will
+                 have their offset set to point past this IP data.
 
 ** IKEv2
 ***  IKEv2 Informational ACK Notification
@@ -92,11 +96,13 @@
 
     - V :: Version, must be set to zero and dropped if set to 1.
     - Reserved :: set to 0 ignored on receipt.
-    - DrpCnt :: For ack data block this is the drop count between AckSeqStart and
-      AckSeqEnd, If the drops exceed the resolution of the counter then set to
-      the max value.
-    - AckSeqStart :: The first SeqNum of the range that this information relates to.
-    - AckSeqEnd :: The last SeqNum of the range that this information relates to.
+    - DrpCnt :: For ack data block this is the drop count between AckSeqStart
+                and AckSeqEnd, If the drops exceed the resolution of the counter
+                then set to the max value.
+    - AckSeqStart :: The first SeqNum of the range that this information relates
+                     to.
+    - AckSeqEnd :: The last SeqNum of the range that this information relates
+                   to.
     - Timestamp :: The time when this notification was created and sent.
 
 
