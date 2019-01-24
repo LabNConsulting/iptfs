@@ -5,9 +5,7 @@
 from __future__ import absolute_import, division, unicode_literals, print_function, nested_scopes
 
 import binascii
-import io
 import logging
-import os
 import sys
 import threading
 import traceback
@@ -37,82 +35,126 @@ def put32(m, i):
     m[3] = (i) & 0xFF
 
 
-def read_packet(fd, m, issock):
-    m.seq = 0
+# -----------------
+# Interface Packets
+# -----------------
 
-    if not issock:
-        n = fd.readinto(m.start)
-    else:
-        m.prepend(4)
-        (n, addr) = fd.recvfrom_into(m.start)
-        assert (addr == peeraddr)
-        if n >= 4:
-            m.seq = get32(m.start)
-            m.start = m.start[4:]
-            n -= 4
 
+def read_intf_packet(fd, m):
+    n = fd.readinto(m.start)
     if n <= 0:
-        logger.critical("read: bad read %d on %s", n, str(fd))
-        sys.exit(1)
-    elif DEBUG:
-        logger.debug("read: %d bytes seq %d on %s", n, m.seq, str(fd))
-
-    m.end = m.start[n:]
-    return m.len()
-
-
-def write_packet(fd, m, isfile):
-    mlen = m.len()
-    if not isfile:
-        # Prepend sequence number on tunnel.
-        m.prepend(4)
-        put32(m.start, m.seq)
-        mlen += 4
+        logger.error("read: bad read %d on interface, dropping", n)
+        return 0
     if DEBUG:
-        logger.debug("write: got mlen %d seq %d on %s", mlen, m.seq, str(fd))
+        logger.debug("read: %d bytes on interface", n)
+    m.end = m.start[n:]
+    return n
 
-    n = os.write(fd, m.start[:mlen])
+
+def write_intf_packet(fd, m):
+    mlen = m.len()
+    n = fd.write(m.start[:mlen])
     if n != mlen:
-        if n < 0:
-            logger.error("write: bad write to interface on %s", str(fd))
-        else:
-            logger.warning("write: short write %d to interface on %s", n, str(fd))
+        logger.error("write: bad write %d (mlen %d) on interface", n, mlen)
     elif DEBUG:
         logger.debug("write: %d bytes (%s) on %s ", n, binascii.hexlify(m.start[:8]), str(fd))
 
 
-def read_packets(fd, freeq, q, max_rxrate):
+def write_intf_packets(fd, outq, inq):
+    logger.info("write_packets: from %s", outq.name)
+    while True:
+        m = outq.pop()
+        write_intf_packet(fd, m)
+        inq.push(m, True)
+
+
+# ------------------
+# TFS Tunnel Packets
+# ------------------
+
+
+def read_tunnel_packet(s, m):
+    m.seq = 0
+
+    m.prepend(4)
+    (n, addr) = s.recvfrom_into(m.start)
+    assert (addr == peeraddr)
+    if n <= 4:
+        logger.error("read: bad read %d on TFS link, dropping", n)
+        return 0
+
+    m.seq = get32(m.start)
+    m.start = m.start[4:]
+    n -= 4
+    m.end = m.start[n:]
+
+    if DEBUG:
+        logger.debug("read: %d bytes seq %d on %s", n, m.seq, str(s))
+
+    return n
+
+
+def recv_ack(inq, m):  # pylint: disable=W0613
+    pass
+
+
+def write_tunnel_packet(s, m):
+    # Prepend sequence number on tunnel.
+    m.prepend(4)
+    put32(m.start, m.seq)
+    mlen = m.len()
+
+    n = s.send(m.start[:mlen])
+    if n != mlen:
+        logger.error("write: bad write %d of %d on TFS link", n, mlen)
+    elif DEBUG:
+        logger.debug("write: %d bytes (%s) on TFS Link", n, binascii.hexlify(m.start[:8]))
+
+
+def write_tunnel_packets(fd, outq, inq, rate):  # pylint: disable=W0613
+    logger.info("write_packets: from %s", outq.name)
+
+    # Loop writing packets limited by "rate"
+    while True:
+        m = outq.pop()
+        write_tunnel_packet(fd, m)
+        inq.push(m, True)
+
+
+# -------
+# Generic
+# -------
+
+
+def read_packets(fd, inq, outq, max_rxrate):
     logger.info("read: start reading on %s", str(fd))
     issock = hasattr(fd, "listen")
-    if not issock:
-        fd = io.open(fd, "rb", buffering=0)
+    if issock:
+        readf = read_tunnel_packet
+    else:
+        readf = read_intf_packet
 
-    # IP/UDP + IP/TCP + TCP timestamps
-    overhead = 20 + 8 + 20 + 20 + 12
-    rxlimit = Limit(max_rxrate, overhead, 10) if max_rxrate else None
+    rxlimit = None
+    if max_rxrate:
+        # IP/UDP + IP/TCP + TCP timestamps
+        # overhead = 20 + 8 + 20 + 20 + 12
+        overhead = 0
+        rxlimit = Limit(max_rxrate, overhead, 10) if max_rxrate else None
 
     while True:
-        m = freeq.pop()
-        n = read_packet(fd, m, issock)
+        m = inq.pop()
+
+        n = 0
+        if m.len() > 0:
+            recv_ack(inq, m)
+        else:
+            n = readf(fd, m)
         if n <= 0 or (rxlimit and rxlimit.limit(n)):
             # If we should drop then push back on readq
-            freeq.push(m)
+            inq.push(m, True)
         else:
             # else add to write queue.
-            q.push(m)
-
-
-def write_packets(fd, q, freeq):
-    logger.info("write_packets: from %s", q.name)
-    isfile = not hasattr(fd, "listen")
-    try:
-        fd = fd.fileno()
-    except Exception:
-        pass
-    while True:
-        m = q.pop()
-        write_packet(fd, m, isfile)
-        freeq.push(m)
+            outq.push(m, False)
 
 
 def thread_catch(func, *args):
@@ -127,16 +169,32 @@ def thread_catch(func, *args):
     return threading.Thread(target=thread_main)
 
 
-def tunnel(fromfd, tofd, rxrate):
-    freeq = MQueue("RED FREEQ", MAXQSZ, MAXBUF, HDRSPACE, DEBUG)
-    q = MQueue("BLACK TXQ", MAXQSZ, 0, 0, DEBUG)
+def tunnel_ingress(riffd, s, rate):
+    inq = MQueue("TFS Ingress INQ", MAXQSZ, MAXBUF, HDRSPACE, DEBUG)
+    outq = MQueue("TFS Ingress OUTQ", MAXQSZ, 0, 0, DEBUG)
 
     threads = [
-        thread_catch(write_packets, tofd, q, freeq),
-        thread_catch(read_packets, fromfd, freeq, q, rxrate),
+        thread_catch(read_packets, riffd, inq, outq, 0),
+        thread_catch(write_tunnel_packets, s, outq, inq, rate),
     ]
+
     for t in threads:
-        logger.debug("Starting thread %s", str(t))
+        t.daemon = True
+        t.start()
+
+    return threads
+
+
+def tunnel_egress(s, wiffd, congest_rate):
+    inq = MQueue("TFS Egress INQ", MAXQSZ, MAXBUF, HDRSPACE, DEBUG)
+    outq = MQueue("TFS Egress OUTQ", MAXQSZ, 0, 0, DEBUG)
+
+    threads = [
+        thread_catch(read_packets, s, inq, outq, congest_rate),
+        thread_catch(write_intf_packets, wiffd, outq, inq),
+    ]
+
+    for t in threads:
         t.daemon = True
         t.start()
 

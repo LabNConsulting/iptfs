@@ -29,12 +29,14 @@ def usage():
 
 def tun_alloc(devname):
     fd = os.open("/dev/net/tun", os.O_RDWR)
+    rfd = io.open(fd, "rb", buffering=0)
+    wfd = io.open(fd, "wb", buffering=0)
     # ff = io.open(fd, "rb")
     # f = io.open("/dev/net/tun", "rb", buffering=0)
     ifs = fcntl.ioctl(fd, TUNSETIFF, struct.pack("16sH", devname.encode(), IFF_TUN | IFF_NO_PI))
     devname = ifs[:16]
     devname = devname.strip(b"\x00")
-    return fd, devname
+    return rfd, wfd, devname
 
 
 def connect(sname, service, isudp):
@@ -68,16 +70,13 @@ def accept(sname, service, isudp):
         except socket.error as e:
             logger.info("Got exception for %s: %s", str(hent), str(e))
             continue
-        except Exception as e:
-            logger.info("Got unexpected exception for %s: %s", str(hent), str(e))
-            continue
     else:
         logger.info("Can't bind to %s:%s", sname, service)
         return None
 
     if isudp:
         # Do PEEK to get first UDP address from client.
-        logger.info("Server: waiting on initial UDP packet %s:%s:%s", sname, service, str(hent))
+        logger.info("Server: waiting on initial UDP packet %s:%s:%s", sname, service, str(hent))  # pylint: disable=W0631
         b = bytearray(9170)
         (n, iptfs.peeraddr) = s.recvfrom_into(b, 0, socket.MSG_PEEK)
         logger.info("Server: Got UDP packet from %s of len %d", iptfs.peeraddr, n)
@@ -90,14 +89,20 @@ def accept(sname, service, isudp):
     return s.accept()
 
 
-def main(*margs):
+def checked_main(*margs):
     parser = argparse.ArgumentParser()
     parser.add_argument("-c", "--connect", help="Connect to server")
+    parser.add_argument(
+        "--congest-rate", type=int, default=0, help="Forced maximum egress rate in Megabits")
     parser.add_argument("-d", "--dev", default="vtun%d", help="Name of tun interface.")
+    parser.add_argument(
+        "--no-egress", action="store_true", help="Do not create tunnel egress endpoint")
+    parser.add_argument(
+        "--no-ingress", action="store_true", help="Do not create tunnel ingress endpoint")
     parser.add_argument("-l", "--listen", default="::", help="Server listen on this address")
     parser.add_argument("-p", "--port", default="8001", help="TCP port to use.")
     # parser.add_argument("-u", "--udp", action="store_true", help="Use UDP instead of TCP")
-    parser.add_argument("-r", "--rx-rate", type=int, default=0, help="Maximum RX rate in Megabits")
+    parser.add_argument("-r", "--rate", type=int, default=0, help="Tunnel rate in Megabits")
     parser.add_argument("-v", "--verbose", action="store_true", help="Name of tun interface.")
     args = parser.parse_args(*margs)
 
@@ -106,26 +111,33 @@ def main(*margs):
     else:
         logging.basicConfig(level=logging.INFO)
 
-    tunfd, devname = tun_alloc(args.dev)
-    print("opened tun device: {} {} ".format(devname, tunfd))
+    riffd, wiffd, devname = tun_alloc(args.dev)
+    print("opened tun device: {} {} {}".format(devname, riffd, wiffd))
 
-    try:
-        if not args.connect:
-            s, _ = accept(args.listen, args.port, True)
-            print("accepted from client: %s", str(s))
-        else:
-            s = connect(args.connect, args.port, True)
-            print("connected to server: %s", str(s))
-    except Exception as e:
-        print("Unexpected exception: %s", str(e))
-        sys.exit(1)
+    if not args.connect:
+        s, _ = accept(args.listen, args.port, True)
+        print("accepted from client: %s", str(s))
+    else:
+        s = connect(args.connect, args.port, True)
+        print("connected to server: %s", str(s))
 
-    threads = iptfs.tunnel(tunfd, s, args.rx_rate * 1000000)
-    threads.extend(iptfs.tunnel(s, tunfd, args.rx_rate * 1000000))
+    threads = []
+    if not args.no_ingress:
+        threads.extend(iptfs.tunnel_ingress(riffd, s, args.rate * 1000000))
+    if not args.no_egress:
+        threads.extend(iptfs.tunnel_egress(s, wiffd, args.congest_rate * 1000000))
     for thread in threads:
         thread.join()
 
     return 0
+
+
+def main(*margs):
+    try:
+        return checked_main(*margs)
+    except Exception as e:  # pylint: disable=W0703
+        print("Unexpected exception: %s", str(e))
+        sys.exit(1)
 
 
 __author__ = "Christian E. Hopps"

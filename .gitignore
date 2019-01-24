@@ -1,6 +1,9 @@
 .eggs/
+auto/
 build/
 target/
+README.pdf
+README.tex
 __pycache__/
 *.egg-info/
 *.so

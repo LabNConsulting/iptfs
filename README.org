@@ -1,5 +1,26 @@
 
 * Packet Format
+** Constant Bandwith
+   The goal of TFS is to hide the size and frequency of the packets. To do this
+   we use a constant send IPsec tunnel of same sized packets. The tunnel
+   bandwidth is an input to the algorithm. Additionally the Path MTU is also an
+   input to the algorithm. Given those inputs we can calculate the frequency of
+   max MTU tunnel packets we can send in order to achieve the reqeusted
+   bandwidth.
+
+   We must also adapt to network congestion and downgrade the bandwidth to
+   accommodate. If congestion were handled in the network on a byte level we
+   might could lower the IPsec (encap) packet size to adjust; however, as
+   congestion is normally handled in the network by dropping packets we instead
+   choose to lower the frequency we send our max MTU encap packets to align with
+   this fact.
+
+   We add regular reports from the receiver on packet drops over a sequence of
+   packets to input into a congestion algorithm. The output of this congestion
+   control algorithm will adjust the frequency that we send our packets until
+   the congestion is accommodated. We do not standardize the congestion control
+   algorithm, although we have described an algorithm that one could use.
+
 ** IPsec
 *** Payload Frame Format
 
@@ -7,6 +28,8 @@
 
      0                   1                   2                   3
      0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
+    +-----------------------------------------------------------------+
+ -4 |                     SeqNum (non-ipsec only)                     |
     +-----------------------------------------------------------------+
   0 |V|          Reserved           |          BlockOffset            |
     +-----------------------------------------------------------------+

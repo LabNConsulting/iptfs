@@ -12,12 +12,13 @@ logger = logging.getLogger(__file__)
 class MBuf:
     def __init__(self, size, hdrspace):
         self.space = memoryview(bytearray(size))
-        self.end = self.start = self.space[hdrspace:]
         self.reset(hdrspace)
+        self.end = self.start = self.space[hdrspace:]
+        self.seq = self.flags = 0
 
     def reset(self, hdrspace):
         self.end = self.start = self.space[hdrspace:]
-        self.seq = 0
+        self.flags = self.seq = 0
 
     def prepend(self, space):
         newstart = self.hdrspace() - space
@@ -37,9 +38,8 @@ class MQueue:
     def __init__(self, name, count, maxbuf, hdrspace, debug):  # pylint: disable=R0913
         """MQueue is a queue for MBUfs.
 
-        If maxbuf is non-0 then this is the managing queue. A managing queue
-        will create count MBufs and will reset them on push and set there
-        sequence number on pop.
+        If maxbuf is non-0 then the queue will allocate and push count empty
+        mbufs on creation.
         """
 
         self.name = name
@@ -52,7 +52,6 @@ class MQueue:
         self.lock = threading.Lock()
         self.push_cv = threading.Condition(self.lock)
         self.pop_cv = threading.Condition(self.lock)
-        self.seq = 0
         self.mbufs = []
         if self.manage:
             for _ in range(0, count):
@@ -73,17 +72,29 @@ class MQueue:
 
             m = self.mbufs.pop()
 
-            if self.manage:
-                self.seq += 1
-                m.seq = self.seq
-
             if self.full():
                 self.push_cv.notify()
 
             return m
 
-    def push(self, m):
+    def trypop(self):
+        with self.pop_cv:
+            if self.empty():
+                return None
+        m = self.mbufs.pop()
+
         if self.manage:
+            if self.full():
+                self.push_cv.notify()
+
+            return m
+
+    def push(self, m, reset):
+        """push an mbuf on the queue.
+
+        If reset is true then the mbuf is reset to an initial state.
+        """
+        if reset:
             m.seq = 0
             m.reset(self.hdrspace)
 
