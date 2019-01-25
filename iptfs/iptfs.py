@@ -158,7 +158,8 @@ def add_to_inner_packet(tmbuf: MBuf, new: bool, m: MBuf, freeq: MQueue, outq: MQ
 
             if (start[0] & 0xF0) not in (0x40, 0x60):
                 if DEBUG:
-                    logger.debug("add_to_inner_packet mbuf len == 0, padding %d", start[0])
+                    logger.debug("add_to_inner_packet mbuf len == 0, padding (verbyte %d)",
+                                 start[0])
                 tmbuf.start = tmbuf.end
                 return m
 
@@ -272,14 +273,14 @@ def read_tunnel_into_packet(s: socket.socket, tmbuf: MBuf, freeq: MQueue, outq: 
     seq = 0
     while True:
         # If we don't have a current outer packet get one.
-        if seq == 0:
+        if seq == 0 or tmbuf.len() == 0:
             seq, reset = tunnel_get_outer_packet(s, tmbuf, outq, rxlimit)
 
         if m and reset:
             m.reset(freeq.hdrspace)
 
         # Consume the outer packet.
-        m, seq = add_to_inner_packet(tmbuf, True, m, freeq, outq)
+        m = add_to_inner_packet(tmbuf, True, m, freeq, outq)
 
 
 # We really want MHeaders with MBuf chains here.
