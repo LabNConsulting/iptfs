@@ -61,7 +61,6 @@ class Periodic:
         self.ival = 1.0 / packet_rate
 
     def wait(self):
-        logging.debug("Periodic wait called.")
         now = time.time()
         delta = now - self.timestamp
         waittime = self.ival - delta
@@ -70,9 +69,9 @@ class Periodic:
             if waittime != 0:
                 logging.info("Overran periodic timer by %f seconds", -waittime)
         else:
-            logging.debug("Waiting: %s", str(self.ival - delta))
+            # logging.debug("Waiting: %s", str(self.ival - delta))
             time.sleep(self.ival - delta)
-            logging.debug("Waking up!")
+            # logging.debug("Waking up!")
             self.timestamp = time.time()
         return True
 

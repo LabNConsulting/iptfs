@@ -253,7 +253,7 @@ def read_tunnel_into_packet(s: socket.socket, tmbuf: MBuf, freeq: MQueue, outq: 
             seq, reset = tunnel_get_outer_packet(s, tmbuf, outq, rxlimit)
 
         if m and reset:
-            m.reset()
+            m.reset(freeq.hdrspace)
 
         # Consume the outer packet.
         m = add_to_inner_packet(tmbuf, True, m, freeq, outq)
@@ -281,7 +281,6 @@ def read_tunnel_packets(s, freeq: MQueue, outq: MQueue, max_rxrate: int):
 
 
 def write_empty_tunnel_packet(s: socket.socket, seq: int, mtu: int):
-    logging.info("write_empty_tunnel_packet seq: %d, mtu %d", seq, mtu)
     m = emptym
     mlen = mtu
 
@@ -292,7 +291,8 @@ def write_empty_tunnel_packet(s: socket.socket, seq: int, mtu: int):
     if n != mlen:
         logger.error("write: bad write %d of %d on TFS link", n, mlen)
     elif DEBUG:
-        logger.debug("write: %d bytes (%s) on TFS Link", n, binascii.hexlify(m.start[:8]))
+        # logger.debug("write: %d bytes (%s) on TFS Link", n, binascii.hexlify(m.start[:8]))
+        pass
 
     return None, seq
 
@@ -300,13 +300,15 @@ def write_empty_tunnel_packet(s: socket.socket, seq: int, mtu: int):
 def write_tunnel_packet(  # pylint: disable=R0912,R0913,R0915
         s: socket.socket, seq: int, mtu: int, leftover: MBuf, inq: MQueue, freeq: MQueue):
 
-    logging.info("write_tunnel_packet seq: %d, mtu %d", seq, mtu)
+    # if DEBUG:
+    #     logging.debug("write_tunnel_packet seq: %d, mtu %d", seq, mtu)
 
     iov = []
     freem = []
 
     if leftover:
-        logging.info("write_tunnel_packet seq: %d, mtu %d leftover %d", seq, mtu, id(leftover))
+        # if DEBUG:
+        #     logging.debug("write_tunnel_packet seq: %d, mtu %d leftover %d", seq, mtu, id(leftover))
         # This is an mbuf we didn't finish sending last time.
         m = leftover
         # Set the offset to after this mbuf data.
@@ -315,7 +317,8 @@ def write_tunnel_packet(  # pylint: disable=R0912,R0913,R0915
         # Try and get a new mbuf to embed
         m = inq.trypop()
         offset = 0
-        logging.info("write_tunnel_packet seq: %d, mtu %d m %d", seq, mtu, id(m))
+        # if DEBUG:
+        #     logging.debug("write_tunnel_packet seq: %d, mtu %d m %d", seq, mtu, id(m))
 
     if not m:
         return write_empty_tunnel_packet(s, seq, mtu)
