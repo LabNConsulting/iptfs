@@ -32,6 +32,7 @@ peeraddr = None
 
 
 def get16(mv: memoryview):
+    print(mv)
     return ((mv[0] << 8) + mv[1])
 
 
@@ -114,6 +115,7 @@ def tunnel_get_recv_mbuf(freeq: MQueue):
 
 
 def add_to_inner_packet(tmbuf: MBuf, new: bool, m: MBuf, freeq: MQueue, outq: MQueue):  # pylint: disable=R0911,R0912
+
     if not new:
         offset = 0
     else:
@@ -124,17 +126,22 @@ def add_to_inner_packet(tmbuf: MBuf, new: bool, m: MBuf, freeq: MQueue, outq: MQ
     start = tmbuf.start
     tmlen = tmbuf.len()
 
+    if DEBUG:
+        logger.debug("add_to_inner_packet tmbuf len %d new %d mbuf %s", tmlen, new, str(m))
+
     if not m:
         m = tunnel_get_recv_mbuf(freeq)
 
     if m.len() == 0:
+        if DEBUG:
+            logger.debug("add_to_inner_packet mbuf len == 0, offset %d", offset)
         # -----------
         # New packet.
         # -----------
         if offset > tmlen:
             # Here we have an old packet filling the entire outer buffer
             # but no existing inner, thrown it away.
-            return m
+            return m, 0
 
         # skip past the existing packet we don't know about.
         if True:  # pylint: disable=W0125
@@ -143,7 +150,16 @@ def add_to_inner_packet(tmbuf: MBuf, new: bool, m: MBuf, freeq: MQueue, outq: MQ
             assert (tmlen <= m.after())
 
             # Check to see if the rest is padding.
-            if tmlen < 6 or (start[0] & 0xF0) not in (0x40, 0x60):
+            if tmlen < 6:
+                if DEBUG:
+                    logger.debug("add_to_inner_packet mbuf len == 0, tmlen < 6")
+                tmbuf.start = tmbuf.end
+                return m
+
+            if (start[0] & 0xF0) not in (0x40, 0x60):
+                if DEBUG:
+                    logger.debug("add_to_inner_packet mbuf len == 0, padding %d", start[0])
+                tmbuf.start = tmbuf.end
                 return m
 
         # Get the IP length
@@ -155,6 +171,7 @@ def add_to_inner_packet(tmbuf: MBuf, new: bool, m: MBuf, freeq: MQueue, outq: MQ
 
         if iplen > m.after():
             logger.error("IP length %d larger than MRU %d", iplen, m.after())
+            tmbuf.start = tmbuf.end
             return m
 
         m.left = iplen
@@ -165,10 +182,12 @@ def add_to_inner_packet(tmbuf: MBuf, new: bool, m: MBuf, freeq: MQueue, outq: MQ
             m.end[:tmlen] = start[:tmlen]
             m.end = m.end[tmlen:]
             m.left -= tmlen
+            tmbuf.start = tmbuf.start[tmlen:]
             return m
         m.end[:m.left] = start[:m.left]
         m.end = m.end[m.left:]
         m.left = 0
+        tmbuf.start = tmbuf.start[m.left:]
         outq.push(m)
         return None
     else:
@@ -180,16 +199,18 @@ def add_to_inner_packet(tmbuf: MBuf, new: bool, m: MBuf, freeq: MQueue, outq: MQ
         m.end[:tmlen] = start[:tmlen]
         m.end = m.end[tmlen:]
         m.left -= tmlen
+        tmbuf.start = tmbuf.start[tmlen:]
         return m
 
     # We have enough to finish this inner packet.
     m.end[:m.left] = start[:m.left]
     m.end = m.end[m.left:]
-    tmbuf.start = start[m.left:]
     m.left = 0
+    tmbuf.start = start[m.left:]
     outq.push(m)
 
     # Recurse!
+    print("recurse")
     return add_to_inner_packet(tmbuf, False, None, freeq, outq)
 
 
@@ -199,7 +220,7 @@ def tunnel_get_outer_packet(s: socket.socket, tmbuf: MBuf, outq: MQueue, rxlimit
         (n, addr) = s.recvfrom_into(tmbuf.start)
         assert (addr == peeraddr)
         if n <= 8:
-            logger.error("read: bad read %d on TFS link, dropping", n)
+            logger.error("read: bad read len %d on TFS link, dropping", n)
             break
 
         # Check if we are forcing congestion
@@ -220,8 +241,10 @@ def tunnel_get_outer_packet(s: socket.socket, tmbuf: MBuf, outq: MQueue, rxlimit
 
         if seq == outq.lastseq + 1 or outq.lastseq == 0:
             # Make this valid.
-            tmbuf.end = tmbuf.start[:n]
+            tmbuf.end = tmbuf.start[n:]
             outq.lastseq = seq
+            if DEBUG:
+                logger.debug("Got outer packet seq: %d len: %d tmbuf.len: %d", seq, n, tmbuf.len())
             return seq, True
 
         # Drops or duplicates
@@ -256,7 +279,7 @@ def read_tunnel_into_packet(s: socket.socket, tmbuf: MBuf, freeq: MQueue, outq: 
             m.reset(freeq.hdrspace)
 
         # Consume the outer packet.
-        m = add_to_inner_packet(tmbuf, True, m, freeq, outq)
+        m, seq = add_to_inner_packet(tmbuf, True, m, freeq, outq)
 
 
 # We really want MHeaders with MBuf chains here.

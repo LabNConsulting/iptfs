@@ -37,7 +37,7 @@ if (( VMID == 2 )); then
     sleep 1
     . venv/bin/activate
     # build/iptfs $COMMON --connect 192.168.10.$((OVMID + 64)) &
-    venv/bin/iptfs $COMMON --connect 192.168.10.$((OVMID + 64)) &
+    venv/bin/iptfs $COMMON --no-egress --connect 192.168.10.$((OVMID + 64)) &
     tfspid=$!
     sleep 1
     sysctl -w net.ipv6.conf.tfs0.disable_ipv6=1
@@ -47,7 +47,7 @@ if (( VMID == 2 )); then
 else
     . venv/bin/activate
     # build/iptfs $COMMON --listen 192.168.10.$IPID &
-    venv/bin/iptfs $COMMON --listen 192.168.10.$IPID &
+    venv/bin/iptfs $COMMON --no-ingress --listen 192.168.10.$IPID &
     tfspid=$!
     sleep 1
     sysctl -w net.ipv6.conf.tfs0.disable_ipv6=1

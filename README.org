@@ -1,12 +1,14 @@
 
 * Packet Format
+*** Congestion Control Document (see notepad) RFC2941
+*** Circuit Breaker.
 ** Constant Bandwith
    The goal of TFS is to hide the size and frequency of the packets. To do this
    we use a constant send IPsec tunnel of same sized packets. The tunnel
-   bandwidth is an input to the algorithm. Additionally the Path MTU is also an
-   input to the algorithm. Given those inputs we can calculate the frequency of
-   max MTU tunnel packets we can send in order to achieve the requested
-   bandwidth.
+   bandwidth is an input to the algorithm. Frame size is the input value, can
+   seed with path mtu value. Additionally the Path MTU is also an input to the
+   algorithm. Given those inputs we can calculate the frequency of max MTU
+   tunnel packets we can send in order to achieve the requested bandwidth.
 
    We may also wish to adapt to network congestion and downgrade the bandwidth
    to accommodate. If congestion were handled in the network on a byte level we
@@ -105,6 +107,9 @@
                    to.
     - Timestamp :: The time when this notification was created and sent.
 
+
+*** Options CFG_REQUEST when to send these ACK.
+*** Options Do a request for ACK information.
 
 * Results
 ** C w/ select (1 pp)
