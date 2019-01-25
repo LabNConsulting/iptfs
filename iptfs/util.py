@@ -11,10 +11,13 @@
 from __future__ import absolute_import, division, unicode_literals, print_function, nested_scopes
 
 import time
+import logging
+
+logger = logging.getLogger(__file__)
 
 
 class Limit:
-    def __init__(self, rate, overhead, count):
+    def __init__(self, rate: int, overhead: int, count: int):
         self.rate = rate / 8
         self.overhead = overhead
         self.count = count
@@ -23,7 +26,7 @@ class Limit:
         self.pktidx = 0
         self.dropcnt = 0
 
-    def limit(self, n):
+    def limit(self, n: int):
         # Size of all packets currently in the RXQ
         n -= self.overhead
         otime = self.pkttimes[self.pktidx][1]
@@ -48,6 +51,31 @@ class Limit:
         self.pkttimes[self.pktidx] = (n, ntime)
         self.pktidx = (self.pktidx + 1) % self.count
         return False
+
+
+class Periodic:
+    def __init__(self, packet_rate: int):
+        self.prate = packet_rate
+        # self.timestamp = time.time_ns()
+        self.timestamp = time.time()
+        self.ival = 1.0 / packet_rate
+
+    def wait(self):
+        logging.debug("Periodic wait called.")
+        now = time.time()
+        delta = now - self.timestamp
+        waittime = self.ival - delta
+        if waittime < 0:
+            self.timestamp = now
+            if waittime != 0:
+                logging.info("Overran periodic timer by %f seconds", -waittime)
+        else:
+            logging.debug("Waiting: %s", str(self.ival - delta))
+            time.sleep(self.ival - delta)
+            logging.debug("Waking up!")
+            self.timestamp = time.time()
+        return True
+
 
 __author__ = 'Christian E. Hopps'
 __date__ = 'January 21 2019'

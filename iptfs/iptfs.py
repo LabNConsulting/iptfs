@@ -7,13 +7,18 @@ from __future__ import absolute_import, division, unicode_literals, print_functi
 import binascii
 
 import logging
+import io
+import socket
 import sys
 import threading
-import time
 import traceback
-from .util import Limit
+from . import DEBUG
 from .mbuf import MBuf, MQueue
+from .util import Limit, Periodic
 
+DEBUG = False
+
+TUNMTU = 1500  # MTU for outer packets on tunnel.
 HDRSPACE = 18
 MAXBUF = 9000 + HDRSPACE
 MAXQSZ = 32
@@ -22,18 +27,21 @@ PADBYTES = memoryview(bytearray(MAXBUF))
 PADBYTES[0] = 0
 logger = logging.getLogger(__file__)
 
-DEBUG = False
-
 # Address for sending to UDP.
 peeraddr = None
 
 
-def get16(m):
-    return ((m[0] << 8) + m[1])
+def get16(mv: memoryview):
+    return ((mv[0] << 8) + mv[1])
 
 
-def get32(m):
-    return ((m[0] << 24) + (m[1] << 16) + (m[2] << 8) + m[3])
+def get32(mv: memoryview):
+    return ((mv[0] << 24) + (mv[1] << 16) + (mv[2] << 8) + mv[3])
+
+
+def put16(m, i):
+    m[0] = (i >> 8) & 0xFF
+    m[1] = (i) & 0xFF
 
 
 def put32(m, i):
@@ -43,12 +51,17 @@ def put32(m, i):
     m[3] = (i) & 0xFF
 
 
+# XXX not nice An empty mbuf full of padding.
+emptym = MBuf(MAXBUF, HDRSPACE)
+put32(emptym.start[4:], 0)
+emptym.start[8] = 0x0
+
 # -----------------
 # Interface Packets
 # -----------------
 
 
-def read_intf_packets(fd, inq, outq):
+def read_intf_packets(fd: io.RawIOBase, inq: MQueue, outq: MQueue):
     logger.info("read: start reading from interface")
     while True:
         m = inq.pop()
@@ -64,7 +77,7 @@ def read_intf_packets(fd, inq, outq):
             outq.push(m, False)
 
 
-def write_intf_packets(fd, outq, freeq):
+def write_intf_packets(fd: io.RawIOBase, outq: MQueue, freeq: MQueue):
     logger.info("write_packets: from %s", outq.name)
     while True:
         m = outq.pop()
@@ -83,31 +96,11 @@ def write_intf_packets(fd, outq, freeq):
 # ------------------
 
 
-class Periodic:
-    def __init__(self, packet_rate):
-        self.prate = packet_rate
-        # self.timestamp = time.time_ns()
-        self.timestamp = time.time()
-        self.ival = 1.0 / packet_rate
-
-    def wait(self):
-        now = time.time()
-        delta = now - self.timestamp
-        waittime = self.ival - delta
-        if waittime < 0:
-            self.timestamp = now
-            if waittime != 0:
-                logging.info("Overran periodic timer by %f seconds", -waittime)
-        else:
-            time.sleep(self.ival - delta)
-            self.timestamp = time.time()
-
-
-def recv_ack(inq, m):  # pylint: disable=W0613
+def recv_ack(inq: MQueue, m: MBuf):  # pylint: disable=W0613
     pass
 
 
-def tunnel_get_recv_mbuf(freeq):
+def tunnel_get_recv_mbuf(freeq: MQueue):
     while True:
         m = freeq.pop()
 
@@ -120,7 +113,7 @@ def tunnel_get_recv_mbuf(freeq):
         freeq.push(m, True)
 
 
-def add_to_inner_packet(tmbuf, new, m, freeq, outq):  # pylint: disable=R0911,R0912
+def add_to_inner_packet(tmbuf: MBuf, new: bool, m: MBuf, freeq: MQueue, outq: MQueue):  # pylint: disable=R0911,R0912
     if not new:
         offset = 0
     else:
@@ -144,7 +137,7 @@ def add_to_inner_packet(tmbuf, new, m, freeq, outq):  # pylint: disable=R0911,R0
             return m
 
         # skip past the existing packet we don't know about.
-        if True:
+        if True:  # pylint: disable=W0125
             start = tmbuf.start = tmbuf.start[offset:]
             tmlen = tmbuf.len()
             assert (tmlen <= m.after())
@@ -200,9 +193,9 @@ def add_to_inner_packet(tmbuf, new, m, freeq, outq):  # pylint: disable=R0911,R0
     return add_to_inner_packet(tmbuf, False, None, freeq, outq)
 
 
-def tunnel_get_outer_packet(s, tmbuf, outq, rxlimit):
-    tmbuf.reset()
+def tunnel_get_outer_packet(s: socket.socket, tmbuf: MBuf, outq: MQueue, rxlimit: Limit):
     while True:
+        tmbuf.reset(HDRSPACE)
         (n, addr) = s.recvfrom_into(tmbuf.start)
         assert (addr == peeraddr)
         if n <= 8:
@@ -250,7 +243,8 @@ def tunnel_get_outer_packet(s, tmbuf, outq, rxlimit):
         return seq, False
 
 
-def read_tunnel_into_packet(s, tmbuf, freeq, outq, rxlimit):
+def read_tunnel_into_packet(s: socket.socket, tmbuf: MBuf, freeq: MQueue, outq: MQueue,
+                            rxlimit: Limit):
     m = None
     seq = 0
     while True:
@@ -266,7 +260,7 @@ def read_tunnel_into_packet(s, tmbuf, freeq, outq, rxlimit):
 
 
 # We really want MHeaders with MBuf chains here.
-def read_tunnel_packets(s, freeq, outq, max_rxrate):
+def read_tunnel_packets(s, freeq: MQueue, outq: MQueue, max_rxrate: int):
     logger.info("read: start reading on TFS link")
 
     outq.startseq = 0
@@ -281,25 +275,58 @@ def read_tunnel_packets(s, freeq, outq, max_rxrate):
         rxlimit = Limit(max_rxrate, overhead, 10) if max_rxrate else None
 
     # Loop reconstructing inner packets
-    tmbuf = MBuf(MAXBUF, 0)
+    tmbuf = MBuf(MAXBUF, HDRSPACE)
     while True:
         read_tunnel_into_packet(s, tmbuf, freeq, outq, rxlimit)
 
 
-def write_tunnel_packet(s, mtu, leftover, inq, freeq):
+def write_empty_tunnel_packet(s: socket.socket, seq: int, mtu: int):
+    logging.info("write_empty_tunnel_packet seq: %d, mtu %d", seq, mtu)
+    m = emptym
+    mlen = mtu
+
+    put32(m.start, seq)
+    seq += 1
+
+    n = s.sendmsg([m.start[:mlen]])
+    if n != mlen:
+        logger.error("write: bad write %d of %d on TFS link", n, mlen)
+    elif DEBUG:
+        logger.debug("write: %d bytes (%s) on TFS Link", n, binascii.hexlify(m.start[:8]))
+
+    return None, seq
+
+
+def write_tunnel_packet(  # pylint: disable=R0912,R0913,R0915
+        s: socket.socket, seq: int, mtu: int, leftover: MBuf, inq: MQueue, freeq: MQueue):
+
+    logging.info("write_tunnel_packet seq: %d, mtu %d", seq, mtu)
+
     iov = []
     freem = []
+
     if leftover:
+        logging.info("write_tunnel_packet seq: %d, mtu %d leftover %d", seq, mtu, id(leftover))
+        # This is an mbuf we didn't finish sending last time.
         m = leftover
+        # Set the offset to after this mbuf data.
         offset = m.len()
     else:
-        m = inq.pop()
+        # Try and get a new mbuf to embed
+        m = inq.trypop()
         offset = 0
+        logging.info("write_tunnel_packet seq: %d, mtu %d m %d", seq, mtu, id(m))
+
+    if not m:
+        return write_empty_tunnel_packet(s, seq, mtu)
 
     # Prepend our framing to first mbuf.
     m.prepend(8)
-    put32(m.start, m.seq)
-    put32(m.start[4:], offset)
+    put32(m.start, seq)
+    seq += 1
+    put16(m.start[4:], 0)
+    put16(m.start[6:], offset)
+
     mlen = m.len()
 
     if mlen > mtu:
@@ -344,24 +371,25 @@ def write_tunnel_packet(s, mtu, leftover, inq, freeq):
     for m in freem:
         freeq.push(m, True)
 
-    return leftover
+    return leftover, seq
 
 
-def write_tunnel_packets(fd, mtu, inq, freeq, rate):  # pylint: disable=W0613
+def write_tunnel_packets(s: socket.socket, mtu: int, inq: MQueue, freeq: MQueue, rate: int):  # pylint: disable=W0613
     logger.info("write_packets: from %s", inq.name)
 
     # Loop writing packets limited by "rate"
     # Overhead is IP(20)+UDP(8)+Framing(4)=32
-    mtu = 1500 - 32
-    mtub = mtu * 8
+    mtub = (mtu - 32) * 8
     prate = rate / mtub
     nrate = prate * mtub
     logging.info("Writing TFS packets at rate of %d pps for %d bps", prate, nrate)
 
     periodic = Periodic(prate)
     leftover = None
+    extram = MBuf(MAXBUF, HDRSPACE)
+    seq = 0
     while periodic.wait():
-        leftover = write_tunnel_packet(fd, mtu, leftover, inq, freeq)
+        leftover, seq = write_tunnel_packet(s, seq, mtu, leftover, inq, freeq)
 
 
 # -------
@@ -381,13 +409,13 @@ def thread_catch(func, *args):
     return threading.Thread(target=thread_main)
 
 
-def tunnel_ingress(riffd, s, rate):
+def tunnel_ingress(riffd: io.RawIOBase, s: socket.socket, rate: int):
     freeq = MQueue("TFS Ingress FREEQ", MAXQSZ, MAXBUF, HDRSPACE, DEBUG)
     outq = MQueue("TFS Ingress OUTQ", MAXQSZ, 0, 0, DEBUG)
 
     threads = [
         thread_catch(read_intf_packets, riffd, freeq, outq),
-        thread_catch(write_tunnel_packets, s, outq, freeq, rate),
+        thread_catch(write_tunnel_packets, s, TUNMTU, outq, freeq, rate),
     ]
 
     for t in threads:
@@ -397,7 +425,7 @@ def tunnel_ingress(riffd, s, rate):
     return threads
 
 
-def tunnel_egress(s, wiffd, congest_rate):
+def tunnel_egress(s: socket.socket, wiffd: io.RawIOBase, congest_rate: int):
     freeq = MQueue("TFS Egress FREEQ", MAXQSZ, MAXBUF, HDRSPACE, DEBUG)
     outq = MQueue("TFS Egress OUTQ", MAXQSZ, 0, 0, DEBUG)
 

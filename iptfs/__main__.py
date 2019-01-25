@@ -107,6 +107,7 @@ def checked_main(*margs):
     args = parser.parse_args(*margs)
 
     if args.verbose:
+        iptfs.DEBUG = True
         logging.basicConfig(level=logging.DEBUG)
     else:
         logging.basicConfig(level=logging.INFO)
