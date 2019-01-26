@@ -27,11 +27,12 @@ IPID=$(ip addr | sed -e '/192\.168\.2\./!d;s,.*192\.168\.2\.\([0-9]*\)/.*,\1,')
 VMID=$((IPID - 64))
 
 FRAMESZ=1400
-TXRATEMb=10
+TXRATEMb=1
 TXRATEKb=$(($TXRATEMb * 1000))
 
 # COMMON=" --congest-rate=1500 -v --dev tfs0 --port 8001"
-COMMON="-v --rate=$TXRATEMb --dev tfs0 --port 8001"
+#COMMON="--trace -v --rate=$TXRATEMb --dev tfs0 --port 8001"
+COMMON="--rate=$TXRATEMb --dev tfs0 --port 8001"
 if (( VMID == 2 )); then
     OVMID=3
     sleep 1

@@ -17,6 +17,7 @@ from .mbuf import MBuf, MQueue
 from .util import Limit, Periodic
 
 DEBUG = False
+TRACE = False
 
 TUNMTU = 1500  # MTU for outer packets on tunnel.
 HDRSPACE = 18
@@ -113,11 +114,16 @@ def tunnel_get_recv_mbuf(freeq: MQueue):
         freeq.push(m, True)
 
 
-def add_to_inner_packet(tmbuf: MBuf, new: bool, m: MBuf, freeq: MQueue, outq: MQueue, recurse=False):  # pylint: disable=R0911,R0912
+def add_to_inner_packet(tmbuf: MBuf, new: bool, m: MBuf, freeq: MQueue, outq: MQueue, seq: int):  # pylint: disable=R0911,R0912,R0913,R0915
+
+    logtmlen = tmbuf.len()
+    assert (logtmlen > 0)
 
     if not new:
+        recurse = True
         offset = 0
     else:
+        recurse = False
         offset = get16(tmbuf.start[6:8])
         # move start past frame to where offset will refer.
         tmbuf.start = tmbuf.start[8:]
@@ -129,20 +135,20 @@ def add_to_inner_packet(tmbuf: MBuf, new: bool, m: MBuf, freeq: MQueue, outq: MQ
     #     logger.debug("add_to_inner_packet tmbuf len %d new %d mbuf %s", tmlen, new, str(m))
 
     if not m:
-        if DEBUG:
-            logger.debug("add_to_inner_packet getting new mbuf")
+        # if DEBUG:
+        #     logger.debug("add_to_inner_packet getting new mbuf")
         m = tunnel_get_recv_mbuf(freeq)
 
     if m.len() == 0:
-        if DEBUG and recurse:
-            logger.debug("add_to_inner_packet mbuf len == 0, offset %d", offset)
-        # if TRACE:
-        #     logger.debug("add_to_inner_packet mbuf len == 0, offset %d", offset)
+        if (DEBUG and recurse):  # or TRACE:
+            logger.debug("add_to_inner_packet(recures) mbuf len == 0, offset %d", offset)
 
         # -----------
         # New packet.
         # -----------
         if offset > tmlen:
+            if new:
+                logger.debug("XXX1 Got outer packet seq: %d tmbuf.len: %d", seq, logtmlen)
             # Here we have an old packet filling the entire outer buffer
             # but no existing inner, thrown it away.
             return m
@@ -155,22 +161,22 @@ def add_to_inner_packet(tmbuf: MBuf, new: bool, m: MBuf, freeq: MQueue, outq: MQ
 
             # Check to see if the rest is padding.
             if tmlen < 6:
-                if DEBUG and recurse:
-                    logger.debug("add_to_inner_packet mbuf len == 0, tmlen < 6")
-                # if TRACE:
-                #     logger.debug("add_to_inner_packet mbuf len == 0, tmlen < 6")
+                if (DEBUG and recurse):  # or TRACE:
+                    logger.debug("add_to_inner_packet(recurse) mbuf len == 0, tmlen < 6")
                 tmbuf.start = tmbuf.end
                 return m
 
             if (start[0] & 0xF0) not in (0x40, 0x60):
-                if DEBUG and recurse:
-                    logger.debug("add_to_inner_packet mbuf len == 0, padding (verbyte %d)",
+                if (DEBUG and recurse):  # or TRACE:
+                    logger.debug("add_to_inner_packet(recurse) mbuf len == 0, padding (verbyte %d)",
                                  start[0])
-                # if TRACE:
-                #     logger.debug("add_to_inner_packet mbuf len == 0, padding (verbyte %d)",
-                #                  start[0])
                 tmbuf.start = tmbuf.end
                 return m
+
+        # This is logging we moved from get_outer_tunnel_packet so we can skip
+        # the empties
+        if new:
+            logger.debug("XXX2 Got outer packet seq: %d tmbuf.len: %d", seq, logtmlen)
 
         # Get the IP length
         vnibble = start[0] & 0xF0
@@ -184,16 +190,34 @@ def add_to_inner_packet(tmbuf: MBuf, new: bool, m: MBuf, freeq: MQueue, outq: MQ
             tmbuf.start = tmbuf.end
             return m
 
+        if DEBUG:
+            logger.debug(
+                "START: add_to_inner_packet(recurse: %d) mbuf len == 0, offset %d iplen %d",
+                recurse, offset, iplen)
+
         m.left = iplen
         # Fall through
     elif offset > tmlen:
+        # This is logging we moved from get_outer_tunnel_packet so we can skip
+        # the empties
+        if new:
+            logger.debug("XXX3 Got outer packet seq: %d tmbuf.len: %d", seq, logtmlen)
+
         # We are continuing to fill an existing inner packet, and this entire buffer is for it.
         if m.left > tmlen:
+            if DEBUG:
+                logger.debug(
+                    "MORELEFT: add_to_inner_packet(recurse: %d) offset>tmlen, offset %d m.left %d tmlen %d",
+                    recurse, offset, m.left, tmlen)
             m.end[:tmlen] = start[:tmlen]
             m.end = m.end[tmlen:]
             m.left -= tmlen
             tmbuf.start = tmbuf.start[tmlen:]
             return m
+        if DEBUG:
+            logger.debug(
+                "COMPLETE: add_to_inner_packet(recurse: %d) offset>tmlen, offset: %d m.left %d tmlen %d",
+                recurse, offset, m.left, tmlen)
         m.end[:m.left] = start[:m.left]
         m.end = m.end[m.left:]
         m.left = 0
@@ -201,11 +225,22 @@ def add_to_inner_packet(tmbuf: MBuf, new: bool, m: MBuf, freeq: MQueue, outq: MQ
         outq.push(m)
         return None
     else:
+        # This is logging we moved from get_outer_tunnel_packet so we can skip
+        # the empties
+        if new:
+            logger.debug("XXX4 Got outer packet seq: %d tmbuf.len: %d", seq, logtmlen)
+        if DEBUG:
+            logger.debug("CONTINUED: add_to_inner_packet(recurse: %d) mbuf len == 0, offset %d",
+                         recurse, offset)
+
         start = tmbuf.start = tmbuf.start[offset:]
         tmlen = tmbuf.len()
         assert (tmlen <= m.after())
 
     if m.left > tmlen:
+        if DEBUG:
+            logger.debug("MORELEFT: add_to_inner_packet(recurse: %d) offset: %d m.left %d tmlen %d",
+                         recurse, offset, m.left, tmlen)
         m.end[:tmlen] = start[:tmlen]
         m.end = m.end[tmlen:]
         m.left -= tmlen
@@ -213,17 +248,22 @@ def add_to_inner_packet(tmbuf: MBuf, new: bool, m: MBuf, freeq: MQueue, outq: MQ
         return m
 
     # We have enough to finish this inner packet.
+    if DEBUG:
+        logger.debug("COMPLET: add_to_inner_packet(recurse: %d) offset %d m.left %d tmlen %d",
+                     recurse, offset, m.left, tmlen)
     m.end[:m.left] = start[:m.left]
     m.end = m.end[m.left:]
     tmbuf.start = tmbuf.start[m.left:]
     m.left = 0
     outq.push(m)
 
-    # Recurse!
     if tmbuf.len() == 0:
         return None
-    logger.debug("recurse: recurse %d", recurse)
-    return add_to_inner_packet(tmbuf, False, None, freeq, outq, True)
+
+    # Recurse!
+    if DEBUG:
+        logger.debug("recurse: recursed %d", recurse)
+    return add_to_inner_packet(tmbuf, False, None, freeq, outq, seq)
 
 
 def tunnel_get_outer_packet(s: socket.socket, tmbuf: MBuf, outq: MQueue, rxlimit: Limit):
@@ -233,7 +273,8 @@ def tunnel_get_outer_packet(s: socket.socket, tmbuf: MBuf, outq: MQueue, rxlimit
         assert (addr == peeraddr)
         if n <= 8:
             logger.error("read: bad read len %d on TFS link, dropping", n)
-            break
+            outq.dropcnt += 1
+            continue
 
         # Check if we are forcing congestion
         if rxlimit and rxlimit.limit(n):
@@ -243,7 +284,8 @@ def tunnel_get_outer_packet(s: socket.socket, tmbuf: MBuf, outq: MQueue, rxlimit
 
         offset = get32(tmbuf.start[4:8])
         if (offset & 0x80000000) != 0:
-            logger.error("read: bad version on TFS link, dropping")
+            logger.error("read: bad version on TFS link, dropping, dump: %s",
+                         binascii.hexlify(tmbuf.start[:16]))
             outq.dropcnt += 1
             continue
 
@@ -257,10 +299,9 @@ def tunnel_get_outer_packet(s: socket.socket, tmbuf: MBuf, outq: MQueue, rxlimit
             outq.lastseq = seq
             # if TRACE:
             #     logger.debug("Got outer packet seq: %d len: %d tmbuf.len: %d", seq, n, tmbuf.len())
-            return seq, True
+            return seq, False
 
         # Drops or duplicates
-
         if seq <= outq.lastseq:
             if seq < outq.lastseq:
                 logger.error("Previous seq number packet detected seq: %d len %d", seq, n)
@@ -275,7 +316,9 @@ def tunnel_get_outer_packet(s: socket.socket, tmbuf: MBuf, outq: MQueue, rxlimit
                      outq.lastseq, seq)
 
         # abandon any in progress packet.
-        return seq, False
+        tmbuf.end = tmbuf.start[n:]
+        outq.lastseq = seq
+        return seq, True
 
 
 def read_tunnel_into_packet(s: socket.socket, tmbuf: MBuf, freeq: MQueue, outq: MQueue,
@@ -288,10 +331,12 @@ def read_tunnel_into_packet(s: socket.socket, tmbuf: MBuf, freeq: MQueue, outq: 
             seq, reset = tunnel_get_outer_packet(s, tmbuf, outq, rxlimit)
 
         if m and reset:
+            if DEBUG:
+                logger.debug("reset current inner mbuf")
             m.reset(freeq.hdrspace)
 
         # Consume the outer packet.
-        m = add_to_inner_packet(tmbuf, True, m, freeq, outq)
+        m = add_to_inner_packet(tmbuf, True, m, freeq, outq, seq)
 
 
 # We really want MHeaders with MBuf chains here.
@@ -325,25 +370,25 @@ def write_empty_tunnel_packet(s: socket.socket, seq: int, mtu: int):
     n = s.sendmsg([m.start[:mlen]])
     if n != mlen:
         logger.error("write: bad empty write %d of %d on TFS link", n, mlen)
-    elif DEBUG:
-        # logger.debug("write: %d bytes (%s) on TFS Link", n, binascii.hexlify(m.start[:8]))
-        pass
+    # elif TRACE:
+    #     logger.debug("write: %d bytes (%s) on TFS Link", n, binascii.hexlify(m.start[:8]))
 
     return None, seq
 
 
-def write_tunnel_packet(  # pylint: disable=R0912,R0913,R0915
+def write_tunnel_packet(  # pylint: disable=R0912,R0913,R0914,R0915
         s: socket.socket, seq: int, mtu: int, leftover: MBuf, inq: MQueue, freeq: MQueue):
 
-    # if DEBUG:
-    #     logging.debug("write_tunnel_packet seq: %d, mtu %d", seq, mtu)
+    # if TRACE:
+    #     logger.debug("write_tunnel_packet seq: %d, mtu %d", seq, mtu)
 
+    mtuenter = mtu
     iov = []
     freem = []
 
     if leftover:
         if DEBUG:
-            logging.debug("write_tunnel_packet seq: %d, mtu %d leftover %d", seq, mtu, id(leftover))
+            logger.debug("write_tunnel_packet seq: %d, mtu %d leftover %d", seq, mtu, id(leftover))
         # This is an mbuf we didn't finish sending last time.
         m = leftover
         # Set the offset to after this mbuf data.
@@ -352,55 +397,85 @@ def write_tunnel_packet(  # pylint: disable=R0912,R0913,R0915
         # Try and get a new mbuf to embed
         m = inq.trypop()
         offset = 0
-        # if TRACE:
-        #     logging.debug("write_tunnel_packet seq: %d, mtu %d m %d", seq, mtu, id(m))
-        if DEBUG and m:
-            logging.debug("write_tunnel_packet seq: %d, mtu %d m %d", seq, mtu, id(m))
+        if (DEBUG and m):  # or TRACE:
+            logger.debug("write_tunnel_packet: seq: %d, mtu %d m %d", seq, mtu, id(m))
 
     if not m:
         return write_empty_tunnel_packet(s, seq, mtu)
 
     # Prepend our framing to first mbuf.
-    m.prepend(8)
-    put32(m.start, seq)
-    seq += 1
-    put16(m.start[4:], 0)
-    put16(m.start[6:], offset)
+    # Would be nice but is broken. put back when we fix mbuf
+    # m.prepend(8)
+
+    # XXX create first IOV of header
+    hdr = memoryview(bytearray(8))
+    iov.append(hdr)
+    mtu = mtu - len(hdr)
+
+    put32(hdr, seq)
+    put16(hdr[4:], 0)
+    put16(hdr[6:], offset)
 
     mlen = m.len()
 
     if mlen > mtu:
         remaining = mlen - mtu
-        iov = [m.start[:mtu]]
+        iov.append(m.start[:mtu])
         m.start = m.start[mtu:mtu + remaining]
+        leftover = m
+        if DEBUG:
+            logger.debug(
+                "write_tunnel_packet: seq %d Add partial(1) MBUF mtu %d of mlen %d mtuenter %d", seq,
+                mtu, mlen, mtuenter)
     else:
-        iov = [m.start[:mlen]]
+        iov.append(m.start[:mlen])
         freem.append(m)
+        m = None
+        logger.debug(
+            "write_tunnel_packet: seq %d Add initial MBUF mlen %d of mtu %d mtuenter %d", seq,
+            mlen, mtu, mtuenter)
         mtu -= mlen
 
         leftover = None
         while True:
             # We need a minimum of 6 bytes to include IPv6 length field.
             if mtu <= 6:
-                iov.append(PADBYTES[8:mtu+8])
+                if DEBUG:
+                    logger.debug("write_tunnel_packet: seq %d mtu %d < 6 ", seq, mtu)
+                iov.append(PADBYTES[8:8 + mtu])
                 break
             m = inq.trypop()
             if not m:
-                iov.append(PADBYTES[8:mtu+8])
+                if DEBUG:
+                    logger.debug("write_tunnel_packet: seq %d No MBUF PAD: %d", seq, mtu)
+                iov.append(PADBYTES[8:8 + mtu])
                 break
             mlen = m.len()
             if mlen > mtu:
                 remaining = mlen - mtu
-                iov = [m.start[:mtu]]
+                iov.append(m.start[:mtu])
                 m.start = m.start[mtu:mtu + remaining]
+                if DEBUG:
+                    logger.debug(
+                        "write_tunnel_packet: seq %d Add partial(2) MBUF mtu %d of mlen %d mtuenter %d", seq,
+                        mtu, mlen, mtuenter)
                 leftover = m
                 break
+
+            iov.append(m.start[:mlen])
+            if DEBUG:
+                logger.debug("write_tunnel_packet: seq %d Add MBUF %d of mtu %d mtuenter %d", seq, mlen, mtu, mtuenter)
+
             freem.append(m)
+            m = None
             mtu -= mlen
 
     iovlen = 0
     for x in iov:
         iovlen += len(x)
+    if iovlen != mtuenter:
+        logger.error("write: bad length %d of mtu %d on TFS link", iovlen, mtuenter)
+
     n = s.sendmsg(iov)
     if n != iovlen:
         logger.error("write: bad write %d of %d on TFS link", n, mlen)
@@ -408,7 +483,10 @@ def write_tunnel_packet(  # pylint: disable=R0912,R0913,R0915
             freem.append(leftover)
             leftover = None
     elif DEBUG:
-        logger.debug("write: %d bytes on TFS Link", n)
+        logger.debug("write: wrote %d bytes on TFS Link", n)
+
+    # Update sequence number now that we've written it out.
+    seq += 1
 
     # Free any MBufs we are done with.
     for m in freem:
@@ -425,7 +503,7 @@ def write_tunnel_packets(s: socket.socket, mtu: int, inq: MQueue, freeq: MQueue,
     mtub = (mtu - 32) * 8
     prate = rate / mtub
     nrate = prate * mtub
-    logging.info("Writing TFS packets at rate of %d pps for %d bps", prate, nrate)
+    logger.info("Writing TFS packets at rate of %d pps for %d bps", prate, nrate)
 
     periodic = Periodic(prate)
     leftover = None
@@ -440,7 +518,7 @@ def write_tunnel_packets(s: socket.socket, mtu: int, inq: MQueue, freeq: MQueue,
 # -------
 
 
-def thread_catch(func, *args):
+def thread_catch(func, name, *args):
     def thread_main():
         try:
             func(*args)
@@ -449,7 +527,7 @@ def thread_catch(func, *args):
             traceback.print_exc()
             sys.exit(1)
 
-    return threading.Thread(target=thread_main)
+    return threading.Thread(name=name, target=thread_main)
 
 
 def tunnel_ingress(riffd: io.RawIOBase, s: socket.socket, rate: int):
@@ -457,8 +535,8 @@ def tunnel_ingress(riffd: io.RawIOBase, s: socket.socket, rate: int):
     outq = MQueue("TFS Ingress OUTQ", MAXQSZ, 0, 0, DEBUG)
 
     threads = [
-        thread_catch(read_intf_packets, riffd, freeq, outq),
-        thread_catch(write_tunnel_packets, s, TUNMTU, outq, freeq, rate),
+        thread_catch(read_intf_packets, "IFREAD", riffd, freeq, outq),
+        thread_catch(write_tunnel_packets, "TFSLINKWRITE", s, TUNMTU, outq, freeq, rate),
     ]
 
     for t in threads:
@@ -473,8 +551,8 @@ def tunnel_egress(s: socket.socket, wiffd: io.RawIOBase, congest_rate: int):
     outq = MQueue("TFS Egress OUTQ", MAXQSZ, 0, 0, DEBUG)
 
     threads = [
-        thread_catch(read_tunnel_packets, s, freeq, outq, congest_rate),
-        thread_catch(write_intf_packets, wiffd, outq, freeq),
+        thread_catch(read_tunnel_packets, "TFSLINKREAD", s, freeq, outq, congest_rate),
+        thread_catch(write_intf_packets, "IFWRITE", wiffd, outq, freeq),
     ]
 
     for t in threads:

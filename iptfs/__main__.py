@@ -95,6 +95,7 @@ def checked_main(*margs):
     parser.add_argument(
         "--congest-rate", type=int, default=0, help="Forced maximum egress rate in Megabits")
     parser.add_argument("-d", "--dev", default="vtun%d", help="Name of tun interface.")
+    parser.add_argument("--debug", action="store_true", help="Debug logging and checks.")
     parser.add_argument(
         "--no-egress", action="store_true", help="Do not create tunnel egress endpoint")
     parser.add_argument(
@@ -103,14 +104,22 @@ def checked_main(*margs):
     parser.add_argument("-p", "--port", default="8001", help="TCP port to use.")
     # parser.add_argument("-u", "--udp", action="store_true", help="Use UDP instead of TCP")
     parser.add_argument("-r", "--rate", type=int, default=0, help="Tunnel rate in Megabits")
-    parser.add_argument("-v", "--verbose", action="store_true", help="Name of tun interface.")
+    parser.add_argument("--trace", action="store_true", help="Trace logging.")
+    parser.add_argument("-v", "--verbose", action="store_true", help="Verbose logging.")
     args = parser.parse_args(*margs)
 
-    if args.verbose:
+    FORMAT = '%(asctime)-15s %(threadName)s %(message)s'
+    if args.trace:
+        iptfs.TRACE = True
         iptfs.DEBUG = True
-        logging.basicConfig(level=logging.DEBUG)
+        logging.basicConfig(format=FORMAT, level=logging.DEBUG)
+    elif args.debug:
+        iptfs.DEBUG = True
+        logging.basicConfig(format=FORMAT, level=logging.DEBUG)
+    elif args.verbose:
+        logging.basicConfig(format=FORMAT, level=logging.DEBUG)
     else:
-        logging.basicConfig(level=logging.INFO)
+        logging.basicConfig(format=FORMAT, level=logging.INFO)
 
     riffd, wiffd, devname = tun_alloc(args.dev)
     logger.info("Opened tun device: %s", devname)

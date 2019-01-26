@@ -21,14 +21,15 @@ class MBuf:
         self.end = self.start = self.space[hdrspace:]
         self.flags = self.seq = 0
 
-    def prepend(self, space):
-        newstart = self.hdrspace() - space
-        assert (newstart >= 0)
-        self.start = self.space[newstart:]
-        return self.start
-
-    def hdrspace(self):
-        return self.space.nbytes - self.start.nbytes
+    # this is broken as start may have shrunk from bothe ends
+    # def prepend(self, space):
+    #     newstart = self.hdrspace() - space
+    #     assert (newstart >= 0)
+    #     self.start = self.space[newstart:]
+    #     return self.start
+    # def hdrspace(self):
+    #     # XXX this is broken if start has been shrunk from the top end.
+    #     # return self.space.nbytes - self.start.nbytes
 
     def after(self):
         return self.end.nbytes
