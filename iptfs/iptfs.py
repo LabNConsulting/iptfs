@@ -376,6 +376,13 @@ def write_empty_tunnel_packet(s: socket.socket, seq: int, mtu: int):
     return None, seq
 
 
+def iovlen(iov):
+    iovlen = 0
+    for x in iov:
+        iovlen += len(x)
+    return iovlen
+
+
 def write_tunnel_packet(  # pylint: disable=R0912,R0913,R0914,R0915
         s: socket.socket, seq: int, mtu: int, leftover: MBuf, inq: MQueue, freeq: MQueue):
 
@@ -407,28 +414,47 @@ def write_tunnel_packet(  # pylint: disable=R0912,R0913,R0914,R0915
     # Would be nice but is broken. put back when we fix mbuf
     # m.prepend(8)
 
+    assert(mtu <= mtuenter)
+
     # XXX create first IOV of header
     hdr = memoryview(bytearray(8))
     iov.append(hdr)
-    mtu = mtu - len(hdr)
+    mtu -= len(hdr)
+    assert(mtu <= mtuenter)
 
     put32(hdr, seq)
     put16(hdr[4:], 0)
     put16(hdr[6:], offset)
 
     mlen = m.len()
+    if mlen < 0:
+        logger.error("negative mlen! %d leftover %d", mlen, leftover is None)
+        assert False
 
     if mlen > mtu:
         remaining = mlen - mtu
         iov.append(m.start[:mtu])
-        m.start = m.start[mtu:mtu + remaining]
+        # if iovlen(iov) > mtuenter:
+        #     logger.error("iovlen: %d of mtu %d mtuenter %d", iovlen(iov), mtu, mtuenter)
+        #     assert False
+        m.start = m.start[mtu:]
         leftover = m
         if DEBUG:
             logger.debug(
                 "write_tunnel_packet: seq %d Add partial(1) MBUF mtu %d of mlen %d mtuenter %d", seq,
                 mtu, mlen, mtuenter)
+        mtu = 0
     else:
         iov.append(m.start[:mlen])
+        # if iovlen(iov) > mtuenter:
+        #     logger.error("iovlen: %d of mtu %d enter %d", iovlen(iov), mtu, mtuenter)
+        #     assert False
+
+        assert(mtu <= mtuenter)
+        if mtu > mtuenter:
+            logger.error("ERROR1: mtu %d mtuenter %d", mtu, mtuenter)
+            assert False
+
         freem.append(m)
         m = None
         logger.debug(
@@ -436,33 +462,60 @@ def write_tunnel_packet(  # pylint: disable=R0912,R0913,R0914,R0915
             mlen, mtu, mtuenter)
         mtu -= mlen
 
+        if mtu > mtuenter:
+            logger.error("ERROR2: mtu %d mtuenter %d", mtu, mtuenter)
+            assert False
+
         leftover = None
+        count = 0
         while True:
+            count += 1
+            assert(mtu <= mtuenter)
             # We need a minimum of 6 bytes to include IPv6 length field.
             if mtu <= 6:
                 if DEBUG:
                     logger.debug("write_tunnel_packet: seq %d mtu %d < 6 ", seq, mtu)
                 iov.append(PADBYTES[8:8 + mtu])
+                # if iovlen(iov) > mtuenter:
+                #     logger.error("iovlen: %d of mtu %d enter %d", iovlen(iov), mtu, mtuenter)
+                #     assert False
+                assert(mtu <= mtuenter)
+                mtu = 0
                 break
+
             m = inq.trypop()
             if not m:
                 if DEBUG:
                     logger.debug("write_tunnel_packet: seq %d No MBUF PAD: %d", seq, mtu)
                 iov.append(PADBYTES[8:8 + mtu])
+                # if iovlen(iov) > mtuenter:
+                #     logger.error("iovlen: %d of mtu %d enter %d", iovlen(iov), mtu, mtuenter)
+                #     assert False
+                assert(mtu <= mtuenter)
+                mtu = 0
                 break
+
             mlen = m.len()
             if mlen > mtu:
                 remaining = mlen - mtu
                 iov.append(m.start[:mtu])
-                m.start = m.start[mtu:mtu + remaining]
+                # if iovlen(iov) > mtuenter:
+                #     logger.error("iovlen: %d of mtu %d enter %d", iovlen(iov), mtu, mtuenter)
+                #     assert False
+                m.start = m.start[mtu:]
                 if DEBUG:
                     logger.debug(
                         "write_tunnel_packet: seq %d Add partial(2) MBUF mtu %d of mlen %d mtuenter %d", seq,
                         mtu, mlen, mtuenter)
                 leftover = m
+                mtu = 0
                 break
 
             iov.append(m.start[:mlen])
+            # if iovlen(iov) > mtuenter:
+            #     logger.error("iovlen: %d of mtu %d enter %d", iovlen(iov), mtu, mtuenter)
+            #     assert False
+            assert(mtu <= mtuenter)
             if DEBUG:
                 logger.debug("write_tunnel_packet: seq %d Add MBUF %d of mtu %d mtuenter %d", seq, mlen, mtu, mtuenter)
 
@@ -470,14 +523,16 @@ def write_tunnel_packet(  # pylint: disable=R0912,R0913,R0914,R0915
             m = None
             mtu -= mlen
 
-    iovlen = 0
-    for x in iov:
-        iovlen += len(x)
-    if iovlen != mtuenter:
-        logger.error("write: bad length %d of mtu %d on TFS link", iovlen, mtuenter)
+    assert(mtu <= mtuenter)
+    # if iovlen(iov) > mtuenter:
+    #     logger.debug("iovlen: %d of mtu %d", iovlen(iov), mtuenter)
+
+    iovl = iovlen(iov)
+    if iovl != mtuenter:
+        logger.error("write: bad length %d of mtu %d on TFS link", iovl, mtuenter)
 
     n = s.sendmsg(iov)
-    if n != iovlen:
+    if n != iovl:
         logger.error("write: bad write %d of %d on TFS link", n, mlen)
         if leftover:
             freem.append(leftover)
@@ -492,6 +547,8 @@ def write_tunnel_packet(  # pylint: disable=R0912,R0913,R0914,R0915
     for m in freem:
         freeq.push(m, True)
 
+    if leftover:
+        assert(leftover.len() > 0)
     return leftover, seq
 
 
