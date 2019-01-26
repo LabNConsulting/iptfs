@@ -32,7 +32,6 @@ peeraddr = None
 
 
 def get16(mv: memoryview):
-    print(mv)
     return ((mv[0] << 8) + mv[1])
 
 
@@ -126,15 +125,16 @@ def add_to_inner_packet(tmbuf: MBuf, new: bool, m: MBuf, freeq: MQueue, outq: MQ
     start = tmbuf.start
     tmlen = tmbuf.len()
 
-    if DEBUG:
-        logger.debug("add_to_inner_packet tmbuf len %d new %d mbuf %s", tmlen, new, str(m))
+    # if TRACE:
+    #     logger.debug("add_to_inner_packet tmbuf len %d new %d mbuf %s", tmlen, new, str(m))
 
     if not m:
         m = tunnel_get_recv_mbuf(freeq)
 
     if m.len() == 0:
-        if DEBUG:
-            logger.debug("add_to_inner_packet mbuf len == 0, offset %d", offset)
+        # if TRACE:
+        #     logger.debug("add_to_inner_packet mbuf len == 0, offset %d", offset)
+
         # -----------
         # New packet.
         # -----------
@@ -151,15 +151,15 @@ def add_to_inner_packet(tmbuf: MBuf, new: bool, m: MBuf, freeq: MQueue, outq: MQ
 
             # Check to see if the rest is padding.
             if tmlen < 6:
-                if DEBUG:
-                    logger.debug("add_to_inner_packet mbuf len == 0, tmlen < 6")
+                # if TRACE:
+                #     logger.debug("add_to_inner_packet mbuf len == 0, tmlen < 6")
                 tmbuf.start = tmbuf.end
                 return m
 
             if (start[0] & 0xF0) not in (0x40, 0x60):
-                if DEBUG:
-                    logger.debug("add_to_inner_packet mbuf len == 0, padding (verbyte %d)",
-                                 start[0])
+                # if TRACE:
+                #     logger.debug("add_to_inner_packet mbuf len == 0, padding (verbyte %d)",
+                #                  start[0])
                 tmbuf.start = tmbuf.end
                 return m
 
@@ -244,8 +244,8 @@ def tunnel_get_outer_packet(s: socket.socket, tmbuf: MBuf, outq: MQueue, rxlimit
             # Make this valid.
             tmbuf.end = tmbuf.start[n:]
             outq.lastseq = seq
-            if DEBUG:
-                logger.debug("Got outer packet seq: %d len: %d tmbuf.len: %d", seq, n, tmbuf.len())
+            # if TRACE:
+            #     logger.debug("Got outer packet seq: %d len: %d tmbuf.len: %d", seq, n, tmbuf.len())
             return seq, True
 
         # Drops or duplicates
@@ -331,8 +331,8 @@ def write_tunnel_packet(  # pylint: disable=R0912,R0913,R0915
     freem = []
 
     if leftover:
-        # if DEBUG:
-        #     logging.debug("write_tunnel_packet seq: %d, mtu %d leftover %d", seq, mtu, id(leftover))
+        if DEBUG:
+            logging.debug("write_tunnel_packet seq: %d, mtu %d leftover %d", seq, mtu, id(leftover))
         # This is an mbuf we didn't finish sending last time.
         m = leftover
         # Set the offset to after this mbuf data.
@@ -341,8 +341,10 @@ def write_tunnel_packet(  # pylint: disable=R0912,R0913,R0915
         # Try and get a new mbuf to embed
         m = inq.trypop()
         offset = 0
-        # if DEBUG:
+        # if TRACE:
         #     logging.debug("write_tunnel_packet seq: %d, mtu %d m %d", seq, mtu, id(m))
+        if DEBUG and m:
+            logging.debug("write_tunnel_packet seq: %d, mtu %d m %d", seq, mtu, id(m))
 
     if not m:
         return write_empty_tunnel_packet(s, seq, mtu)

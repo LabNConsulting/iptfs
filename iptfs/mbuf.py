@@ -9,6 +9,7 @@ import threading
 
 logger = logging.getLogger(__file__)
 
+
 class MBuf:
     def __init__(self, size, hdrspace):
         self.space = memoryview(bytearray(size))
@@ -22,7 +23,7 @@ class MBuf:
 
     def prepend(self, space):
         newstart = self.hdrspace() - space
-        assert(newstart >= 0)
+        assert (newstart >= 0)
         self.start = self.space[newstart:]
         return self.start
 
@@ -34,7 +35,6 @@ class MBuf:
 
     def len(self):
         return self.start.nbytes - self.end.nbytes
-
 
 
 class MQueue:
@@ -73,24 +73,20 @@ class MQueue:
                     logger.debug("pop: mqueue %s is empty", self.name)
                 self.pop_cv.wait()
 
-            m = self.mbufs.pop()
-
             if self.full():
                 self.push_cv.notify()
 
-            return m
+            return self.mbufs.pop()
 
     def trypop(self):
         with self.pop_cv:
             if self.empty():
                 return None
-        m = self.mbufs.pop()
 
-        if self.manage:
             if self.full():
                 self.push_cv.notify()
 
-            return m
+            return self.mbufs.pop()
 
     def push(self, m, reset):
         """push an mbuf on the queue.
@@ -110,6 +106,7 @@ class MQueue:
             if self.empty():
                 self.pop_cv.notify()
             self.mbufs.append(m)
+
 
 __author__ = 'Christian Hopps'
 __date__ = 'January 22 2019'
