@@ -87,7 +87,7 @@ def write_intf_packets(fd: io.RawIOBase, outq: MQueue, freeq: MQueue):
         if n != mlen:
             logger.error("write: bad write %d (mlen %d) on interface", n, mlen)
         if DEBUG:
-            logger.debug("write: %d bytes (%s) on %s ", n, binascii.hexlify(m.start[:8]), str(fd))
+            logger.debug("write: %d bytes (%s) on interface", n, binascii.hexlify(m.start[:8]))
         freeq.push(m, True)
 
 
@@ -113,7 +113,7 @@ def tunnel_get_recv_mbuf(freeq: MQueue):
         freeq.push(m, True)
 
 
-def add_to_inner_packet(tmbuf: MBuf, new: bool, m: MBuf, freeq: MQueue, outq: MQueue):  # pylint: disable=R0911,R0912
+def add_to_inner_packet(tmbuf: MBuf, new: bool, m: MBuf, freeq: MQueue, outq: MQueue, recurse=False):  # pylint: disable=R0911,R0912
 
     if not new:
         offset = 0
@@ -129,9 +129,13 @@ def add_to_inner_packet(tmbuf: MBuf, new: bool, m: MBuf, freeq: MQueue, outq: MQ
     #     logger.debug("add_to_inner_packet tmbuf len %d new %d mbuf %s", tmlen, new, str(m))
 
     if not m:
+        if DEBUG:
+            logger.debug("add_to_inner_packet getting new mbuf")
         m = tunnel_get_recv_mbuf(freeq)
 
     if m.len() == 0:
+        if DEBUG and recurse:
+            logger.debug("add_to_inner_packet mbuf len == 0, offset %d", offset)
         # if TRACE:
         #     logger.debug("add_to_inner_packet mbuf len == 0, offset %d", offset)
 
@@ -151,12 +155,17 @@ def add_to_inner_packet(tmbuf: MBuf, new: bool, m: MBuf, freeq: MQueue, outq: MQ
 
             # Check to see if the rest is padding.
             if tmlen < 6:
+                if DEBUG and recurse:
+                    logger.debug("add_to_inner_packet mbuf len == 0, tmlen < 6")
                 # if TRACE:
                 #     logger.debug("add_to_inner_packet mbuf len == 0, tmlen < 6")
                 tmbuf.start = tmbuf.end
                 return m
 
             if (start[0] & 0xF0) not in (0x40, 0x60):
+                if DEBUG and recurse:
+                    logger.debug("add_to_inner_packet mbuf len == 0, padding (verbyte %d)",
+                                 start[0])
                 # if TRACE:
                 #     logger.debug("add_to_inner_packet mbuf len == 0, padding (verbyte %d)",
                 #                  start[0])
@@ -206,13 +215,15 @@ def add_to_inner_packet(tmbuf: MBuf, new: bool, m: MBuf, freeq: MQueue, outq: MQ
     # We have enough to finish this inner packet.
     m.end[:m.left] = start[:m.left]
     m.end = m.end[m.left:]
+    tmbuf.start = tmbuf.start[m.left:]
     m.left = 0
-    tmbuf.start = start[m.left:]
     outq.push(m)
 
     # Recurse!
-    print("recurse")
-    return add_to_inner_packet(tmbuf, False, None, freeq, outq)
+    if tmbuf.len() == 0:
+        return None
+    logger.debug("recurse: recurse %d", recurse)
+    return add_to_inner_packet(tmbuf, False, None, freeq, outq, True)
 
 
 def tunnel_get_outer_packet(s: socket.socket, tmbuf: MBuf, outq: MQueue, rxlimit: Limit):
@@ -313,7 +324,7 @@ def write_empty_tunnel_packet(s: socket.socket, seq: int, mtu: int):
 
     n = s.sendmsg([m.start[:mlen]])
     if n != mlen:
-        logger.error("write: bad write %d of %d on TFS link", n, mlen)
+        logger.error("write: bad empty write %d of %d on TFS link", n, mlen)
     elif DEBUG:
         # logger.debug("write: %d bytes (%s) on TFS Link", n, binascii.hexlify(m.start[:8]))
         pass
@@ -371,11 +382,11 @@ def write_tunnel_packet(  # pylint: disable=R0912,R0913,R0915
         while True:
             # We need a minimum of 6 bytes to include IPv6 length field.
             if mtu <= 6:
-                iov.append(PADBYTES[:mtu])
+                iov.append(PADBYTES[8:mtu+8])
                 break
             m = inq.trypop()
             if not m:
-                iov.append(PADBYTES[:mtu])
+                iov.append(PADBYTES[8:mtu+8])
                 break
             mlen = m.len()
             if mlen > mtu:
@@ -387,14 +398,17 @@ def write_tunnel_packet(  # pylint: disable=R0912,R0913,R0915
             freem.append(m)
             mtu -= mlen
 
+    iovlen = 0
+    for x in iov:
+        iovlen += len(x)
     n = s.sendmsg(iov)
-    if n != mlen:
+    if n != iovlen:
         logger.error("write: bad write %d of %d on TFS link", n, mlen)
         if leftover:
             freem.append(leftover)
             leftover = None
     elif DEBUG:
-        logger.debug("write: %d bytes (%s) on TFS Link", n, binascii.hexlify(m.start[:8]))
+        logger.debug("write: %d bytes on TFS Link", n)
 
     # Free any MBufs we are done with.
     for m in freem:

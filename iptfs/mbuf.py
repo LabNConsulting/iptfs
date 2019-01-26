@@ -88,7 +88,7 @@ class MQueue:
 
             return self.mbufs.pop()
 
-    def push(self, m, reset):
+    def push(self, m, reset=False):
         """push an mbuf on the queue.
 
         If reset is true then the mbuf is reset to an initial state.
