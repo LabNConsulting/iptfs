@@ -145,7 +145,7 @@ def add_to_inner_packet(tmbuf: MBuf, new: bool, m: MBuf, freeq: MQueue, outq: MQ
         if offset > tmlen:
             # Here we have an old packet filling the entire outer buffer
             # but no existing inner, thrown it away.
-            return m, 0
+            return m
 
         # skip past the existing packet we don't know about.
         if True:  # pylint: disable=W0125

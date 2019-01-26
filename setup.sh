@@ -42,7 +42,8 @@ if (( VMID == 2 )); then
     sleep 1
     sysctl -w net.ipv6.conf.tfs0.disable_ipv6=1
     ip addr add 192.168.30.$IPID/24 dev tfs0
-    ip link set tfs0 mtu 8970
+    ip link set tfs0 mtu 1470
+    # ip link set tfs0 mtu 8970
     ip link set tfs0 up
 else
     . venv/bin/activate
@@ -52,7 +53,8 @@ else
     sleep 1
     sysctl -w net.ipv6.conf.tfs0.disable_ipv6=1
     ip addr add 192.168.30.$IPID/24 dev tfs0
-    ip link set tfs0 mtu 8970
+    ip link set tfs0 mtu 1470
+    #ip link set tfs0 mtu 8970
     ip link set tfs0 up
 fi
 

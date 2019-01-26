@@ -73,6 +73,7 @@ class MQueue:
                     logger.debug("pop: mqueue %s is empty", self.name)
                 self.pop_cv.wait()
 
+            # If we were full then notify there will be push space.
             if self.full():
                 self.push_cv.notify()
 
@@ -83,6 +84,7 @@ class MQueue:
             if self.empty():
                 return None
 
+            # If we were full then notify there will be push space.
             if self.full():
                 self.push_cv.notify()
 
@@ -103,8 +105,10 @@ class MQueue:
                     logger.debug("push: queue %s is full", self.name)
                 self.push_cv.wait()
 
+            # If we were empty then notify there will be something to pop.
             if self.empty():
                 self.pop_cv.notify()
+
             self.mbufs.append(m)
 
 

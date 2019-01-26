@@ -113,14 +113,14 @@ def checked_main(*margs):
         logging.basicConfig(level=logging.INFO)
 
     riffd, wiffd, devname = tun_alloc(args.dev)
-    print("opened tun device: {} {} {}".format(devname, riffd, wiffd))
+    logger.info("Opened tun device: %s", devname)
 
     if not args.connect:
         s, _ = accept(args.listen, args.port, True)
-        print("accepted from client: %s", str(s))
+        logger.info("Accepted from client: %s", str(s))
     else:
         s = connect(args.connect, args.port, True)
-        print("connected to server: %s", str(s))
+        logger.info("Connected to server: %s", str(s))
 
     threads = []
     if not args.no_ingress:
@@ -137,7 +137,7 @@ def main(*margs):
     try:
         return checked_main(*margs)
     except Exception as e:  # pylint: disable=W0703
-        print("Unexpected exception: %s", str(e))
+        logger.critical("Unexpected exception: %s", str(e))
         sys.exit(1)
 
 
