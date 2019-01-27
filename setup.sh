@@ -28,7 +28,7 @@ VMID=$((IPID - 64))
 
 FRAMESZ=1400
 TXRATE=10 # (Mbps)
-CONGESTRATE=50
+CONGESTRATE=8
 
 # COMMON=" --congest-rate=1500 -v --dev tfs0 --port 8001"
 #COMMON="--trace -v --rate=$TXRATEMb --dev tfs0 --port 8001"

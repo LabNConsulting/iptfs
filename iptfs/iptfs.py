@@ -361,8 +361,9 @@ def tunnel_get_outer_packet(s: socket.socket, tmbuf: MBuf, outq: MQueue, _: thre
 
         # record missing packets.
         outq.dropcnt += seq - (outq.lastseq + 1)
-        logger.error("Detected packet loss (totl count: %d lasseq %d seq %d)", outq.dropcnt,
-                     outq.lastseq, seq)
+        if DEBUG:
+            logger.debug("Detected packet loss (totl count: %d lasseq %d seq %d)", outq.dropcnt,
+                         outq.lastseq, seq)
 
         # with send_ack_cv:
         #     send_ack_cv.notify()
@@ -657,8 +658,13 @@ def recv_ack(m: MBuf):  # pylint: disable=W0613
     ackstart = get32(start[12:])
     ackend = get32(start[16:])
 
-    logger.info("Received ACK: drop %d start %d end %d timestamp %d:%d", dropcnt, ackstart, ackend,
-                ns1, ns2)
+    if dropcnt:
+        pct = 100 * dropcnt / (ackend - ackstart)
+        logger.info("Received ACK: drop %d/%d%% start %d end %d timestamp %d:%d", dropcnt, pct, ackstart, ackend,
+                    ns1, ns2)
+    elif DEBUG:
+        logger.debug("Received ACK: drop %d start %d end %d timestamp %d:%d", dropcnt, ackstart, ackend,
+                    ns1, ns2)
 
 
 # def send_ack_infos(s: socket.socket, cv: threading.Condition, outq: MQueue):
