@@ -75,8 +75,9 @@ class MQueue:
                 self.pop_cv.wait()
 
             # If we were full then notify there will be push space.
-            if self.full():
-                self.push_cv.notify()
+            # if self.full():
+            #     self.push_cv.notify()
+            self.push_cv.notify()
 
             return self.mbufs.pop()
 
@@ -107,8 +108,9 @@ class MQueue:
                 self.push_cv.wait()
 
             # If we were empty then notify there will be something to pop.
-            if self.empty():
-                self.pop_cv.notify()
+            # if self.empty():
+            #     self.pop_cv.notify()
+            self.pop_cv.notify()
 
             self.mbufs.append(m)
 

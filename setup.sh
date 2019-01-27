@@ -32,6 +32,7 @@ TXRATE=10 # (Mbps)
 # COMMON=" --congest-rate=1500 -v --dev tfs0 --port 8001"
 #COMMON="--trace -v --rate=$TXRATEMb --dev tfs0 --port 8001"
 COMMON="--rate=$TXRATE --dev tfs0 --port 8001"
+#COMMON="--debug --rate=$TXRATE --dev tfs0 --port 8001"
 if (( VMID == 2 )); then
     OVMID=3
     sleep 1
