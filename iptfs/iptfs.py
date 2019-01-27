@@ -646,9 +646,18 @@ def write_tunnel_packets(  # pylint: disable=W0613,R0913
 # ACK Info
 # ========
 
+def summin1(l):
+    mval = 0
+    s = 0
+    for x in l:
+        if x:
+            mval=1
+        s += x
+    return max(mval, s//len(l))
+
 # Use integers averages.
-ppsavg = util.RunningAverage(5, 0, lambda x: sum(x) // len(x))
-dropavg = util.RunningAverage(5, 0, lambda x: sum(x) // len(x))
+ppsavg = util.RunningAverage(5, 0, summin1)
+dropavg = util.RunningAverage(5, 0, summin1)
 lastack = 0
 
 
