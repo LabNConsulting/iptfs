@@ -14,7 +14,7 @@ import threading
 import traceback
 from . import DEBUG
 from .mbuf import MBuf, MQueue
-from .util import Limit, Periodic
+from .util import Limit, Periodic, PeriodicSignal
 
 DEBUG = False
 TRACE = False
@@ -310,7 +310,7 @@ def add_to_inner_packet(tmbuf: MBuf, new: bool, m: MBuf, freeq: MQueue, outq: MQ
     return add_to_inner_packet(tmbuf, False, None, freeq, outq, seq)
 
 
-def tunnel_get_outer_packet(s: socket.socket, tmbuf: MBuf, outq: MQueue, rxlimit: Limit):
+def tunnel_get_outer_packet(s: socket.socket, tmbuf: MBuf, outq: MQueue, send_ack_cv: threading.Condition, rxlimit: Limit):
     while True:
         tmbuf.reset(HDRSPACE)
         (n, addr) = s.recvfrom_into(tmbuf.start)
@@ -360,6 +360,8 @@ def tunnel_get_outer_packet(s: socket.socket, tmbuf: MBuf, outq: MQueue, rxlimit
         logger.error("Detected packet loss (totl count: %d lasseq %d seq %d)", outq.dropcnt,
                      outq.lastseq, seq)
 
+        send_ack_cv.notifyAll()
+
         # abandon any in progress packet.
         tmbuf.end = tmbuf.start[n:]
         outq.lastseq = seq
@@ -367,13 +369,13 @@ def tunnel_get_outer_packet(s: socket.socket, tmbuf: MBuf, outq: MQueue, rxlimit
 
 
 def read_tunnel_into_packet(s: socket.socket, tmbuf: MBuf, freeq: MQueue, outq: MQueue,
-                            rxlimit: Limit):
+                            send_ack_cv: threading.Condition, rxlimit: Limit):
     m = None
     seq = 0
     while True:
         # If we don't have a current outer packet get one.
         # if seq == 0 or tmbuf.len() == 0:
-        seq, reset = tunnel_get_outer_packet(s, tmbuf, outq, rxlimit)
+        seq, reset = tunnel_get_outer_packet(s, tmbuf, outq, send_ack_cv, rxlimit)
 
         if m and reset:
             if DEBUG:
@@ -385,7 +387,7 @@ def read_tunnel_into_packet(s: socket.socket, tmbuf: MBuf, freeq: MQueue, outq: 
 
 
 # We really want MHeaders with MBuf chains here.
-def read_tunnel_packets(s, freeq: MQueue, outq: MQueue, max_rxrate: int):
+def read_tunnel_packets(s, freeq: MQueue, outq: MQueue, send_ack_cv: threading.Condition, max_rxrate: int):
     logger.info("read: start reading on TFS link")
 
     outq.startseq = 0
@@ -402,7 +404,7 @@ def read_tunnel_packets(s, freeq: MQueue, outq: MQueue, max_rxrate: int):
     # Loop reconstructing inner packets
     tmbuf = MBuf(MAXBUF, HDRSPACE)
     while True:
-        read_tunnel_into_packet(s, tmbuf, freeq, outq, rxlimit)
+        read_tunnel_into_packet(s, tmbuf, freeq, outq, send_ack_cv, rxlimit)
 
 
 # ------------
@@ -610,16 +612,26 @@ def write_tunnel_packets(s: socket.socket, mtu: int, inq: MQueue, freeq: MQueue,
     nrate = prate * mtub
     logger.info("Writing TFS packets at rate of %d pps for %d bps", prate, nrate)
 
-    periodic = Periodic(prate)
+    periodic = Periodic(1.0/prate)
     leftover = None
     seq = 0
     while periodic.wait():
         leftover, seq = write_tunnel_packet(s, seq, mtu, leftover, inq, freeq)
 
+# ===============
+# ACK Info Thread
+# ===============
 
-# -------
+def send_ack_info(cv):
+    while True:
+        with cv:
+            cv.wait()
+        logger.info("Send ACK")
+
+
+# =======
 # Generic
-# -------
+# =======
 
 
 def thread_catch(func, name, *args):
@@ -650,18 +662,23 @@ def tunnel_ingress(riffd: io.RawIOBase, s: socket.socket, rate: int):
     return threads
 
 
-def tunnel_egress(s: socket.socket, wiffd: io.RawIOBase, congest_rate: int):
+def tunnel_egress(s: socket.socket, wiffd: io.RawIOBase, ack_rate: float, congest_rate: int):
     freeq = MQueue("TFS Egress FREEQ", MAXQSZ, MAXBUF, HDRSPACE, DEBUG)
     outq = MQueue("TFS Egress OUTQ", MAXQSZ, 0, 0, DEBUG)
 
+    send_ack_periodic = PeriodicSignal("ACK Signal", ack_rate)
+
     threads = [
-        thread_catch(read_tunnel_packets, "TFSLINKREAD", s, freeq, outq, congest_rate),
+        thread_catch(read_tunnel_packets, "TFSLINKREAD", s, freeq, outq, send_ack_periodic.cv, congest_rate),
         thread_catch(write_intf_packets, "IFWRITE", wiffd, outq, freeq),
+        thread_catch(send_ack_info, "ACKINFO", send_ack_periodic.cv)
     ]
 
     for t in threads:
         t.daemon = True
         t.start()
+
+    send_ack_periodic.start()
 
     return threads
 

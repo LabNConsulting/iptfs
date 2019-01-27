@@ -91,6 +91,8 @@ def accept(sname, service, isudp):
 
 def checked_main(*margs):
     parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "-a", "--ack-rate", type=float, default=1.0, help="Rate in float seconds to send ACK info")
     parser.add_argument("-c", "--connect", help="Connect to server")
     parser.add_argument(
         "--congest-rate", type=int, default=0, help="Forced maximum egress rate in Megabits")
@@ -135,7 +137,7 @@ def checked_main(*margs):
     if not args.no_ingress:
         threads.extend(iptfs.tunnel_ingress(riffd, s, args.rate * 1000000))
     if not args.no_egress:
-        threads.extend(iptfs.tunnel_egress(s, wiffd, args.congest_rate * 1000000))
+        threads.extend(iptfs.tunnel_egress(s, wiffd, args.ack_rate, args.congest_rate * 1000000))
     for thread in threads:
         thread.join()
 

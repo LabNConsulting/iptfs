@@ -12,6 +12,7 @@ from __future__ import absolute_import, division, unicode_literals, print_functi
 
 import time
 import logging
+import threading
 
 logger = logging.getLogger(__file__)
 
@@ -54,11 +55,10 @@ class Limit:
 
 
 class Periodic:
-    def __init__(self, packet_rate: int):
-        self.prate = packet_rate
+    def __init__(self, rate: int):
         # self.timestamp = time.time_ns()
         self.timestamp = time.time()
-        self.ival = 1.0 / packet_rate
+        self.ival = rate
 
     def wait(self):
         now = time.time()
@@ -74,6 +74,22 @@ class Periodic:
             # logging.debug("Waking up!")
             self.timestamp = time.time()
         return True
+
+
+class PeriodicSignal:
+    def __init__(self, name: str, rate: int):
+        self.cv = threading.Condition()
+        self._periodic = Periodic(rate)
+        self._thread = threading.Thread(name=name, target=self._periodic_signal)
+        self._thread.daemon = True
+
+    def start(self):
+        self._thread.start()
+
+    def _periodic_signal(self):
+        while self._periodic.wait():
+            with self.cv:
+                self.cv.notifyAll()
 
 
 __author__ = 'Christian E. Hopps'
