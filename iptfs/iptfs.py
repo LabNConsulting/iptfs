@@ -692,17 +692,21 @@ def recv_ack(m: MBuf):  # pylint: disable=W0613,R0912
         if dropavg.average == 0:
             # Increase rate as we have zero drops.
             if tunnel_periodic.pps < tunnel_target_pps:
-                target = tunnel_periodic.pps * 110 // 100
+                target = tunnel_periodic.pps + 1
                 if target > tunnel_target_pps:
                     target = tunnel_target_pps
                 logger.info("Increasing send rate to %d pps", target)
                 tunnel_periodic.change_rate(target)
         else:
-            target = tunnel_periodic.pps * 90 // 100
+            # decrease by 1/4 droppct
+            droppct = dropavg.average * 25 / ppsavg.average
+            if not droppct:
+                droppct = 1
+            target = max(tunnel_periodic.pps * (100 - droppct) // 100, 1)
             if target < 0:
                 target = tunnel_target_pps * 1 // 100
-            logger.info("Decreasing send rate to %d pps due to dropavg: %d", target,
-                        dropavg.average)
+            logger.info("Decreasing send rate to %d pps due to dropavg: %d (%d pct)", target,
+                        dropavg.average, 2 * droppct)
             tunnel_periodic.change_rate(target)
 
     if dropcnt:
