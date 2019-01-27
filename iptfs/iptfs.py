@@ -683,7 +683,7 @@ def send_ack_infos(s: socket.socket, send_lock: threading.Lock, rate: float, out
             if outq.startseq == 0:
                 continue
             dropcnt = outq.dropcnt
-            dropcnt = 0
+            outq.dropcnt = 0
             ackstart = outq.startseq
             outq.startseq = 0
             ackend = outq.lastseq
