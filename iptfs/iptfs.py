@@ -122,7 +122,7 @@ def add_to_inner_packet(tmbuf: MBuf, new: bool, m: MBuf, freeq: MQueue, outq: MQ
 
     logtmlen = tmbuf.len()
     if logtmlen <= 0:
-        logger.error("ERRORX1: logtmlen %d recurse %d ", logtmlen, recurse)
+        logger.error("ERRORX1: logtmlen %d new %d ", logtmlen, new)
     assert (logtmlen > 0)
 
     if not new:
@@ -342,7 +342,8 @@ def tunnel_get_outer_packet(s: socket.socket, tmbuf: MBuf, outq: MQueue, rxlimit
             tmbuf.end = tmbuf.start[n:]
             outq.lastseq = seq
             # if TRACE:
-            #     logger.debug("Got outer packet seq: %d len: %d tmbuf.len: %d", seq, n, tmbuf.len())
+            #     logger.debug("Got outer packet seq: %d len: %d tmbuf.len: %d",
+            #                  seq, n, tmbuf.len())
             return seq, False
 
         # Drops or duplicates
@@ -426,10 +427,10 @@ def write_empty_tunnel_packet(s: socket.socket, seq: int, mtu: int):
 
 
 def iovlen(iov):
-    iovlen = 0
+    iovl = 0
     for x in iov:
-        iovlen += len(x)
-    return iovlen
+        iovl += len(x)
+    return iovl
 
 
 def write_tunnel_packet(  # pylint: disable=R0912,R0913,R0914,R0915
