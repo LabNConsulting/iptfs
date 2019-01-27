@@ -12,6 +12,7 @@ import os
 import socket
 import struct
 import sys
+import threading
 from . import iptfs
 
 TUNSETIFF = 0x400454ca
@@ -133,11 +134,14 @@ def checked_main(*margs):
         s = connect(args.connect, args.port, True)
         logger.info("Connected to server: %s", str(s))
 
+    send_lock = threading.Lock()
+
     threads = []
     if not args.no_ingress:
-        threads.extend(iptfs.tunnel_ingress(riffd, s, args.rate * 1000000))
+        threads.extend(iptfs.tunnel_ingress(riffd, s, send_lock, args.rate * 1000000))
     if not args.no_egress:
-        threads.extend(iptfs.tunnel_egress(s, wiffd, args.ack_rate, args.congest_rate * 1000000))
+        threads.extend(
+            iptfs.tunnel_egress(s, send_lock, wiffd, args.ack_rate, args.congest_rate * 1000000))
     for thread in threads:
         thread.join()
 
