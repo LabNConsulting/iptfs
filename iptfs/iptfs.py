@@ -15,7 +15,8 @@ import time
 import traceback
 from . import DEBUG
 from .mbuf import MBuf, MQueue
-from .util import Limit, Periodic  # , PeriodicSignal
+from .util import monotonic_ns, Limit, Periodic  # , PeriodicSignal
+from . import util
 
 DEBUG = False
 TRACE = False
@@ -613,6 +614,10 @@ def write_tunnel_packet(  # pylint: disable=R0912,R0913,R0914,R0915
     return leftover, seq
 
 
+tunnel_target_pps = 0
+tunnel_periodic = util.PeriodicPPS(1)
+
+
 def write_tunnel_packets(  # pylint: disable=W0613,R0913
         s: socket.socket, send_lock: threading.Lock, mtu: int, inq: MQueue, freeq: MQueue,
         rate: int):
@@ -625,10 +630,15 @@ def write_tunnel_packets(  # pylint: disable=W0613,R0913
     nrate = prate * mtub
     logger.info("Writing TFS packets at rate of %d pps for %d bps", prate, nrate)
 
-    periodic = Periodic(1.0 / prate)
+    global tunnel_target_pps
+    global tunnel_periodic
+
+    tunnel_target_pps = prate
+    tunnel_periodic = util.PeriodicPPS(prate)
+
     leftover = None
     seq = 0
-    while periodic.wait():
+    while tunnel_periodic.wait():
         leftover, seq = write_tunnel_packet(s, send_lock, seq, mtu, leftover, inq, freeq)
 
 
@@ -636,17 +646,15 @@ def write_tunnel_packets(  # pylint: disable=W0613,R0913
 # ACK Info
 # ========
 
-try:
-    clock_gettime_ns = time.clock_gettime_ns
-except AttributeError:
-
-    def clock_gettime_ns(clock):
-        fp = time.clock_gettime(clock)
-        ns = int(fp * 1000000000)
-        return ns
+# Use integers averages.
+ppsavg = util.RunningAverage(5, 0, lambda x: sum(x) // len(x))
+dropavg = util.RunningAverage(5, 0, lambda x: sum(x) // len(x))
+lastack = 0
 
 
-def recv_ack(m: MBuf):  # pylint: disable=W0613
+def recv_ack(m: MBuf):  # pylint: disable=W0613,R0912
+    global lastack  # pylint: disable=W0603
+
     if m.len() != 24:
         logger.info("Received Bad Length ACK: len: %d", m.len())
         return
@@ -655,16 +663,55 @@ def recv_ack(m: MBuf):  # pylint: disable=W0613
     dropcnt = get32(start) & 0xFFFFFF
     ns1 = get32(start[4:])
     ns2 = get32(start[8:])
+    ns = (ns1 << 32) + ns2
     ackstart = get32(start[12:])
     ackend = get32(start[16:])
+    runlen = ackend - ackstart
+
+    # XXX this all needs to be safer (check for 0 etc).
+    ppsavg.add_value(runlen)
+    ticked = dropavg.add_value(dropcnt)
+    if lastack == 0:
+        count = 1
+    else:
+        # Add 100ms to time to account for a bit of drift.
+        count = (ns + 100000000 - lastack) // 1000000000
+    lastack = ns
+
+    if count > 1:
+        logger.info("Lost ACK count: %d", count - 1)
+        pps = ppsavg.average
+        for _ in range(1, count):
+            # Count missed ACKs as dropping 25%
+            ppsavg.add_value(pps)
+            if dropavg.add_value(pps // 4):
+                ticked = True
+
+    if ticked:
+        # We've gone a full run so let's act.
+        if dropavg.average == 0:
+            # Increase rate as we have zero drops.
+            if tunnel_periodic.pps < tunnel_target_pps:
+                target = tunnel_periodic.pps * 110 // 100
+                if target > tunnel_target_pps:
+                    target = tunnel_target_pps
+                logger.info("Increasing send rate to %d pps", target)
+                tunnel_periodic.change_rate(target)
+        else:
+            target = tunnel_periodic.pps * 90 // 100
+            if target < 0:
+                target = tunnel_target_pps * 1 // 100
+            logger.info("Decreasing send rate to %d pps due to dropavg: %d", target,
+                        dropavg.average)
+            tunnel_periodic.change_rate(target)
 
     if dropcnt:
         pct = 100 * dropcnt / (ackend - ackstart)
-        logger.info("Received ACK: drop %d/%d%% start %d end %d timestamp %d:%d", dropcnt, pct, ackstart, ackend,
-                    ns1, ns2)
+        logger.info("Received ACK: drop %d/%d%% start %d end %d timestamp %d:%d", dropcnt, pct,
+                    ackstart, ackend, ns1, ns2)
     elif DEBUG:
-        logger.debug("Received ACK: drop %d start %d end %d timestamp %d:%d", dropcnt, ackstart, ackend,
-                    ns1, ns2)
+        logger.debug("Received ACK: drop %d start %d end %d timestamp %d:%d", dropcnt, ackstart,
+                     ackend, ns1, ns2)
 
 
 # def send_ack_infos(s: socket.socket, cv: threading.Condition, outq: MQueue):
@@ -696,7 +743,7 @@ def send_ack_infos(s: socket.socket, send_lock: threading.Lock, rate: float, out
 
         if dropcnt > 0xFFFFFF:
             dropcnt = 0xFFFFFF
-        ns = clock_gettime_ns(time.CLOCK_MONOTONIC)
+        ns = monotonic_ns()
 
         # We use the 2nd bit to indicate this is an ACK this normally goes in IKEv2
         put32(start, (0x40000000 | dropcnt))
@@ -731,8 +778,10 @@ def thread_catch(func, name, *args):
 
 
 def tunnel_ingress(riffd: io.RawIOBase, s: socket.socket, send_lock: threading.Lock, rate: int):
+    global targetpps
     freeq = MQueue("TFS Ingress FREEQ", MAXQSZ, MAXBUF, HDRSPACE, DEBUG)
     outq = MQueue("TFS Ingress OUTQ", MAXQSZ, 0, 0, DEBUG)
+    targetpps = rate
 
     threads = [
         thread_catch(read_intf_packets, "IFREAD", riffd, freeq, outq),

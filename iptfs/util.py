@@ -16,6 +16,68 @@ import threading
 
 logger = logging.getLogger(__file__)
 
+SEC_NANOSECS = 1000000000
+
+try:
+    clock_gettime_ns = time.clock_gettime_ns
+except AttributeError:
+
+    def clock_gettime_ns(clock):
+        fp = time.clock_gettime(clock)
+        ns = int(fp * SEC_NANOSECS)
+        return ns
+
+
+def monotonic_ns():
+    return clock_gettime_ns(time.CLOCK_MONOTONIC)
+
+
+def monotonic():
+    return time.clock_gettime(time.CLOCK_MONOTONIC)
+
+
+class Timestamp:
+    """A way to track the lifetime left of an object"""
+
+    def __init__(self):
+        self.timestamp = monotonic()
+
+    def reset(self):
+        self.timestamp = monotonic()
+
+    def elapsed(self):
+        return monotonic() - self.timestamp
+
+
+class RunningAverage:
+    def __init__(self, runlen, defval=int(0), avgf=None):
+        self.runlen = runlen
+        self.values = [defval] * runlen
+        self.index = 0
+        self.ticks = 0
+
+        if avgf is None:
+            self.avgf = lambda l: sum(l) / len(l)
+        else:
+            self.avgf = avgf
+
+        self.average = self.avgf(self.values)
+
+    def add_value(self, value):
+        """add_value adds a new value to the running average.
+
+        Returns True if a full run has occurred.
+        """
+        self.values[self.index] = value
+        self.index += 1
+        rv = False
+        if self.index == self.runlen:
+            self.ticks += 1
+            self.index = 0
+            rv = True
+        self.average = self.avgf(self.values)
+        return rv
+
 
 class Limit:
     def __init__(self, rate: int, overhead: int, count: int):
@@ -55,7 +117,7 @@ class Limit:
 
 
 class Periodic:
-    def __init__(self, rate: int):
+    def __init__(self, rate: float):
         # self.timestamp = time.time_ns()
         self.timestamp = time.time()
         self.ival = rate
@@ -71,6 +133,40 @@ class Periodic:
         else:
             # logging.debug("Waiting: %s", str(self.ival - delta))
             time.sleep(self.ival - delta)
+            # logging.debug("Waking up!")
+            self.timestamp = time.time()
+        return True
+
+
+class PeriodicPPS:
+    def __init__(self, pps: int):
+        # self.timestamp = time.time_ns()
+        self.ival_lock = threading.Lock()
+        self.timestamp = time.time()
+        self.pps = pps
+        self.ival = 1.0 / pps
+
+    def change_rate(self, pps: int):
+        with self.ival_lock:
+            if pps != self.pps:
+                self.pps = pps
+                self.ival = 1.0 / pps
+                return True
+        return False
+
+    def wait(self):
+        with self.ival_lock:
+            ival = self.ival
+        now = time.time()
+        delta = now - self.timestamp
+        waittime = ival - delta
+        if waittime < 0:
+            self.timestamp = now
+            if waittime != 0:
+                logging.info("Overran periodic timer by %f seconds", -waittime)
+        else:
+            # logging.debug("Waiting: %s", str(self.ival - delta))
+            time.sleep(ival - delta)
             # logging.debug("Waking up!")
             self.timestamp = time.time()
         return True
