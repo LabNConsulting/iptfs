@@ -57,9 +57,9 @@ emptym = MBuf(MAXBUF, HDRSPACE)
 put32(emptym.start[4:], 0)
 emptym.start[8] = 0x0
 
-# -----------------
+# =================
 # Interface Packets
-# -----------------
+# =================
 
 
 def read_intf_packets(fd: io.RawIOBase, inq: MQueue, outq: MQueue):
@@ -92,9 +92,13 @@ def write_intf_packets(fd: io.RawIOBase, outq: MQueue, freeq: MQueue):
         freeq.push(m, True)
 
 
-# ------------------
+# ==================
 # TFS Tunnel Packets
-# ------------------
+# ==================
+
+# -------------------
+# Read Tunnel Packets
+# -------------------
 
 
 def recv_ack(inq: MQueue, m: MBuf):  # pylint: disable=W0613
@@ -398,6 +402,11 @@ def read_tunnel_packets(s, freeq: MQueue, outq: MQueue, max_rxrate: int):
     tmbuf = MBuf(MAXBUF, HDRSPACE)
     while True:
         read_tunnel_into_packet(s, tmbuf, freeq, outq, rxlimit)
+
+
+# ------------
+# Write Tunnel
+# ------------
 
 
 def write_empty_tunnel_packet(s: socket.socket, seq: int, mtu: int):
