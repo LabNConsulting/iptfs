@@ -1,0 +1,225 @@
+# -*- fill-column: 70 -*-
+# This is a comment.
+#
+
+This document describes a mechanism to provides for traffic flow
+security (also referred to as traffic flow confidentiality) for IP
+encapsulated traffic. Traffic flow security is provided by obscuring
+size and frequency using a constant sized and send rate encrypted
+tunnel.
+
+* Introduction
+
+The goal of IP Traffic Flow Security (IP-TFS) is to hide the size and
+frequency of IP traffic. To do this we use a constant send IPsec
+^RFC4303^ tunnel of same sized packets. The tunnel bandwidth and packet
+size are the inputs to the algorithm. The packet size can be set based
+on path MTU discovery for optimal performance. Given these inputs we
+calculate the frequency of the packet sized tunnel packets we should
+send in order to achieve the requested bandwidth.
+
+The tunnel can operate in 2 modes, a congestion controlled mode and
+non-congestion controlled mode.
+
+** Non-Congestion Controlled Mode
+
+The non-congestion controlled mode should only be used where the user
+has full administrative control over the path the tunnel will take,
+and can therefor guarantee the bandwidth. In this case packet loss
+should be signaled to the administrator so that any failures due to a
+lack of bandwidth can be corrected.
+
+** Congestion Controlled Mode
+
+With the congestion controlled mode we adapt to network congestion and
+downgrade the packet send rate to accommodate. If congestion were
+handled in the network on a byte level we might could lower the IPsec
+(encap) packet size to adapt; however, as congestion is normally
+handled in the network by dropping packets we instead choose to lower
+the frequency we send our fixed sized packets. This also minimizes
+transport overhead.
+
+The output of the congestion control algorithm SHOULD adjust the
+frequency that we send our packets until the congestion is
+accommodated. We do not standardize the congestion control algorithm,
+although it should conform to ^RFC2914^.
+
+** Congestion Information
+
+In order to support congestion control we send regular reports from
+the receiver to the sender indicating the number of packet drops over
+during a sequence of packets. These reports can also be sent when in the
+non-congestion controlled mode to allow for reporting from the sending
+device.
+
+** Keywords
+
+The keywords "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
+"SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and
+"OPTIONAL" in this document are to be interpreted as described in BCP
+14, ^RFC2119^ ^RFC8174^ when, and only when, they appear in all capitals,
+as shown here..
+
+** Terminology
+
+This document defines terms.  If your document does not, you might
+need to import them.  All this should be described in this section.
+
+
+* Packet and Data Formats
+** IPSec
+*** Payload Format
+
+
+#+begin_example
+
+    0                   1                   2                   3
+    0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
+   +-----------------------------------------------------------------+
+ 0 |V|          Reserved           |          BlockOffset            |
+   +-----------------------------------------------------------------+
+ 4 |       Data Blocks ...
+   +---------------
+
+#+end_example
+
+    - V :: Version, must be set to zero and dropped if set to 1.
+    - Reserved  :: set to 0 ignored on receipt.
+    - BlockOffset :: This is the number of bytes before the next
+                     IP/IPv6 data block. It can point past the end of
+                     the containing packet in which case this packet
+                     is the continuation of a preivous one and
+                     possibly padding. NOTE: This can point into the
+                     next packet and yet the current packet can end
+                     with padding. This will happen if there's not
+                     enough bytes to start a new inner packet in the
+                     current outer packet.
+    - Data Blocks :: variable number of bytes that constitute the
+                     start or continuation of a previous data block.
+
+ *** Data Block
+
+#+begin_example
+
+    0                   1                   2                   3
+    0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
+   +-----------------------------------------------------------------+
+ 0 | Type  | IPv4, IPv6 or pad.
+   +--------
+
+#+end_example
+
+    - Type :: 0x0 for pad, 0x4 for IPv4, 0x6 for IPv6.
+
+**** IPv4 Data Block
+
+#+begin_example
+
+    0                   1                   2                   3
+    0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
+   +-----------------------------------------------------------------+
+ 0 |  0x4  |  IHL  | Type Of Service |         Total Length          |
+   +------------------------------------------------------------------
+ 4 | Rest of inner packet ...
+   +
+
+#+end_example
+
+    - Type :: 0x4 for IPv4 (i.e., first nibble of IPv4 packet).
+    - Total Length :: Length of the IPv4 inner packet.
+
+
+**** IPv6 Data Block
+
+#+begin_example
+
+    0                   1                   2                   3
+    0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
+   +-----------------------------------------------------------------+
+ 0 |  0x6  | Traffic Class |              Flow Label                 |
+   +------------------------------------------------------------------
+ 4 |          Total Length         | Rest of inner packet ...
+   +--------------------------------
+
+#+end_example
+
+    - Type :: 0x6 for for IPv6 (i.e., first nibble of IPv6 packet).
+    - Total Length :: Length of the IPv6 inner packet. unspecified
+                      data. For IPv4 and IPv6 the length field must at
+                      least be present. It is fine and expected that
+                      the packet data may span multiple containing
+                      packets. Subsequent packets will have their
+                      offset set to point past this IP data.
+
+
+**** Pad Data Block
+
+#+begin_example
+
+    0                   1                   2                   3
+    0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
+   +-----------------------------------------------------------------+
+ 0 |  0x0  | Padding ...
+   +--------
+
+#+end_example
+
+    - Type :: 0x0 for pad
+    - Padding :: extends to end of the encapsulating packet.
+
+
+
+** IKEv2
+***  IKEv2 Informational ACK Notification
+
+#+begin_example
+
+      0                   1                   2                   3
+      0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
+     +-----------------------------------------------------------------+
+  0  |V|  Reserved   |                     DrpCnt                      |
+     +-----------------------------------------------------------------+
+  4  |                          Timestamp...
+     +-----------------------------------------------------------------+
+  8                          ...Timestamp                              |
+     +-----------------------------------------------------------------+
+  12 |                          AckSeqStart                            |
+     +-----------------------------------------------------------------+
+  16 |                          AckSeqEnd                              |
+     +-----------------------------------------------------------------+
+
+#+end_example
+
+     - V :: Version, must be set to zero and dropped if set to 1.
+     - Reserved :: set to 0 ignored on receipt.
+     - DrpCnt :: For ack data block this is the drop count between
+                 AckSeqStart and AckSeqEnd, If the drops exceed the
+                 resolution of the counter then set to the max value.
+     - AckSeqStart :: The first SeqNum of the range that this
+                      information relates to.
+     - AckSeqEnd :: The last SeqNum of the range that this information
+                    relates to.
+     - Timestamp :: The time when this notification was created and
+                    sent.
+
+* IANA Considerations
+
+This document requests a code point be allocated by IANA from
+"Assigned Internet Protocol Numbers" for identifying the IP-TFS ESP
+payload format.
+
+# ^IANA-PN^ https://www.iana.org/assignments/protocol-numbers
+
+* Security Considerations
+
+Consider that we have made things better.
+
+
+{{document:
+    name ;
+    ipr trust200902;
+    category std;
+    references references.xml;
+    title "IP Traffic Flow Security";
+    contributor "author:Christian E. Hopps:LabN Consulting, L.L.C.:chopps@chopps.org";
+}}
