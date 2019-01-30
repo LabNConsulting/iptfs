@@ -28,11 +28,12 @@ VMID=$((IPID - 64))
 
 FRAMESZ=1400
 TXRATE=10 # (Mbps)
-CONGESTRATE=6
+CONGESTRATE=1000
 
 # COMMON=" --congest-rate=1500 -v --dev tfs0 --port 8001"
 #COMMON="--trace -v --rate=$TXRATEMb --dev tfs0 --port 8001"
-COMMON="--rate=$TXRATE --congest=$CONGESTRATE --dev tfs0 --port 8001"
+#COMMON="--rate=$TXRATE --congest=$CONGESTRATE --dev tfs0 --port 8001"
+COMMON="--rate=$TXRATE --dev tfs0 --port 8001"
 #COMMON="--debug --rate=$TXRATE --dev tfs0 --port 8001"
 if (( VMID == 2 )); then
     OVMID=3
@@ -44,8 +45,8 @@ if (( VMID == 2 )); then
     sleep 1
     sysctl -w net.ipv6.conf.tfs0.disable_ipv6=1
     ip addr add 192.168.30.$IPID/24 dev tfs0
-    ip link set tfs0 mtu 1470
-    #ip link set tfs0 mtu 8970
+    #ip link set tfs0 mtu 1470
+    ip link set tfs0 mtu 8970
     ip link set tfs0 up
 else
     . venv/bin/activate
@@ -55,8 +56,8 @@ else
     sleep 1
     sysctl -w net.ipv6.conf.tfs0.disable_ipv6=1
     ip addr add 192.168.30.$IPID/24 dev tfs0
-    ip link set tfs0 mtu 1470
-    #ip link set tfs0 mtu 8970
+    #ip link set tfs0 mtu 1470
+    ip link set tfs0 mtu 8970
     ip link set tfs0 up
 fi
 

@@ -638,7 +638,7 @@ def write_tunnel_packets(  # pylint: disable=W0613,R0913
 
     leftover = None
     seq = 0
-    while tunnel_periodic.wait():
+    while tunnel_periodic.waitspin():
         leftover, seq = write_tunnel_packet(s, send_lock, seq, mtu, leftover, inq, freeq)
 
 
@@ -646,14 +646,16 @@ def write_tunnel_packets(  # pylint: disable=W0613,R0913
 # ACK Info
 # ========
 
+
 def summin1(l):
     mval = 0
     s = 0
     for x in l:
         if x:
-            mval=1
+            mval = 1
         s += x
-    return max(mval, s//len(l))
+    return max(mval, s // len(l))
+
 
 # Use integers averages.
 ppsavg = util.RunningAverage(5, 0, summin1)

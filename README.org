@@ -3,25 +3,32 @@
 *** Congestion Control Document (see notepad) RFC2941
 *** Circuit Breaker.
 ** Constant Bandwith
-   The goal of TFS is to hide the size and frequency of the packets. To do this
-   we use a constant send IPsec tunnel of same sized packets. The tunnel
-   bandwidth is an input to the algorithm. Frame size is the input value, can
-   seed with path mtu value. Additionally the Path MTU is also an input to the
-   algorithm. Given those inputs we can calculate the frequency of max MTU
-   tunnel packets we can send in order to achieve the requested bandwidth.
+   The goal of IP-TFS is to hide the size and frequency of the packets. To do
+   this we use a constant send IPsec tunnel of same sized packets. The tunnel
+   bandwidth and frame size are the inputs to the algorithm. The frame size can
+   be set based on path MTU discovery for optimal performance. Given those
+   inputs we can calculate the frequency of frame sized tunnel packets we should
+   send in order to achieve the requested bandwidth.
 
-   We may also wish to adapt to network congestion and downgrade the bandwidth
-   to accommodate. If congestion were handled in the network on a byte level we
-   might could lower the IPsec (encap) packet size to adjust; however, as
-   congestion is normally handled in the network by dropping packets we instead
-   choose to lower the frequency we send our max MTU encap packets to align with
-   this fact.
+   The tunnel can operate in 2 modes, an inelastic and an elastic mode. The
+   inelastic mode should only be used where the user has full administrative
+   control over the path the tunnel will take, and can therefor guarantee the
+   bandwidth. In this case packet loss should be signaled so that any failures
+   due to a lack of bandwidth can be corrected. With the elastic mode we adapt
+   to network congestion and downgrade the bandwidth to accommodate. If
+   congestion were handled in the network on a byte level we might could lower
+   the IPsec (encap) packet size to adjust; however, as congestion is normally
+   handled in the network by dropping packets we instead choose to lower the
+   frequency we send our fixed sized packets to align with this fact. This also
+   minimizes transport overhead.
 
-   We add regular reports from the receiver on packet drops over a sequence of
-   packets to input into a congestion algorithm. The output of this congestion
-   control algorithm will adjust the frequency that we send our packets until
-   the congestion is accommodated. We do not standardize the congestion control
-   algorithm, although we have described an algorithm that one could use.
+   For both modes we send regular reports from the receiver to the sender on
+   packet drops over a sequence of packets. This can be used to alert in the
+   inelastic mode or as input into a congestion control algorithm for the
+   elastic mode. The output of the congestion control algorithm if used will
+   adjust the frequency that we send our packets until the congestion is
+   accommodated. We do not standardize the congestion control algorithm,
+   although we will describe an algorithm that one could use.
 
    Congestion control is an optional feature. The system can also operate in an
    inelastic configuration where the bandwidth required is assumed to be
@@ -63,17 +70,69 @@
      0                   1                   2                   3
      0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
     +-----------------------------------------------------------------+
-  0 | Version | rest of IPv4, IPv6 or pad.
-    +----------
+  0 |Version| IPv4, IPv6 or pad.
+    +--------
 
 #+end_example
 
-    - Version :: 0x0 for pad, 0x4 for IPv4, 0x6 for IPv6. If padding then its
-                 length extends to the end of the containing packet and is
+    - Version :: 0x0 for pad, 0x4 for IPv4, 0x6 for IPv6.
+
+**** IPv4 Data Block
+
+#+begin_example
+
+     0                   1                   2                   3
+     0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
+    +-----------------------------------------------------------------+
+  0 |  0x4  |  IHL  | Type Of Service |         Total Length          |
+    +------------------------------------------------------------------
+  4 | Rest of inner packet ...
+    +
+
+#+end_example
+
+    - Version :: 0x4 for IPv4.
+    - Total Length :: Length of the IPv4 inner packet.
+
+
+**** IPv6 Data Block
+
+#+begin_example
+
+     0                   1                   2                   3
+     0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
+    +-----------------------------------------------------------------+
+  0 |  0x6  | Traffic Class |              Flow Label                 |
+    +------------------------------------------------------------------
+  4 |          Total Length         | Rest of inner packet ...
+    +--------------------------------
+
+#+end_example
+
+    - Version :: 0x6 for for IPv6.
+    - Total Length :: Length of the IPv6 inner packet.
                  unspecified data. For IPv4 and IPv6 the length field must at
                  least be present. It is fine and expected that the packet data
                  may span multiple containing packets. Subsequent packets will
                  have their offset set to point past this IP data.
+
+
+**** Pad Data Block
+
+#+begin_example
+
+     0                   1                   2                   3
+     0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
+    +-----------------------------------------------------------------+
+  0 |  0x0  | Padding ...
+    +--------
+
+#+end_example
+
+    - Version :: 0x0 for pad
+    - Padding :: extends to end of the encapsulating packet.
+
+
 
 ** IKEv2
 ***  IKEv2 Informational ACK Notification

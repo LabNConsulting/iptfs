@@ -171,6 +171,20 @@ class PeriodicPPS:
             self.timestamp = time.time()
         return True
 
+    def waitspin(self):
+        with self.ival_lock:
+            expire = self.timestamp + self.ival
+        now = time.time()
+        if now > expire:
+            logging.info("Overran periodic timer by %f seconds", now - expire)
+        else:
+            while time.sleep(0):
+                now = time.time()
+                if now > expire:
+                    break
+        self.timestamp = now
+        return True
+
 
 class PeriodicSignal:
     def __init__(self, name: str, rate: int):
