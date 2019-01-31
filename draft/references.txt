@@ -2,12 +2,14 @@
     title "Normative References";
     ietf-ref RFC2119;
     ietf-ref RFC4303;
+    ietf-ref RFC5996;
     ietf-ref RFC8174;
+}}
+{{references:
     title "Informative References";
     ietf-ref RFC1191;
     ietf-ref RFC2914;
     ietf-ref RFC4301;
-    ietf-ref RFC8084;
     ietf-ref RFC8084;
     ietf-ref RFC8201;
     ietf-ref I-D.iab-wire-image;

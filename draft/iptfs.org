@@ -14,8 +14,9 @@ Traffic Analysis ^RFC4301^ is the act of extracting information about
 data being sent through a network. While one may directly obscure the
 data through the use of encryption ^RFC4303^, the traffic pattern
 itself still exposes information due to variations in it's shape and
-timing ^AppCrypt8.6^. Hiding the size and frequency of traffic is
-referred to as Traffic Flow Confidentiality (TFC) ^RFC4303^
+timing ^I-D.iab-wire-image^ and ^AppCrypt8.6^. Hiding the size and
+frequency of traffic is referred to as Traffic Flow Confidentiality
+(TFC) ^RFC4303^
 
 ^RFC4303^ provides for limited TFC by allowing for padding to be added
 to encrypted IP packets. This method has a few limitations. One
@@ -34,6 +35,19 @@ tunnel.
 Additionally IP-TFS provides for dealing with network congestion This
 is important when the IP-TFS user is not fully in control of the
 IP-TFS tunnel path ^RFC2914^.
+
+** Keywords
+
+The keywords "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
+"SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and
+"OPTIONAL" in this document are to be interpreted as described in BCP
+14, ^RFC2119^ ^RFC8174^ when, and only when, they appear in all capitals,
+as shown here..
+
+** Concepts and Terminology
+
+This document assumes familiarity with IP security concepts described
+in ^RFC4301^.
 
 * The Algorithm
 
@@ -114,52 +128,67 @@ overhead is required to encapsulate an IP packet.
 
 ** Modes of operation
 
-The tunnel can operae in 2 modes, a congestion controlled mode and
-non-congestion controlled mode.
+Just as with normal IPsec tunnels IP-TFS tunnels are unidirectional.
+Bidirectional functionality is achieved by setting up 2 tunnels, one
+in either direction.
 
-** Non-Congestion Controlled Mode
+An IP-TFS tunnel can operae in 2 modes, a non-congestion controlled mode and
+congestion controlled mode.
 
-The non-congestion controlled mode should only be used where the user
-has full administrative control over the path the tunnel will take,
-and can therefor guarantee the bandwidth. In this case packet loss
-should be signaled to the administrator so that any failures due to a
-lack of bandwidth can be corrected.
+*** Non-Congestion Controlled Mode
 
-** Congestion Controlled Mode
+For similar reasons as given in ^MPLSUDP^ the non-congestion
+controlled mode should only be used where the user has full
+administrative control over the path the tunnel will take. This is
+required so the user can guarantee the bandwidth and also be sure as
+to not be negatively affecting network congestion ^RFC2914^. In this
+case packet loss should be signaled to the administrator so that any
+failures due to a lack of bandwidth can be corrected.
 
-With the congestion controlled mode we adapt to network congestion and
-downgrade the packet send rate to accommodate. If congestion were
-handled in the network on a byte level we might could lower the IPsec
-(encap) packet size to adapt; however, as congestion is normally
-handled in the network by dropping packets we instead choose to lower
-the frequency we send our fixed sized packets. This also minimizes
-transport overhead.
+*** Congestion Controlled Mode
+
+With the congestion controlled mode, IP-TFS adapts to network
+congestion and by lowering the packet send rate to accommodate the
+congestion. If congestion were handled in the network on a byte level
+we might could lower the IPsec (encap) packet size to adapt; however,
+as congestion is normally handled in the network by dropping packets
+we instead choose to lower the frequency we send our fixed sized
+packets. This also minimizes transport overhead.
 
 The output of the congestion control algorithm SHOULD adjust the
 frequency that we send our packets until the congestion is
 accommodated. We do not standardize the congestion control algorithm,
-although it should conform to ^RFC2914^.
+although the algorithm SHOULD conform to guidelines in ^RFC2914^.
+
+It's perhaps important to note that the adjustable rate of sending
+over the congestion controlled IP-TFS tunnel is being affected by the
+network congestion itself. As long as the encapsulated traffic flow
+shape and timing are not affecting network congestion the variations
+in the tunnel rate will not break the traffic flow confidentiality.
+
+*** Circuit Breakers
+
+In additional to congestion control, implementations may wish to define
+and implement circuit breakers ^RFC8084^ as a recovery method of last
+resort. Enabling circuit breakers is also a reason a user may wish to
+enable congestion information reports even when using the
+non-congestion controlled mode of operation. The definition of circuit
+breakers is outside the scope of this document.
 
 ** Congestion Information
 
-In order to support congestion control we send regular reports from
-the receiver to the sender indicating the number of packet drops over
-during a sequence of packets. These reports can also be sent when in the
-non-congestion controlled mode to allow for reporting from the sending
-device.
+In order to support the congestion control mode we send regular packet
+drop reports from the receiver to the sender. These reports indicate
+the number of packet drops during a sequence of packets. These reports
+can also be sent when in the non-congestion controlled mode to allow
+for reporting from the sending device or to implement Circuit Breakers
+^RFC8084^.
 
-** Keywords
-
-The keywords "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
-"SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and
-"OPTIONAL" in this document are to be interpreted as described in BCP
-14, ^RFC2119^ ^RFC8174^ when, and only when, they appear in all capitals,
-as shown here..
-
-** Concepts and Terminology
-
-This document assumes familiarity with IP security concepts described
-in ^RFC4301^.
+The congestion information is sent using unsolicited IKEv2 INFORMATION
+notifications ^RFC5996^. These notifications are sent at a configured
+interval (which can be configured to 0 to disable the sending of the
+reports). We utilize IKEv2 CFG_REQUEST/CFG_RESPONSE ^RFC5996^ to
+configure the report sending interval.
 
 * Packet and Data Formats
 ** IPSec
@@ -262,7 +291,6 @@ in ^RFC4301^.
     - Padding :: extends to end of the encapsulating packet.
 
 
-
 ** IKEv2
 ***  IKEv2 Informational ACK Notification
 
@@ -306,7 +334,20 @@ payload format.
 
 * Security Considerations
 
-Consider that we have made things better.
+This document describes a mechanism to add Traffic Flow
+Confidentiality to IP traffic. Use of this mechanism is expected to
+increase the security of the traffic being transported. Other than the
+additional security afforded by using this mechanism, IP-TFS utilizes
+the security protocols ^RFC5303^ and ^RFC5996^ and so their security
+considerations apply to IP-TFS as well.
+
+As noted previously in ^Congestion Controlled Mode^, for TFC to be
+fully maintained the encapsulated traffic flow should not be affecting
+network congestion in a predictable way, and if it would be then
+non-congestion controlled mode use should be considered instead.
+
+** References
+  - Mention RFC8084 Circuit Breakers
 
 {{document:
     name ;
@@ -317,8 +358,3 @@ Consider that we have made things better.
     contributor "author:Christian E. Hopps:LabN Consulting, L.L.C.:chopps@chopps.org";
 }}
 
-** References
-- RFC4301 IPSec 4301 - Traffic Analysis
-- RFC4303 IPSec 4303 - Traffic Flow Confidentiality
-- RFC8084 Circuit Breakers
-- draft-iab-wire-image 3.2 (obscuring timing and sizing information).
