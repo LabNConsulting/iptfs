@@ -2,7 +2,7 @@
     title "Normative References";
     ietf-ref RFC2119;
     ietf-ref RFC4303;
-    ietf-ref RFC5996;
+    ietf-ref RFC7296;
     ietf-ref RFC8174;
 }}
 {{references:

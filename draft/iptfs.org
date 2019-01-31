@@ -187,17 +187,81 @@ breakers is outside the scope of this document.
 ** Congestion Information
 
 In order to support the congestion control mode we send regular packet
-drop reports from the receiver to the sender. These reports indicate
-the number of packet drops during a sequence of packets. These reports
-can also be sent when in the non-congestion controlled mode to allow
-for reporting from the sending device or to implement Circuit Breakers
-^RFC8084^.
+drop reports from the receiver (egress tunnel endopint) to the sender.
+These reports indicate the number of packet drops during a sequence of
+packets. The sequence or range of packets is identified using the
+start and end ESP sequence numbers of the packet range.
 
-The congestion information is sent using unsolicited IKEv2 INFORMATION
-notifications ^RFC5996^. These notifications are sent at a configured
+These congestion information reports can also be sent when in the
+non-congestion controlled mode to allow for reporting from the sending
+device or to implement Circuit Breakers ^RFC8084^.
+
+The congestion information is sent using a  IKEv2 INFORMATION
+notifications ^RFC7296^. These notifications are sent at a configured
 interval (which can be configured to 0 to disable the sending of the
-reports). We utilize IKEv2 CFG_REQUEST/CFG_RESPONSE ^RFC5996^ to
-configure the report sending interval.
+reports).
+
+* Configuration
+
+IP-TFS is meant to be deployable with a minimal amount of
+configuration. All IP-TFS specific configuration (i.e., in addition to
+the underlying IPsec tunnel configuration) should be able to be
+specified at the tunnel ingress (sending) side alone (i.e.,
+single-ended provisioning).
+
+** Bandwidth
+
+Bandwidth is a local configuration option. For non-congestion
+controlled mode the only configuration required is the requested
+bandwidth. For congestion controlled mode one can manually configure
+the bandwidth or one could default to the maximum bandwidth allowed in
+which case no bandwidth configuration is required. No standardized
+configuration method is required.
+
+** Fixed Packet Size
+
+The fixed packet size to be used for the tunnel encapsulation packets
+can be configured manually or can be automatically determined using
+Path MTU discovery (see ^RFC1191^ and ^RFC8201^). No standardized
+configuration method is required.
+
+** Congestion Information Configuration.
+
+If congestion control mode is to be used, or if the user wishes to
+receive congestion information on the sender for circuit breaking or
+other operational notificationsin the non-congestion controlled mode,
+IP-TFS will need to configure the egress tunnel endpoint to send
+congestion information periodically.
+
+In order to configure the sending interval of periodic congestion
+information on the egress tunnel endpoint, we utilize the IKEv2
+Configuration Payload (CP) ^RFC7296^. Implementations MAY also allow
+for manual (or default) configuration of this interval; however,
+implementations of IP-TFS MUST support configuration using the
+IKEv2 exchange described below.
+
+We utilize a new IKEv2 configuration attribute TFS_INFO_INTERVAL (TBD)
+to configure the sending interval from the egress endpoint of the
+tunnel. This value is configured using a CFG_REQUEST payload and is
+acknowledge by the receiver using a CFG_REPLY payload. This
+configuration exchange SHOULD be sent during the IKEv2 configuration
+exchanges occurring as the tunnel is first brought up. The sending
+interval value may also be changed at any time afterwards using a
+similar CFG_REQUEST/CFG_REPLY payload inside an IKEv2 INFORMATIONAL
+exchange.
+
+The sending interval value is given in milliseconds and is 16 bits
+wide; however, it is not recommended that values below 1/10th of a
+second are used as this could lead to early exhaustion of the Message
+ID field used in the IKEv2 INFORMATIONAL exchange to send the
+congestion information.
+
+? Could we get away with sending the info using the same message ID
+? each time? We have a timestamp that would allow for duplicate
+? detection, and the payload will be authenticated by IKEv2.
+
+A sending interval value of 0 disables sending of the congestion
+information.
 
 * Packet and Data Formats
 ** IPSec
@@ -205,28 +269,29 @@ configure the report sending interval.
 
 #+begin_example
 
-    0                   1                   2                   3
-    0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
-   +-----------------------------------------------------------------+
- 0 |V|          Reserved           |          BlockOffset            |
-   +-----------------------------------------------------------------+
- 4 |       Data Blocks ...
-   +---------------
+        0                   1                   2                   3
+        0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
+       +-----------------------------------------------------------------+
+     0 |V|          Reserved           |          BlockOffset            |
+       +-----------------------------------------------------------------+
+     4 |       Data Blocks ...
+       +---------------
 
 #+end_example
 
     - V :: Version, must be set to zero and dropped if set to 1.
-    - Reserved  :: set to 0 ignored on receipt.
+    - Reserved :: Set to 0 ignored on receipt.
     - BlockOffset :: This is the number of bytes before the next
                      IP/IPv6 data block. It can point past the end of
                      the containing packet in which case this packet
-                     is the continuation of a preivous one and
-                     possibly padding. NOTE: This can point into the
-                     next packet and yet the current packet can end
-                     with padding. This will happen if there's not
-                     enough bytes to start a new inner packet in the
-                     current outer packet.
-    - Data Blocks :: variable number of bytes that constitute the
+                     is the continuation of a previous one and
+                     possibly padding. NOTE: Even if BlockOffset
+                     points into a subsequent packet this packet can
+                     still end with padding. This will happen if there
+                     are a few bytes available but not enough bytes to
+                     start a new inner packet in the current outer
+                     packet.
+    - Data Blocks :: Variable number of bytes that constitute the
                      start or continuation of a previous data block.
 
 *** Data Blocks
@@ -301,14 +366,21 @@ configure the report sending interval.
 
 
 ** IKEv2
-***  IKEv2 Informational ACK Notification
+***  IKEv2 Congestion Information Notification Data
+
+We utilize a send only (i.e., no response expected) IKEv2
+INFORMATIONAL exchange (37) to transmit the congestion information using
+a notification payload of type TFS_CONGEST_INFO (TBD). The
+The Response bit should be set to 0. As no response is expected the
+only payload should be the congestion information in the notification
+payload. The following diagram defines the notification payload data.
 
 #+begin_example
 
       0                   1                   2                   3
       0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
      +-----------------------------------------------------------------+
-  0  |V|  Reserved   |                     DrpCnt                      |
+  0  |   Reserved    |                  DropCount                      |
      +-----------------------------------------------------------------+
   4  |                          Timestamp...
      +-----------------------------------------------------------------+
@@ -321,25 +393,54 @@ configure the report sending interval.
 
 #+end_example
 
-     - V :: Version, must be set to zero and dropped if set to 1.
      - Reserved :: set to 0 ignored on receipt.
-     - DrpCnt :: For ack data block this is the drop count between
-                 AckSeqStart and AckSeqEnd, If the drops exceed the
-                 resolution of the counter then set to the max value.
-     - AckSeqStart :: The first SeqNum of the range that this
-                      information relates to.
-     - AckSeqEnd :: The last SeqNum of the range that this information
-                    relates to.
-     - Timestamp :: The time when this notification was created and
-                    sent.
+     - DropCount :: For ack data block this is the drop count between
+                    AckSeqStart and AckSeqEnd, If the drops exceed the
+                    resolution of the counter then set to the max
+                    value.
+     - AckSeqStart :: The first ESP sequence number of the packet
+                      range that this information relates to.
+     - AckSeqEnd :: The last ESP sequence number of the packet range
+                    that this information relates to.
+     - Timestamp :: The time when this notification data was
+                    created/sent.
 
 * IANA Considerations
 
-This document requests a code point be allocated by IANA from
-"Assigned Internet Protocol Numbers" for identifying the IP-TFS ESP
-payload format.
+This document requests a protocol number be allocated by IANA from
+"Assigned Internet Protocol Numbers" registry for identifying the
+IP-TFS ESP payload format.
+
+  Type: TBD
+  Description: IP-TFS ESP payload format.
+  Reference: This document
 
 # ^IANA-PN^ https://www.iana.org/assignments/protocol-numbers
+
+Additionally this document requests an attribute value
+TFS_INFO_INTERVAL (TBD) be allocated by IANA from "IKEv2 Configuration
+Payload Attribute Types" registry.
+
+  Type: TBD
+  Description: The sending rate of congestion information from egress
+               tunnel endpoint.
+  Reference: This document
+
+# ^IANA-IKECA^
+# https://www.iana.org/assignments/ikev2-parameters/ikev2-parameters.xhtml#ikev2-parameters-21
+
+Additionally this document requests a notify message status type
+TFS_CONGEST_INFO (TBD) be allocated by IANA from "IKEv2 Notify Message
+Types - Status Types" registry.
+
+  Type: TBD
+  Description: The sending rate of congestion information from egress
+               tunnel endpoint.
+  Reference: This document
+
+# ^IANA-IKECA^
+# https://www.iana.org/assignments/ikev2-parameters/ikev2-parameters.xhtml#ikev2-parameters-16
+
 
 * Security Considerations
 
@@ -347,7 +448,7 @@ This document describes a mechanism to add Traffic Flow
 Confidentiality to IP traffic. Use of this mechanism is expected to
 increase the security of the traffic being transported. Other than the
 additional security afforded by using this mechanism, IP-TFS utilizes
-the security protocols ^RFC4303^ and ^RFC5996^ and so their security
+the security protocols ^RFC4303^ and ^RFC7296^ and so their security
 considerations apply to IP-TFS as well.
 
 As noted previously in ^congestion-controlled-mode^, for TFC to be
