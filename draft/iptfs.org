@@ -2,23 +2,119 @@
 # This is a comment.
 #
 
-This document describes a mechanism to provides for traffic flow
-security (also referred to as traffic flow confidentiality) for IP
-encapsulated traffic. Traffic flow security is provided by obscuring
-size and frequency using a constant sized and send rate encrypted
-tunnel.
+This document describes a mechanism to provides for robust traffic
+flow security (also referred to as traffic flow confidentiality) for
+IP encapsulated traffic. Traffic flow security is provided by
+obscuring the size and frequency of IP traffic using a constant sized
+and constant send rate encrypted tunnel.
 
 * Introduction
 
-The goal of IP Traffic Flow Security (IP-TFS) is to hide the size and
-frequency of IP traffic. To do this we use a constant send IPsec
-^RFC4303^ tunnel of same sized packets. The tunnel bandwidth and packet
-size are the inputs to the algorithm. The packet size can be set based
-on path MTU discovery for optimal performance. Given these inputs we
-calculate the frequency of the packet sized tunnel packets we should
-send in order to achieve the requested bandwidth.
+Traffic Analysis ^RFC4301^ is the act of extracting information about
+data being sent through a network. While one may directly obscure the
+data through the use of encryption ^RFC4303^, the traffic pattern
+itself still exposes information due to variations in it's shape and
+timing ^AppCrypt8.6^. Hiding the size and frequency of traffic is
+referred to as Traffic Flow Confidentiality (TFC) ^RFC4303^
 
-The tunnel can operate in 2 modes, a congestion controlled mode and
+^RFC4303^ provides for limited TFC by allowing for padding to be added
+to encrypted IP packets. This method has a few limitations. One
+limitation is that the frequency of the data being sent is not
+obscured. A second limitation is that only a single IP packet of data
+is encapsulated in any encrypted containing packet which wastes a
+large amount of available bandwidth.
+
+The IP-TFS solution provides for full TFC without the aforementioned
+timing and bandwidth limitations. To do this we use a constant send
+IPsec ^RFC4303^ tunnel of fixed-sized encapsulating packets. These
+fixed-sized packets are sent at a constant rate and contain
+partial, full or multiple IP packets to maximize the bandwidth of the
+tunnel.
+
+Additionally IP-TFS provides for dealing with network congestion This
+is important when the IP-TFS user is not fully in control of the
+IP-TFS tunnel path ^RFC2914^.
+
+* The Algorithm
+
+As mentioned in ^Introduction^ IP-TFS utilizes an IPsec ^RFC4303^
+tunnel as it's transport. To provide for full TFC we send fixed sized
+encapsulating packets at a constant rate on the tunnel.
+
+The primary input to the algorithm is the requested bandwidth of the
+tunnel. From this we must determine the size and rate of the fixed
+sized packets we will send on the tunnel.
+
+The fixed-packet-size may either be specified manually or can be
+determined optimally through the use of Path MTU discovery ^RFC1191^
+and ^RFC8201^.
+
+Given the encapsulating fixed-packet-size and the requested tunnel
+bandwidth we determine the correct packet send rate. The packet send
+rate is the requested bandwidth divided by the payload size of the
+fixed-packet-size encapsulating packet.
+
+** Tunnel Content
+
+As previously mentioned one issue with the TFC padding solution in
+^RFC4303^ is the large amount of wasted bandwidth as
+only one IP packet can be sent per encapsulating packet. In order to
+maximize bandwidth IP-TFS breaks this one-to-one association.
+
+With IP-TFS we fragment and aggregate the inner IP traffic flow into
+the encapsulating IP tunnel packets. We only pad the tunnel packets if
+there is no data available to be sent at the time of tunnel packet
+transmission.
+
+In order to do this we create a new payload data type identified with
+a new IP protocol number TBD (see ^IANA Considerations^). This payload
+is comprised of a 32 bit header followd by either a partial, a single
+or multiple data-blocks.
+
+*** IPsec Payload Format
+
+#+begin_example
+
+    0                   1                   2                   3
+    0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
+   +-----------------------------------------------------------------+
+ 0 |V|          Reserved           |          BlockOffset            |
+   +-----------------------------------------------------------------+
+ 4 |       Data Blocks ...
+   +---------------
+
+#+end_example
+
+The BlockOffset value is either zero or some offset into or past the
+end of the encapsulating packet. If the value is zero it means that a
+data-block immediately follows the header. Conversely if the value is
+non-zero it points at the start of the next data block. It can be the
+case that the BlockOffset points past the end of the encapsulating
+packet. This simply means that the next data-block occurs in a
+subsequent encapsulating packet. When the BlockOffset is non-zero
+the data immediately following the header belongs to the previous
+data-block that is still being re-assembled.
+
+*** Data-Blocks
+
+A data-block is defined by a 4-bit type code followed by the data
+block data. The types values have been carefully chosen to coincide
+with the IPv4/IPv6 version field values so that no per-data-block type
+overhead is required to encapsulate an IP packet.
+
+#+begin_example
+
+      0                   1                   2                   3
+      0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
+     +-----------------------------------------------------------------+
+   0 | Type  | rest of IPv4, IPv6 or pad.
+     +--------
+
+#+end_example
+
+** Modes of operation
+
+The tunnel can operae in 2 modes, a congestion controlled mode and
 non-congestion controlled mode.
 
 ** Non-Congestion Controlled Mode
@@ -60,16 +156,14 @@ The keywords "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
 14, ^RFC2119^ ^RFC8174^ when, and only when, they appear in all capitals,
 as shown here..
 
-** Terminology
+** Concepts and Terminology
 
-This document defines terms.  If your document does not, you might
-need to import them.  All this should be described in this section.
-
+This document assumes familiarity with IP security concepts described
+in ^RFC4301^.
 
 * Packet and Data Formats
 ** IPSec
 *** Payload Format
-
 
 #+begin_example
 
@@ -214,7 +308,6 @@ payload format.
 
 Consider that we have made things better.
 
-
 {{document:
     name ;
     ipr trust200902;
@@ -223,3 +316,9 @@ Consider that we have made things better.
     title "IP Traffic Flow Security";
     contributor "author:Christian E. Hopps:LabN Consulting, L.L.C.:chopps@chopps.org";
 }}
+
+** References
+- RFC4301 IPSec 4301 - Traffic Analysis
+- RFC4303 IPSec 4303 - Traffic Flow Confidentiality
+- RFC8084 Circuit Breakers
+- draft-iab-wire-image 3.2 (obscuring timing and sizing information).
