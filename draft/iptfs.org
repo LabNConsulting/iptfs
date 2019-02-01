@@ -27,11 +27,12 @@ amount of available bandwidth.
 
 The IP-TFS solution provides for full TFC without the aforementioned
 timing and bandwidth limitations. To do this we use a constant send
-IPsec ^RFC4303^ tunnel with fixed-sized encapsulating packets. These
-fixed-sized packets are sent at a constant rate and contain partial,
-full or multiple IP packets to maximize the bandwidth of the tunnel.
+rate IPsec ^RFC4303^ tunnel with fixed-sized encapsulating packets.
+These fixed-sized packets are sent at a constant rate and contain
+partial, full or multiple IP packets to maximize the bandwidth of the
+tunnel.
 
-Additionally IP-TFS provides for dealing with network congestion.
+Additionally, IP-TFS provides for dealing with network congestion.
 This is important for when the IP-TFS user is not in full control of
 the domain through which the IP-TFS tunnel path flows ^RFC2914^.
 
@@ -74,7 +75,7 @@ them faster or slower than the requested rate.
 
 ** Tunnel Content
 
-As previously mentioned one issue with the TFC padding solution in
+As previously mentioned, one issue with the TFC padding solution in
 ^RFC4303^ is the large amount of wasted bandwidth as only one IP
 packet can be sent per encapsulating packet. In order to maximize
 bandwidth IP-TFS breaks this one-to-one association.
@@ -105,20 +106,22 @@ either a partial, a full or multiple partial or full data-blocks.
 
 The BlockOffset value is either zero or some offset into or past the
 end of the encapsulating packet. If the value is zero it means that a
-data-block immediately follows the header. Conversely if the value is
-non-zero it points at the start of the next data block. It can be the
-case that the BlockOffset points past the end of the encapsulating
-packet. This simply means that the next data-block occurs in a
-subsequent encapsulating packet. When the BlockOffset is non-zero the
-data immediately following the header belongs to the previous
-data-block that is still being re-assembled.
+new data-block immediately follows the header. Conversely if the
+value is non-zero it points at the start of the next data block. It
+can be the case that the BlockOffset points past the end of the
+encapsulating packet. This simply means that the next data-block
+occurs in a subsequent encapsulating packet. When the BlockOffset is
+non-zero the data immediately following the header belongs to the
+previous data-block that is still being re-assembled.
 
 *** Data-Blocks
 
 A data-block is defined by a 4-bit type code followed by the data
 block data. The types values have been carefully chosen to coincide
 with the IPv4/IPv6 version field values so that no per-data-block
-type overhead is required to encapsulate an IP packet.
+type overhead is required to encapsulate an IP packet. Likewise, the
+length of the data block is extracted from the encapsulated packet's
+length field.
 
 #+begin_example
 
@@ -140,15 +143,15 @@ may occur in a single encapsulating packet.
 
 #+begin_example
 
-  Off: 0         Off: 100         Off: 2900       Off:1400
+  Offset: 0        Offset: 100    Offset: 2900    Offset: 1400
  [ ESP1  (1500) ][ ESP2  (1500) ][ ESP3  (1500) ][ ESP4  (1500) ]
  [--800--][--800--][60][-240-][--4000----------------------][pad]
 
 #+end_example
 
-The encapsulated IP packet flow is as follows: an 800 byte packet, an
-800 byte packet, a 60 byte packet, a 240 byte packet, a 4000 byte
-packet.
+The encapsulated IP packet flow (lengths include IP header and
+payload) is as follows: an 800 byte packet, an 800 byte packet, a 60
+byte packet, a 240 byte packet, a 4000 byte packet.
 
 The BlockOffset values in the 4 IP-TFS payload headers for this
 packet flow would thus be: 0, 100, 2900, 1400 respectively. The first
@@ -177,9 +180,9 @@ per ESP packet. To deal with this we further restrict these mappings.
 In particular we never map the inner DF bit as it is unrelated to the
 IP-TFS tunnel functionality; we never directly fragment the inner
 packets and the inner packets will not affect the fragmentation of
-the outer encapsulation packets. Likewise the ECN value need not be
+the outer encapsulation packets. Likewise, the ECN value need not be
 mapped as any congestion related to the constant send rate IP-TFS
-tunnel is unrelated (by design!) to the inner traffic flow. Finally
+tunnel is unrelated (by design!) to the inner traffic flow. Finally,
 by default the DS field should not be copied although an
 implementation may choose to allow for configuration to override this
 behavior. An implementation SHOULD also allow the DS value to be set
@@ -243,11 +246,11 @@ define and implement circuit breakers ^RFC8084^ as a recovery method
 of last resort. Enabling circuit breakers is also a reason a user may
 wish to enable congestion information reports even when using the
 non-congestion controlled mode of operation. The definition of
-circuit breakers is outside the scope of this document.
+circuit breakers are outside the scope of this document.
 
 ** Congestion Information
 
-In order to support the congestion control mode we send regular
+In order to support the congestion control mode, we send regular
 packet drop reports from the receiver (egress tunnel endpoint) to the
 sender. These reports indicate the number of packet drops during a
 sequence of packets. The sequence or range of packets is identified
@@ -257,7 +260,7 @@ These congestion information reports can also be sent when in the
 non-congestion controlled mode to allow for reporting from the
 sending device or to implement Circuit Breakers ^RFC8084^.
 
-The congestion information is sent using a IKEv2 INFORMATION
+The congestion information is sent using an IKEv2 INFORMATION
 notifications ^RFC7296^. These notifications are sent at a configured
 interval (which can be configured to 0 to disable the sending of the
 reports).
@@ -342,15 +345,17 @@ information.
 
   - V :: Version, must be set to zero and dropped if set to 1.
   - Reserved :: Set to 0 ignored on receipt.
-  - BlockOffset :: This is the number of bytes before the next
-                   IP/IPv6 data block. It can point past the end of
-                   the containing packet in which case this packet is
-                   the continuation of a previous one and possibly
-                   padding. NOTE: Even if BlockOffset points into a
-                   subsequent packet this packet can still end with
-                   padding. This will happen if there are a few bytes
-                   available but not enough bytes to start a new
-                   inner packet in the current outer packet.
+  - BlockOffset :: This is the number of bytes following this header
+                   before the next IP/IPv6 data block. It can also
+                   point past the end of the containing packet in
+                   which case the containing packet is entirely
+                   composed of the continuation of the previous data
+                   block plus possible padding. The small amount of
+                   trailing padding can occur because we use the
+                   length fields in the encapsulated packet to
+                   determine the data block length and so we must
+                   always be able to encode enough bytes to include
+                   this field at the start of a data block.
   - Data Blocks :: Variable number of bytes that constitute the start
                    or continuation of a previous data block.
 
