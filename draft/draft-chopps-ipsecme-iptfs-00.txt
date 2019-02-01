@@ -1,0 +1,784 @@
+
+
+
+
+Network Working Group                                           C. Hopps
+Internet-Draft                                   LabN Consulting, L.L.C.
+Intended status: Standards Track                        February 1, 2019
+Expires: August 5, 2019
+
+
+                        IP Traffic Flow Security
+                     draft-chopps-ipsecme-iptfs-00
+
+Abstract
+
+   This document describes a mechanism to provides for robust traffic
+   flow security (also referred to as traffic flow confidentiality) for
+   IP encapsulated traffic.  Traffic flow security is provided by
+   obscuring the size and frequency of IP traffic using a constant sized
+   and constant send rate encrypted tunnel.
+
+Status of This Memo
+
+   This Internet-Draft is submitted in full conformance with the
+   provisions of BCP 78 and BCP 79.
+
+   Internet-Drafts are working documents of the Internet Engineering
+   Task Force (IETF).  Note that other groups may also distribute
+   working documents as Internet-Drafts.  The list of current Internet-
+   Drafts is at https://datatracker.ietf.org/drafts/current/.
+
+   Internet-Drafts are draft documents valid for a maximum of six months
+   and may be updated, replaced, or obsoleted by other documents at any
+   time.  It is inappropriate to use Internet-Drafts as reference
+   material or to cite them other than as "work in progress."
+
+   This Internet-Draft will expire on August 5, 2019.
+
+Copyright Notice
+
+   Copyright (c) 2019 IETF Trust and the persons identified as the
+   document authors.  All rights reserved.
+
+   This document is subject to BCP 78 and the IETF Trust's Legal
+   Provisions Relating to IETF Documents
+   (https://trustee.ietf.org/license-info) in effect on the date of
+   publication of this document.  Please review these documents
+   carefully, as they describe your rights and restrictions with respect
+   to this document.  Code Components extracted from this document must
+   include Simplified BSD License text as described in Section 4.e of
+   the Trust Legal Provisions and are provided without warranty as
+   described in the Simplified BSD License.
+
+
+
+Hopps                    Expires August 5, 2019                 [Page 1]
+
+Internet-Draft                                             February 2019
+
+
+Table of Contents
+
+   1.  Introduction  . . . . . . . . . . . . . . . . . . . . . . . .   2
+     1.1.  Terminology & Concepts  . . . . . . . . . . . . . . . . .   3
+   2.  The IP-TFS Tunnel.  . . . . . . . . . . . . . . . . . . . . .   3
+     2.1.  Tunnel Content  . . . . . . . . . . . . . . . . . . . . .   4
+       2.1.1.  IPsec Payload Format  . . . . . . . . . . . . . . . .   4
+       2.1.2.  Data-Blocks . . . . . . . . . . . . . . . . . . . . .   4
+       2.1.3.  Example of an encapsulated IP packet flow.  . . . . .   5
+       2.1.4.  IP Header Value Mapping . . . . . . . . . . . . . . .   5
+     2.2.  Modes of operation  . . . . . . . . . . . . . . . . . . .   6
+       2.2.1.  Non-Congestion Controlled Mode  . . . . . . . . . . .   6
+       2.2.2.  Congestion Controlled Mode  . . . . . . . . . . . . .   6
+     2.3.  Congestion Information  . . . . . . . . . . . . . . . . .   7
+   3.  Configuration . . . . . . . . . . . . . . . . . . . . . . . .   7
+     3.1.  Bandwidth . . . . . . . . . . . . . . . . . . . . . . . .   8
+     3.2.  Fixed Packet Size . . . . . . . . . . . . . . . . . . . .   8
+     3.3.  Congestion Information Configuration. . . . . . . . . . .   8
+   4.  Packet and Data Formats . . . . . . . . . . . . . . . . . . .   9
+     4.1.  IPSec . . . . . . . . . . . . . . . . . . . . . . . . . .   9
+       4.1.1.  Payload Format  . . . . . . . . . . . . . . . . . . .   9
+       4.1.2.  Data Blocks . . . . . . . . . . . . . . . . . . . . .   9
+     4.2.  IKEv2 . . . . . . . . . . . . . . . . . . . . . . . . . .  10
+       4.2.1.  IKEv2 Congestion Information Notification Data  . . .  10
+   5.  IANA Considerations . . . . . . . . . . . . . . . . . . . . .  11
+   6.  Security Considerations . . . . . . . . . . . . . . . . . . .  12
+   7.  References  . . . . . . . . . . . . . . . . . . . . . . . . .  12
+     7.1.  Normative References  . . . . . . . . . . . . . . . . . .  12
+     7.2.  Informative References  . . . . . . . . . . . . . . . . .  13
+   Author's Address  . . . . . . . . . . . . . . . . . . . . . . . .  14
+
+1.  Introduction
+
+   Traffic Analysis [RFC4301] is the act of extracting information about
+   data being sent through a network.  While one may directly obscure
+   the data through the use of encryption [RFC4303], the traffic pattern
+   itself exposes information due to variations in it's shape and timing
+   [I-D.iab-wire-image] and [AppCrypt S.8.6].  Hiding the size and
+   frequency of traffic is referred to as Traffic Flow Confidentiality
+   (TFC) [RFC4303]
+
+   [RFC4303] provides for limited TFC by allowing for padding to be
+   added to the encrypted IP packets.  This method has a few
+   limitations.  One limitation is that the frequency of the data being
+   sent is not obscured.  A second limitation is that only a single IP
+   packet of data is encapsulated in any encrypted ESP packet which
+   wastes a large amount of available bandwidth.
+
+
+
+
+Hopps                    Expires August 5, 2019                 [Page 2]
+
+Internet-Draft                                             February 2019
+
+
+   The IP-TFS solution provides for full TFC without the aforementioned
+   timing and bandwidth limitations.  To do this we use a constant send
+   IPsec [RFC4303] tunnel with fixed-sized encapsulating packets.  These
+   fixed-sized packets are sent at a constant rate and contain partial,
+   full or multiple IP packets to maximize the bandwidth of the tunnel.
+
+   Additionally IP-TFS provides for dealing with network congestion.
+   This is important for when the IP-TFS user is not in full control of
+   the domain through which the IP-TFS tunnel path flows [RFC2914].
+
+1.1.  Terminology & Concepts
+
+   The keywords "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
+   "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and
+   "OPTIONAL" in this document are to be interpreted as described in BCP
+   14, [RFC2119] [RFC8174] when, and only when, they appear in all
+   capitals, as shown here..
+
+   This document assumes familiarity with IP security concepts described
+   in [RFC4301].
+
+2.  The IP-TFS Tunnel.
+
+   As mentioned in Section 1 IP-TFS utilizes an IPsec [RFC4303] tunnel
+   as it's transport.  To provide for full TFC we send fixed sized
+   encapsulating packets at a constant rate on the tunnel.
+
+   The primary input to the tunnel algorithm is the requested bandwidth
+   of the tunnel.  From this we must determine the size and rate of the
+   fixed sized packets we will send on the tunnel.
+
+   The fixed-packet-size may either be specified manually or can be
+   determined optimally through the use of Path MTU discovery [RFC1191]
+   and [RFC8201].
+
+   Given the encapsulating packet size and the requested tunnel
+   bandwidth we determine the correct packet send rate.  The packet send
+   rate is the requested bandwidth divided by the payload size of the
+   fixed-packet-size encapsulating packet.
+
+   The egress of the IP-TFS tunnel SHOULD NOT impose any restrictions on
+   tunnel packet arrival rate.  Packet send rate is entirely the
+   function of the ingress (sending) side of the IP-TFS tunnel.  Indeed
+   the ingress (sending) side of the IP-TFS tunnel MUST be allowed to
+   vary the rate at which it sends encapsulating packets, including
+   sending them faster or slower than the requested rate.
+
+
+
+
+
+Hopps                    Expires August 5, 2019                 [Page 3]
+
+Internet-Draft                                             February 2019
+
+
+2.1.  Tunnel Content
+
+   As previously mentioned one issue with the TFC padding solution in
+   [RFC4303] is the large amount of wasted bandwidth as only one IP
+   packet can be sent per encapsulating packet.  In order to maximize
+   bandwidth IP-TFS breaks this one-to-one association.
+
+   With IP-TFS we fragment as well as aggregate the inner IP traffic
+   flow into the encapsulating IP tunnel packets.  We only pad the
+   tunnel packets if there is no data available to be sent at the time
+   of tunnel packet transmission or an unusable amount of space remains.
+
+   In order to do this we create a new payload data type identified with
+   a new IP protocol number IPTFS_PROTOCOL (TBD).  A payload of
+   IPTFS_PROTOCOL type is comprised of a 32 bit header followed by
+   either a partial, a full or multiple partial or full data-blocks.
+
+2.1.1.  IPsec Payload Format
+
+     0                   1                   2                   3
+     0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
+    +-----------------------------------------------------------------+
+    |V|          Reserved           |          BlockOffset            |
+    +-----------------------------------------------------------------+
+    |       Data Blocks ...
+    +---------------
+
+   The BlockOffset value is either zero or some offset into or past the
+   end of the encapsulating packet.  If the value is zero it means that
+   a data-block immediately follows the header.  Conversely if the value
+   is non-zero it points at the start of the next data block.  It can be
+   the case that the BlockOffset points past the end of the
+   encapsulating packet.  This simply means that the next data-block
+   occurs in a subsequent encapsulating packet.  When the BlockOffset is
+   non-zero the data immediately following the header belongs to the
+   previous data-block that is still being re-assembled.
+
+2.1.2.  Data-Blocks
+
+   A data-block is defined by a 4-bit type code followed by the data
+   block data.  The types values have been carefully chosen to coincide
+   with the IPv4/IPv6 version field values so that no per-data-block
+   type overhead is required to encapsulate an IP packet.
+
+
+
+
+
+
+
+
+Hopps                    Expires August 5, 2019                 [Page 4]
+
+Internet-Draft                                             February 2019
+
+
+     0                   1                   2                   3
+     0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
+    +-----------------------------------------------------------------+
+    | Type  | rest of IPv4, IPv6 or pad.
+    +--------
+
+2.1.3.  Example of an encapsulated IP packet flow.
+
+   Below we show an example inner IP packet flow within the
+   encapsulating tunnel packet stream.  Notice how encapsulated IP
+   packets can start and end anywhere, and more than one or less than 1
+   may occur in a single encapsulating packet.
+
+     Off: 0         Off: 100         Off: 2900       Off:1400
+    [ ESP1  (1500) ][ ESP2  (1500) ][ ESP3  (1500) ][ ESP4  (1500) ]
+    [--800--][--800--][60][-240-][--4000----------------------][pad]
+
+   The encapsulated IP packet flow is as follows: an 800 byte packet, an
+   800 byte packet, a 60 byte packet, a 240 byte packet, a 4000 byte
+   packet.
+
+   The BlockOffset values in the 4 IP-TFS payload headers for this
+   packet flow would thus be: 0, 100, 2900, 1400 respectively.  The
+   first encapsulating packet ESP1 has a zero BlockOffset which points
+   at the IP data block immediately following the IP-TFS header.  The
+   following packet ESP2s BlockOffset points inward 100 bytes to the
+   start of the 60 byte data block.  The third encapsulating packet ESP3
+   contains the middle portion of the 4000 byte data block so the offset
+   points past its end and into the forth encapsulating packet.  The
+   fourth packet ESP4s offset is 1400 pointing at the padding which
+   follows the completion of the continued 4000 byte packet.
+
+   Having the BlockOffset always point at the next available data block
+   allows for quick recovery with minimal inner packet loss in the
+   presence of outer encapsulating packet loss.
+
+2.1.4.  IP Header Value Mapping
+
+   [RFC4301] provides some direction on when and how to map various
+   values from an inner IP header to the outer encapsulating header,
+   namely the Don't-Fragment (DF) bit ([RFC0791] and [RFC8200]), the
+   Differentiated Services (DS) field [RFC2474] and the Explicit
+   Congestion Notification (ECN) field [RFC3168].  Unlike [RFC4301] with
+   IP-TFS we may and often will be encapsulating more than 1 IP packet
+   per ESP packet.  To deal with this we further restrict these
+   mappings.  In particular we never map the inner DF bit as it is
+   unrelated to the IP-TFS tunnel functionality; we never directly
+   fragment the inner packets and the inner packets will not affect the
+
+
+
+Hopps                    Expires August 5, 2019                 [Page 5]
+
+Internet-Draft                                             February 2019
+
+
+   fragmentation of the outer encapsulation packets.  Likewise the ECN
+   value need not be mapped as any congestion related to the constant
+   send rate IP-TFS tunnel is unrelated (by design!) to the inner
+   traffic flow.  Finally by default the DS field should not be copied
+   although an implementation may choose to allow for configuration to
+   override this behavior.  An implementation SHOULD also allow the DS
+   value to be set by configuration.
+
+2.2.  Modes of operation
+
+   Just as with normal IPsec tunnels IP-TFS tunnels are unidirectional.
+   Bidirectional functionality is achieved by setting up 2 tunnels, one
+   in either direction.
+
+   An IP-TFS tunnel can operate in 2 modes, a non-congestion controlled
+   mode and congestion controlled mode.
+
+2.2.1.  Non-Congestion Controlled Mode
+
+   In the non-congestion controlled mode IP-TFS sends fixed-sized
+   packets at a constant rate.  The packet send rate is constant and is
+   not automatically adjusted regardless of any network congestion
+   (i.e., packet loss).
+
+   For similar reasons as given in [RFC7510] the non-congestion
+   controlled mode should only be used where the user has full
+   administrative control over the path the tunnel will take.  This is
+   required so the user can guarantee the bandwidth and also be sure as
+   to not be negatively affecting network congestion [RFC2914].  In this
+   case packet loss should be signaled to the administrator so that any
+   failures due to a lack of bandwidth can be corrected.
+
+2.2.2.  Congestion Controlled Mode
+
+   With the congestion controlled mode, IP-TFS adapts to network
+   congestion by lowering the packet send rate to accommodate the
+   congestion.  If congestion were handled in the network on a byte
+   level we might consider lowering the IPsec (encapsulation) packet
+   size to adapt; however, as congestion is normally handled in the
+   network by dropping packets we instead choose to lower the frequency
+   we send our fixed sized packets.  This choice also minimizes
+   transport overhead.
+
+   The output of a congestion control algorithm SHOULD adjust the
+   frequency that we send our packets until the congestion is
+   accommodated.  We do not standardize the congestion control
+   algorithm, although the algorithm SHOULD conform to guidelines in
+   [RFC2914].
+
+
+
+Hopps                    Expires August 5, 2019                 [Page 6]
+
+Internet-Draft                                             February 2019
+
+
+   When an implementation is choosing a congestion control algorithm it
+   is worth noting that IP-TFS is not providing for reliable delivery of
+   IP traffic and so per packet ACKs are not required, and are not
+   provided.
+
+   It's perhaps important to note that the adjustable rate of sending
+   over the congestion controlled IP-TFS tunnel is being controlled by
+   the network congestion.  As long as the encapsulated traffic flow
+   shape and timing are not directly affecting the network congestion,
+   the variations in the tunnel rate will not break the traffic flow
+   confidentiality.
+
+2.2.2.1.  Circuit Breakers
+
+   In additional to congestion control, implementations may wish to
+   define and implement circuit breakers [RFC8084] as a recovery method
+   of last resort.  Enabling circuit breakers is also a reason a user
+   may wish to enable congestion information reports even when using the
+   non-congestion controlled mode of operation.  The definition of
+   circuit breakers is outside the scope of this document.
+
+2.3.  Congestion Information
+
+   In order to support the congestion control mode we send regular
+   packet drop reports from the receiver (egress tunnel endpoint) to the
+   sender.  These reports indicate the number of packet drops during a
+   sequence of packets.  The sequence or range of packets is identified
+   using the start and end ESP sequence numbers of the packet range.
+
+   These congestion information reports can also be sent when in the
+   non-congestion controlled mode to allow for reporting from the
+   sending device or to implement Circuit Breakers [RFC8084].
+
+   The congestion information is sent using a IKEv2 INFORMATION
+   notifications [RFC7296].  These notifications are sent at a
+   configured interval (which can be configured to 0 to disable the
+   sending of the reports).
+
+3.  Configuration
+
+   IP-TFS is meant to be deployable with a minimal amount of
+   configuration.  All IP-TFS specific configuration (i.e., in addition
+   to the underlying IPsec tunnel configuration) should be able to be
+   specified at the tunnel ingress (sending) side alone (i.e., single-
+   ended provisioning).
+
+
+
+
+
+
+Hopps                    Expires August 5, 2019                 [Page 7]
+
+Internet-Draft                                             February 2019
+
+
+3.1.  Bandwidth
+
+   Bandwidth is a local configuration option.  For non-congestion
+   controlled mode the only configuration required is the requested
+   bandwidth.  For congestion controlled mode one can manually configure
+   the bandwidth or one could default to the maximum bandwidth allowed
+   in which case no bandwidth configuration is required.  No
+   standardized configuration method is required.
+
+3.2.  Fixed Packet Size
+
+   The fixed packet size to be used for the tunnel encapsulation packets
+   can be configured manually or can be automatically determined using
+   Path MTU discovery (see [RFC1191] and [RFC8201]).  No standardized
+   configuration method is required.
+
+3.3.  Congestion Information Configuration.
+
+   If congestion control mode is to be used, or if the user wishes to
+   receive congestion information on the sender for circuit breaking or
+   other operational notifications in the non-congestion controlled
+   mode, IP-TFS will need to configure the egress tunnel endpoint to
+   send congestion information periodically.
+
+   In order to configure the sending interval of periodic congestion
+   information on the egress tunnel endpoint, we utilize the IKEv2
+   Configuration Payload (CP) [RFC7296].  Implementations MAY also allow
+   for manual (or default) configuration of this interval; however,
+   implementations of IP-TFS MUST support configuration using the IKEv2
+   exchange described below.
+
+   We utilize a new IKEv2 configuration attribute TFS_INFO_INTERVAL
+   (TBD) to configure the sending interval from the egress endpoint of
+   the tunnel.  This value is configured using a CFG_REQUEST payload and
+   is acknowledge by the receiver using a CFG_REPLY payload.  This
+   configuration exchange SHOULD be sent during the IKEv2 configuration
+   exchanges occurring as the tunnel is first brought up.  The sending
+   interval value may also be changed at any time afterwards using a
+   similar CFG_REQUEST/CFG_REPLY payload inside an IKEv2 INFORMATIONAL
+   exchange.
+
+   The sending interval value is given in milliseconds and is 16 bits
+   wide; however, it is not recommended that values below 1/10th of a
+   second are used as this could lead to early exhaustion of the Message
+   ID field used in the IKEv2 INFORMATIONAL exchange to send the
+   congestion information.
+
+
+
+
+
+Hopps                    Expires August 5, 2019                 [Page 8]
+
+Internet-Draft                                             February 2019
+
+
+   A sending interval value of 0 disables sending of the congestion
+   information.
+
+4.  Packet and Data Formats
+
+4.1.  IPSec
+
+4.1.1.  Payload Format
+
+     0                   1                   2                   3
+     0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
+    +-----------------------------------------------------------------+
+    |V|          Reserved           |          BlockOffset            |
+    +-----------------------------------------------------------------+
+    |       Data Blocks ...
+    +---------------
+
+     - V :: Version, must be set to zero and dropped if set to 1.
+     - Reserved :: Set to 0 ignored on receipt.
+     - BlockOffset :: This is the number of bytes before the next
+                      IP/IPv6 data block. It can point past the end of
+                      the containing packet in which case this packet is
+                      the continuation of a previous one and possibly
+                      padding. NOTE: Even if BlockOffset points into a
+                      subsequent packet this packet can still end with
+                      padding. This will happen if there are a few bytes
+                      available but not enough bytes to start a new
+                      inner packet in the current outer packet.
+     - Data Blocks :: Variable number of bytes that constitute the start
+                      or continuation of a previous data block.
+
+4.1.2.  Data Blocks
+
+     0                   1                   2                   3
+     0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
+    +-----------------------------------------------------------------+
+    | Type  | IPv4, IPv6 or pad.
+    +--------
+
+       - Type :: 0x0 for pad, 0x4 for IPv4, 0x6 for IPv6.
+
+4.1.2.1.  IPv4 Data Block
+
+
+
+
+
+
+
+
+
+Hopps                    Expires August 5, 2019                 [Page 9]
+
+Internet-Draft                                             February 2019
+
+
+     0                   1                   2                   3
+     0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
+    +-----------------------------------------------------------------+
+    |  0x4  |  IHL  | Type Of Service |         Total Length          |
+    +------------------------------------------------------------------
+    | Rest of inner packet ...
+    +
+
+     - Type :: 0x4 for IPv4 (i.e., first nibble of IPv4 packet).
+     - Total Length :: Length of the IPv4 inner packet.
+
+4.1.2.2.  IPv6 Data Block
+
+     0                   1                   2                   3
+     0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
+    +-----------------------------------------------------------------+
+    |  0x6  | Traffic Class |              Flow Label                 |
+    +------------------------------------------------------------------
+    |          Total Length         | Rest of inner packet ...
+    +--------------------------------
+
+     - Type :: 0x6 for for IPv6 (i.e., first nibble of IPv6 packet).
+     - Total Length :: Length of the IPv6 inner packet. unspecified
+                       data. For IPv4 and IPv6 the length field must at
+                       least be present. It is fine and expected that
+                       the packet data may span multiple containing
+                       packets. Subsequent packets will have their
+                       offset set to point past this IP data.
+
+4.1.2.3.  Pad Data Block
+
+     0                   1                   2                   3
+     0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
+    +-----------------------------------------------------------------+
+    |  0x0  | Padding ...
+    +--------
+
+     - Type :: 0x0 for pad
+     - Padding :: extends to end of the encapsulating packet.
+
+4.2.  IKEv2
+
+4.2.1.  IKEv2 Congestion Information Notification Data
+
+   We utilize a send only (i.e., no response expected) IKEv2
+   INFORMATIONAL exchange (37) to transmit the congestion information
+   using a notification payload of type TFS_CONGEST_INFO (TBD).  The The
+   Response bit should be set to 0.  As no response is expected the only
+
+
+
+Hopps                    Expires August 5, 2019                [Page 10]
+
+Internet-Draft                                             February 2019
+
+
+   payload should be the congestion information in the notification
+   payload.  The following diagram defines the notification payload
+   data.
+
+     0                   1                   2                   3
+     0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
+    +-----------------------------------------------------------------+
+    |E|  Reserved   |                  DropCount                      |
+    +-----------------------------------------------------------------+
+    |                          Timestamp...
+    +-----------------------------------------------------------------+
+                            ...Timestamp                              |
+    +-----------------------------------------------------------------+
+    |                          AckSeqStart                            |
+    +-----------------------------------------------------------------+
+    |                          AckSeqEnd                              |
+    +-----------------------------------------------------------------+
+
+     - ECN ::
+     - Reserved :: set to 0 ignored on receipt.
+     - DropCount :: The drop count that occurred between AckSeqStart and
+                    AckSeqEnd, If the drops exceed the resolution of the
+                    counter then set to the max value.
+     - AckSeqStart :: The first ESP sequence number of the packet range
+                      that this information relates to.
+     - AckSeqEnd :: The last ESP sequence number of the packet range
+                    that this information relates to.
+     - Timestamp :: The time when this notification data was
+                    created/sent. This value does not need to be
+                    synchronized only monotonically increasing at the
+                    sender.
+
+5.  IANA Considerations
+
+   This document requests a protocol number IPTFS_PROTOCOL be allocated
+   by IANA from "Assigned Internet Protocol Numbers" registry for
+   identifying the IP-TFS ESP payload format.
+
+     Type: TBD
+     Description: IP-TFS ESP payload format.
+     Reference: This document
+
+   Additionally this document requests an attribute value
+   TFS_INFO_INTERVAL (TBD) be allocated by IANA from "IKEv2
+   Configuration Payload Attribute Types" registry.
+
+
+
+
+
+
+Hopps                    Expires August 5, 2019                [Page 11]
+
+Internet-Draft                                             February 2019
+
+
+     Type: TBD
+     Description: The sending rate of congestion information from egress
+                  tunnel endpoint.
+     Reference: This document
+
+   Additionally this document requests a notify message status type
+   TFS_CONGEST_INFO (TBD) be allocated by IANA from "IKEv2 Notify
+   Message Types - Status Types" registry.
+
+     Type: TBD
+     Description: The sending rate of congestion information from egress
+                  tunnel endpoint.
+     Reference: This document
+
+6.  Security Considerations
+
+   This document describes a mechanism to add Traffic Flow
+   Confidentiality to IP traffic.  Use of this mechanism is expected to
+   increase the security of the traffic being transported.  Other than
+   the additional security afforded by using this mechanism, IP-TFS
+   utilizes the security protocols [RFC4303] and [RFC7296] and so their
+   security considerations apply to IP-TFS as well.
+
+   As noted previously in Section 2.2.2, for TFC to be fully maintained
+   the encapsulated traffic flow should not be affecting network
+   congestion in a predictable way, and if it would be then non-
+   congestion controlled mode use should be considered instead.
+
+7.  References
+
+7.1.  Normative References
+
+   [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
+              Requirement Levels", BCP 14, RFC 2119,
+              DOI 10.17487/RFC2119, March 1997,
+              <https://www.rfc-editor.org/info/rfc2119>.
+
+   [RFC4303]  Kent, S., "IP Encapsulating Security Payload (ESP)",
+              RFC 4303, DOI 10.17487/RFC4303, December 2005,
+              <https://www.rfc-editor.org/info/rfc4303>.
+
+   [RFC7296]  Kaufman, C., Hoffman, P., Nir, Y., Eronen, P., and T.
+              Kivinen, "Internet Key Exchange Protocol Version 2
+              (IKEv2)", STD 79, RFC 7296, DOI 10.17487/RFC7296, October
+              2014, <https://www.rfc-editor.org/info/rfc7296>.
+
+
+
+
+
+
+Hopps                    Expires August 5, 2019                [Page 12]
+
+Internet-Draft                                             February 2019
+
+
+   [RFC8174]  Leiba, B., "Ambiguity of Uppercase vs Lowercase in RFC
+              2119 Key Words", BCP 14, RFC 8174, DOI 10.17487/RFC8174,
+              May 2017, <https://www.rfc-editor.org/info/rfc8174>.
+
+7.2.  Informative References
+
+   [I-D.iab-wire-image]
+              Trammell, B. and M. Kuehlewind, "The Wire Image of a
+              Network Protocol", draft-iab-wire-image-01 (work in
+              progress), November 2018.
+
+   [RFC0791]  Postel, J., "Internet Protocol", STD 5, RFC 791,
+              DOI 10.17487/RFC0791, September 1981,
+              <https://www.rfc-editor.org/info/rfc791>.
+
+   [RFC1191]  Mogul, J. and S. Deering, "Path MTU discovery", RFC 1191,
+              DOI 10.17487/RFC1191, November 1990,
+              <https://www.rfc-editor.org/info/rfc1191>.
+
+   [RFC2474]  Nichols, K., Blake, S., Baker, F., and D. Black,
+              "Definition of the Differentiated Services Field (DS
+              Field) in the IPv4 and IPv6 Headers", RFC 2474,
+              DOI 10.17487/RFC2474, December 1998,
+              <https://www.rfc-editor.org/info/rfc2474>.
+
+   [RFC2914]  Floyd, S., "Congestion Control Principles", BCP 41,
+              RFC 2914, DOI 10.17487/RFC2914, September 2000,
+              <https://www.rfc-editor.org/info/rfc2914>.
+
+   [RFC3168]  Ramakrishnan, K., Floyd, S., and D. Black, "The Addition
+              of Explicit Congestion Notification (ECN) to IP",
+              RFC 3168, DOI 10.17487/RFC3168, September 2001,
+              <https://www.rfc-editor.org/info/rfc3168>.
+
+   [RFC4301]  Kent, S. and K. Seo, "Security Architecture for the
+              Internet Protocol", RFC 4301, DOI 10.17487/RFC4301,
+              December 2005, <https://www.rfc-editor.org/info/rfc4301>.
+
+   [RFC7510]  Xu, X., Sheth, N., Yong, L., Callon, R., and D. Black,
+              "Encapsulating MPLS in UDP", RFC 7510,
+              DOI 10.17487/RFC7510, April 2015,
+              <https://www.rfc-editor.org/info/rfc7510>.
+
+   [RFC8084]  Fairhurst, G., "Network Transport Circuit Breakers",
+              BCP 208, RFC 8084, DOI 10.17487/RFC8084, March 2017,
+              <https://www.rfc-editor.org/info/rfc8084>.
+
+
+
+
+
+Hopps                    Expires August 5, 2019                [Page 13]
+
+Internet-Draft                                             February 2019
+
+
+   [RFC8200]  Deering, S. and R. Hinden, "Internet Protocol, Version 6
+              (IPv6) Specification", STD 86, RFC 8200,
+              DOI 10.17487/RFC8200, July 2017,
+              <https://www.rfc-editor.org/info/rfc8200>.
+
+   [RFC8201]  McCann, J., Deering, S., Mogul, J., and R. Hinden, Ed.,
+              "Path MTU Discovery for IP version 6", STD 87, RFC 8201,
+              DOI 10.17487/RFC8201, July 2017,
+              <https://www.rfc-editor.org/info/rfc8201>.
+
+Author's Address
+
+   Christian E. Hopps
+   LabN Consulting, L.L.C.
+
+   Email: chopps@chopps.org
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Hopps                    Expires August 5, 2019                [Page 14]

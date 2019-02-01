@@ -1,4 +1,4 @@
-# -*- fill-column: 70 -*-
+# -*- fill-column: 69 -*-
 # This is a comment.
 #
 
@@ -13,14 +13,14 @@ and constant send rate encrypted tunnel.
 Traffic Analysis ^RFC4301^ is the act of extracting information about
 data being sent through a network. While one may directly obscure the
 data through the use of encryption ^RFC4303^, the traffic pattern
-itself exposes information due to variations in it's shape and
-timing ^I-D.iab-wire-image^ and [AppCrypt §8.6]. Hiding the size and
+itself exposes information due to variations in it's shape and timing
+^I-D.iab-wire-image^ and [AppCrypt §8.6]. Hiding the size and
 frequency of traffic is referred to as Traffic Flow Confidentiality
 (TFC) ^RFC4303^
 
-^RFC4303^ provides for limited TFC by allowing for padding to be added
-to the encrypted IP packets. This method has a few limitations. One
-limitation is that the frequency of the data being sent is not
+^RFC4303^ provides for limited TFC by allowing for padding to be
+added to the encrypted IP packets. This method has a few limitations.
+One limitation is that the frequency of the data being sent is not
 obscured. A second limitation is that only a single IP packet of data
 is encapsulated in any encrypted ESP packet which wastes a large
 amount of available bandwidth.
@@ -28,21 +28,20 @@ amount of available bandwidth.
 The IP-TFS solution provides for full TFC without the aforementioned
 timing and bandwidth limitations. To do this we use a constant send
 IPsec ^RFC4303^ tunnel with fixed-sized encapsulating packets. These
-fixed-sized packets are sent at a constant rate and contain
-partial, full or multiple IP packets to maximize the bandwidth of the
-tunnel.
+fixed-sized packets are sent at a constant rate and contain partial,
+full or multiple IP packets to maximize the bandwidth of the tunnel.
 
-Additionally IP-TFS provides for dealing with network congestion. This
-is important for when the IP-TFS user is not in full control of the
-domain through which the IP-TFS tunnel path flows ^RFC2914^.
+Additionally IP-TFS provides for dealing with network congestion.
+This is important for when the IP-TFS user is not in full control of
+the domain through which the IP-TFS tunnel path flows ^RFC2914^.
 
 ** Terminology & Concepts
 
 The keywords "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
 "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and
 "OPTIONAL" in this document are to be interpreted as described in BCP
-14, ^RFC2119^ ^RFC8174^ when, and only when, they appear in all capitals,
-as shown here..
+14, ^RFC2119^ ^RFC8174^ when, and only when, they appear in all
+capitals, as shown here..
 
 This document assumes familiarity with IP security concepts described
 in ^RFC4301^.
@@ -68,39 +67,39 @@ fixed-packet-size encapsulating packet.
 
 The egress of the IP-TFS tunnel SHOULD NOT impose any restrictions on
 tunnel packet arrival rate. Packet send rate is entirely the function
-of the ingress (sending) side of the IP-TFS tunnel. Indeed the ingress
-(sending) side of the IP-TFS tunnel MUST be allowed to vary the rate
-at which it sends encapsulating packets, including sending them faster
-or slower than the requested rate.
+of the ingress (sending) side of the IP-TFS tunnel. Indeed the
+ingress (sending) side of the IP-TFS tunnel MUST be allowed to vary
+the rate at which it sends encapsulating packets, including sending
+them faster or slower than the requested rate.
 
 ** Tunnel Content
 
 As previously mentioned one issue with the TFC padding solution in
-^RFC4303^ is the large amount of wasted bandwidth as
-only one IP packet can be sent per encapsulating packet. In order to
-maximize bandwidth IP-TFS breaks this one-to-one association.
+^RFC4303^ is the large amount of wasted bandwidth as only one IP
+packet can be sent per encapsulating packet. In order to maximize
+bandwidth IP-TFS breaks this one-to-one association.
 
-With IP-TFS we fragment as well as aggregate the inner IP traffic flow
-into the encapsulating IP tunnel packets. We only pad the tunnel
-packets if there is no data available to be sent at the time of tunnel
-packet transmission or an unusable amount of space remains.
+With IP-TFS we fragment as well as aggregate the inner IP traffic
+flow into the encapsulating IP tunnel packets. We only pad the tunnel
+packets if there is no data available to be sent at the time of
+tunnel packet transmission or an unusable amount of space remains.
 
 In order to do this we create a new payload data type identified with
 a new IP protocol number IPTFS_PROTOCOL (TBD). A payload of
-IPTFS_PROTOCOL type is comprised of a 32 bit header followed by either
-a partial, a full or multiple partial or full data-blocks.
+IPTFS_PROTOCOL type is comprised of a 32 bit header followed by
+either a partial, a full or multiple partial or full data-blocks.
 
 *** IPsec Payload Format
 
 #+begin_example
 
-    0                   1                   2                   3
-    0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
-   +-----------------------------------------------------------------+
- 0 |V|          Reserved           |          BlockOffset            |
-   +-----------------------------------------------------------------+
- 4 |       Data Blocks ...
-   +---------------
+  0                   1                   2                   3
+  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
+ +-----------------------------------------------------------------+
+ |V|          Reserved           |          BlockOffset            |
+ +-----------------------------------------------------------------+
+ |       Data Blocks ...
+ +---------------
 
 #+end_example
 
@@ -110,40 +109,40 @@ data-block immediately follows the header. Conversely if the value is
 non-zero it points at the start of the next data block. It can be the
 case that the BlockOffset points past the end of the encapsulating
 packet. This simply means that the next data-block occurs in a
-subsequent encapsulating packet. When the BlockOffset is non-zero
-the data immediately following the header belongs to the previous
+subsequent encapsulating packet. When the BlockOffset is non-zero the
+data immediately following the header belongs to the previous
 data-block that is still being re-assembled.
 
 *** Data-Blocks
 
 A data-block is defined by a 4-bit type code followed by the data
 block data. The types values have been carefully chosen to coincide
-with the IPv4/IPv6 version field values so that no per-data-block type
-overhead is required to encapsulate an IP packet.
+with the IPv4/IPv6 version field values so that no per-data-block
+type overhead is required to encapsulate an IP packet.
 
 #+begin_example
 
-      0                   1                   2                   3
-      0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
-     +-----------------------------------------------------------------+
-   0 | Type  | rest of IPv4, IPv6 or pad.
-     +--------
+  0                   1                   2                   3
+  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
+ +-----------------------------------------------------------------+
+ | Type  | rest of IPv4, IPv6 or pad.
+ +--------
 
 #+end_example
 
 
 *** Example of an encapsulated IP packet flow.
 
-Below we show an example inner IP packet flow within the encapsulating
-tunnel packet stream. Notice how encapsulated IP packets can start and
-end anywhere, and more than one or less than 1 may occur in a single
-encapsulating packet.
+Below we show an example inner IP packet flow within the
+encapsulating tunnel packet stream. Notice how encapsulated IP
+packets can start and end anywhere, and more than one or less than 1
+may occur in a single encapsulating packet.
 
 #+begin_example
 
-  Off: 0            Off: 100          Off: 2900         Off:1400
- [ ESP-IP1 (1500) ][ ESP IP2 (1500) ][ ESP IP3 (1500) ][ ESP IP4 (1500) ]
- [--800---][--800---][60][-240-][--4000----------------------------][pad]
+  Off: 0         Off: 100         Off: 2900       Off:1400
+ [ ESP1  (1500) ][ ESP2  (1500) ][ ESP3  (1500) ][ ESP4  (1500) ]
+ [--800--][--800--][60][-240-][--4000----------------------][pad]
 
 #+end_example
 
@@ -151,16 +150,16 @@ The encapsulated IP packet flow is as follows: an 800 byte packet, an
 800 byte packet, a 60 byte packet, a 240 byte packet, a 4000 byte
 packet.
 
-The BlockOffset values in the 4 IP-TFS payload headers for this packet
-flow would thus be: 0, 100, 2900, 1400 respectively. The first
-encapsulating packet ESP-IP1 has a zero BlockOffset which points at
-the IP data block immediately following the IP-TFS header. The
-following packet ESP-IP2s BlockOffset points inward 100 bytes to the
-start of the 60 byte data block. The third encapsulating packet
-ESP-IP3 contains the middle portion of the 4000 byte data block so the
-offset points past its end and into the forth encapsulating packet.
-The fourth packet EPS-IP4s offset is 1400 pointing at the padding
-which follows the completion of the continued 4000 byte packet.
+The BlockOffset values in the 4 IP-TFS payload headers for this
+packet flow would thus be: 0, 100, 2900, 1400 respectively. The first
+encapsulating packet ESP1 has a zero BlockOffset which points at the
+IP data block immediately following the IP-TFS header. The following
+packet ESP2s BlockOffset points inward 100 bytes to the start of the
+60 byte data block. The third encapsulating packet ESP3 contains the
+middle portion of the 4000 byte data block so the offset points past
+its end and into the forth encapsulating packet. The fourth packet
+ESP4s offset is 1400 pointing at the padding which follows the
+completion of the continued 4000 byte packet.
 
 Having the BlockOffset always point at the next available data block
 allows for quick recovery with minimal inner packet loss in the
@@ -170,19 +169,21 @@ presence of outer encapsulating packet loss.
 
 ^RFC4301^ provides some direction on when and how to map various
 values from an inner IP header to the outer encapsulating header,
-namely the Dont-Fragment (DF) bit (^RFC0791^ and ^RFC8200^), the
+namely the Don't-Fragment (DF) bit (^RFC0791^ and ^RFC8200^), the
 Differentiated Services (DS) field ^RFC2474^ and the Explicit
 Congestion Notification (ECN) field ^RFC3168^. Unlike ^RFC4301^ with
 IP-TFS we may and often will be encapsulating more than 1 IP packet
 per ESP packet. To deal with this we further restrict these mappings.
 In particular we never map the inner DF bit as it is unrelated to the
 IP-TFS tunnel functionality; we never directly fragment the inner
-packets and the inner packets will not affect the fragmentation of the
-outer encapsulation packets. Likewise the ECN value need not be mapped
-as any congestion related to the constant send rate IP-TFS tunnel is
-unrelated (by design!) to the inner traffic flow. Finally by default
-the DS field should not be copied although an implementation may
-choose to allow for configuration to override this behavior.
+packets and the inner packets will not affect the fragmentation of
+the outer encapsulation packets. Likewise the ECN value need not be
+mapped as any congestion related to the constant send rate IP-TFS
+tunnel is unrelated (by design!) to the inner traffic flow. Finally
+by default the DS field should not be copied although an
+implementation may choose to allow for configuration to override this
+behavior. An implementation SHOULD also allow the DS value to be set
+by configuration.
 
 ** Modes of operation
 
@@ -190,15 +191,15 @@ Just as with normal IPsec tunnels IP-TFS tunnels are unidirectional.
 Bidirectional functionality is achieved by setting up 2 tunnels, one
 in either direction.
 
-An IP-TFS tunnel can operae in 2 modes, a non-congestion controlled mode and
-congestion controlled mode.
+An IP-TFS tunnel can operate in 2 modes, a non-congestion controlled
+mode and congestion controlled mode.
 
 *** Non-Congestion Controlled Mode
 
-In the non-congestion controlled mode IP-TFS sends fixed-sized packets
-at a constant rate. The packet send rate is constant and is not
-automatically adjusted regardless of any network congestion (i.e.,
-packet loss).
+In the non-congestion controlled mode IP-TFS sends fixed-sized
+packets at a constant rate. The packet send rate is constant and is
+not automatically adjusted regardless of any network congestion
+(i.e., packet loss).
 
 For similar reasons as given in ^RFC7510^ the non-congestion
 controlled mode should only be used where the user has full
@@ -213,10 +214,10 @@ failures due to a lack of bandwidth can be corrected.
 With the congestion controlled mode, IP-TFS adapts to network
 congestion by lowering the packet send rate to accommodate the
 congestion. If congestion were handled in the network on a byte level
-we might consdier lowering the IPsec (encap) packet size to adapt; however,
-as congestion is normally handled in the network by dropping packets
-we instead choose to lower the frequency we send our fixed sized
-packets. This choice also minimizes transport overhead.
+we might consider lowering the IPsec (encapsulation) packet size to
+adapt; however, as congestion is normally handled in the network by
+dropping packets we instead choose to lower the frequency we send our
+fixed sized packets. This choice also minimizes transport overhead.
 
 The output of a congestion control algorithm SHOULD adjust the
 frequency that we send our packets until the congestion is
@@ -230,33 +231,33 @@ provided.
 
 It's perhaps important to note that the adjustable rate of sending
 over the congestion controlled IP-TFS tunnel is being controlled by
-the network congestion. As long as the encapsulated traffic flow shape
-and timing are not directly affecting the network congestion, the
-variations in the tunnel rate will not break the traffic flow
+the network congestion. As long as the encapsulated traffic flow
+shape and timing are not directly affecting the network congestion,
+the variations in the tunnel rate will not break the traffic flow
 confidentiality.
 
-*** Circuit Breakers
+**** Circuit Breakers
 
-In additional to congestion control, implementations may wish to define
-and implement circuit breakers ^RFC8084^ as a recovery method of last
-resort. Enabling circuit breakers is also a reason a user may wish to
-enable congestion information reports even when using the
-non-congestion controlled mode of operation. The definition of circuit
-breakers is outside the scope of this document.
+In additional to congestion control, implementations may wish to
+define and implement circuit breakers ^RFC8084^ as a recovery method
+of last resort. Enabling circuit breakers is also a reason a user may
+wish to enable congestion information reports even when using the
+non-congestion controlled mode of operation. The definition of
+circuit breakers is outside the scope of this document.
 
 ** Congestion Information
 
-In order to support the congestion control mode we send regular packet
-drop reports from the receiver (egress tunnel endopint) to the sender.
-These reports indicate the number of packet drops during a sequence of
-packets. The sequence or range of packets is identified using the
-start and end ESP sequence numbers of the packet range.
+In order to support the congestion control mode we send regular
+packet drop reports from the receiver (egress tunnel endpoint) to the
+sender. These reports indicate the number of packet drops during a
+sequence of packets. The sequence or range of packets is identified
+using the start and end ESP sequence numbers of the packet range.
 
 These congestion information reports can also be sent when in the
-non-congestion controlled mode to allow for reporting from the sending
-device or to implement Circuit Breakers ^RFC8084^.
+non-congestion controlled mode to allow for reporting from the
+sending device or to implement Circuit Breakers ^RFC8084^.
 
-The congestion information is sent using a  IKEv2 INFORMATION
+The congestion information is sent using a IKEv2 INFORMATION
 notifications ^RFC7296^. These notifications are sent at a configured
 interval (which can be configured to 0 to disable the sending of the
 reports).
@@ -264,8 +265,8 @@ reports).
 * Configuration
 
 IP-TFS is meant to be deployable with a minimal amount of
-configuration. All IP-TFS specific configuration (i.e., in addition to
-the underlying IPsec tunnel configuration) should be able to be
+configuration. All IP-TFS specific configuration (i.e., in addition
+to the underlying IPsec tunnel configuration) should be able to be
 specified at the tunnel ingress (sending) side alone (i.e.,
 single-ended provisioning).
 
@@ -274,8 +275,8 @@ single-ended provisioning).
 Bandwidth is a local configuration option. For non-congestion
 controlled mode the only configuration required is the requested
 bandwidth. For congestion controlled mode one can manually configure
-the bandwidth or one could default to the maximum bandwidth allowed in
-which case no bandwidth configuration is required. No standardized
+the bandwidth or one could default to the maximum bandwidth allowed
+in which case no bandwidth configuration is required. No standardized
 configuration method is required.
 
 ** Fixed Packet Size
@@ -289,21 +290,21 @@ configuration method is required.
 
 If congestion control mode is to be used, or if the user wishes to
 receive congestion information on the sender for circuit breaking or
-other operational notificationsin the non-congestion controlled mode,
-IP-TFS will need to configure the egress tunnel endpoint to send
-congestion information periodically.
+other operational notifications in the non-congestion controlled
+mode, IP-TFS will need to configure the egress tunnel endpoint to
+send congestion information periodically.
 
 In order to configure the sending interval of periodic congestion
 information on the egress tunnel endpoint, we utilize the IKEv2
 Configuration Payload (CP) ^RFC7296^. Implementations MAY also allow
 for manual (or default) configuration of this interval; however,
-implementations of IP-TFS MUST support configuration using the
-IKEv2 exchange described below.
+implementations of IP-TFS MUST support configuration using the IKEv2
+exchange described below.
 
-We utilize a new IKEv2 configuration attribute TFS_INFO_INTERVAL (TBD)
-to configure the sending interval from the egress endpoint of the
-tunnel. This value is configured using a CFG_REQUEST payload and is
-acknowledge by the receiver using a CFG_REPLY payload. This
+We utilize a new IKEv2 configuration attribute TFS_INFO_INTERVAL
+(TBD) to configure the sending interval from the egress endpoint of
+the tunnel. This value is configured using a CFG_REQUEST payload and
+is acknowledge by the receiver using a CFG_REPLY payload. This
 configuration exchange SHOULD be sent during the IKEv2 configuration
 exchanges occurring as the tunnel is first brought up. The sending
 interval value may also be changed at any time afterwards using a
@@ -329,41 +330,39 @@ information.
 *** Payload Format
 
 #+begin_example
-
-        0                   1                   2                   3
-        0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
-       +-----------------------------------------------------------------+
-     0 |V|          Reserved           |          BlockOffset            |
-       +-----------------------------------------------------------------+
-     4 |       Data Blocks ...
-       +---------------
+  0                   1                   2                   3
+  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
+ +-----------------------------------------------------------------+
+ |V|          Reserved           |          BlockOffset            |
+ +-----------------------------------------------------------------+
+ |       Data Blocks ...
+ +---------------
 
 #+end_example
 
-    - V :: Version, must be set to zero and dropped if set to 1.
-    - Reserved :: Set to 0 ignored on receipt.
-    - BlockOffset :: This is the number of bytes before the next
-                     IP/IPv6 data block. It can point past the end of
-                     the containing packet in which case this packet
-                     is the continuation of a previous one and
-                     possibly padding. NOTE: Even if BlockOffset
-                     points into a subsequent packet this packet can
-                     still end with padding. This will happen if there
-                     are a few bytes available but not enough bytes to
-                     start a new inner packet in the current outer
-                     packet.
-    - Data Blocks :: Variable number of bytes that constitute the
-                     start or continuation of a previous data block.
+  - V :: Version, must be set to zero and dropped if set to 1.
+  - Reserved :: Set to 0 ignored on receipt.
+  - BlockOffset :: This is the number of bytes before the next
+                   IP/IPv6 data block. It can point past the end of
+                   the containing packet in which case this packet is
+                   the continuation of a previous one and possibly
+                   padding. NOTE: Even if BlockOffset points into a
+                   subsequent packet this packet can still end with
+                   padding. This will happen if there are a few bytes
+                   available but not enough bytes to start a new
+                   inner packet in the current outer packet.
+  - Data Blocks :: Variable number of bytes that constitute the start
+                   or continuation of a previous data block.
 
 *** Data Blocks
 
 #+begin_example
 
-    0                   1                   2                   3
-    0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
-   +-----------------------------------------------------------------+
- 0 | Type  | IPv4, IPv6 or pad.
-   +--------
+  0                   1                   2                   3
+  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
+ +-----------------------------------------------------------------+
+ | Type  | IPv4, IPv6 or pad.
+ +--------
 
 #+end_example
 
@@ -373,104 +372,106 @@ information.
 
 #+begin_example
 
-    0                   1                   2                   3
-    0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
-   +-----------------------------------------------------------------+
- 0 |  0x4  |  IHL  | Type Of Service |         Total Length          |
-   +------------------------------------------------------------------
- 4 | Rest of inner packet ...
-   +
+  0                   1                   2                   3
+  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
+ +-----------------------------------------------------------------+
+ |  0x4  |  IHL  | Type Of Service |         Total Length          |
+ +------------------------------------------------------------------
+ | Rest of inner packet ...
+ +
 
 #+end_example
 
-    - Type :: 0x4 for IPv4 (i.e., first nibble of IPv4 packet).
-    - Total Length :: Length of the IPv4 inner packet.
+  - Type :: 0x4 for IPv4 (i.e., first nibble of IPv4 packet).
+  - Total Length :: Length of the IPv4 inner packet.
 
 
 **** IPv6 Data Block
 
 #+begin_example
 
-    0                   1                   2                   3
-    0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
-   +-----------------------------------------------------------------+
- 0 |  0x6  | Traffic Class |              Flow Label                 |
-   +------------------------------------------------------------------
- 4 |          Total Length         | Rest of inner packet ...
-   +--------------------------------
+  0                   1                   2                   3
+  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
+ +-----------------------------------------------------------------+
+ |  0x6  | Traffic Class |              Flow Label                 |
+ +------------------------------------------------------------------
+ |          Total Length         | Rest of inner packet ...
+ +--------------------------------
 
 #+end_example
 
-    - Type :: 0x6 for for IPv6 (i.e., first nibble of IPv6 packet).
-    - Total Length :: Length of the IPv6 inner packet. unspecified
-                      data. For IPv4 and IPv6 the length field must at
-                      least be present. It is fine and expected that
-                      the packet data may span multiple containing
-                      packets. Subsequent packets will have their
-                      offset set to point past this IP data.
+  - Type :: 0x6 for for IPv6 (i.e., first nibble of IPv6 packet).
+  - Total Length :: Length of the IPv6 inner packet. unspecified
+                    data. For IPv4 and IPv6 the length field must at
+                    least be present. It is fine and expected that
+                    the packet data may span multiple containing
+                    packets. Subsequent packets will have their
+                    offset set to point past this IP data.
 
 
 **** Pad Data Block
 
 #+begin_example
 
-    0                   1                   2                   3
-    0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
-   +-----------------------------------------------------------------+
- 0 |  0x0  | Padding ...
-   +--------
+  0                   1                   2                   3
+  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
+ +-----------------------------------------------------------------+
+ |  0x0  | Padding ...
+ +--------
 
 #+end_example
 
-    - Type :: 0x0 for pad
-    - Padding :: extends to end of the encapsulating packet.
+  - Type :: 0x0 for pad
+  - Padding :: extends to end of the encapsulating packet.
 
 
 ** IKEv2
 ***  IKEv2 Congestion Information Notification Data
 
 We utilize a send only (i.e., no response expected) IKEv2
-INFORMATIONAL exchange (37) to transmit the congestion information using
-a notification payload of type TFS_CONGEST_INFO (TBD). The
-The Response bit should be set to 0. As no response is expected the
-only payload should be the congestion information in the notification
+INFORMATIONAL exchange (37) to transmit the congestion information
+using a notification payload of type TFS_CONGEST_INFO (TBD). The The
+Response bit should be set to 0. As no response is expected the only
+payload should be the congestion information in the notification
 payload. The following diagram defines the notification payload data.
 
 #+begin_example
 
-      0                   1                   2                   3
-      0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
-     +-----------------------------------------------------------------+
-  0  |   Reserved    |                  DropCount                      |
-     +-----------------------------------------------------------------+
-  4  |                          Timestamp...
-     +-----------------------------------------------------------------+
-  8                          ...Timestamp                              |
-     +-----------------------------------------------------------------+
-  12 |                          AckSeqStart                            |
-     +-----------------------------------------------------------------+
-  16 |                          AckSeqEnd                              |
-     +-----------------------------------------------------------------+
+  0                   1                   2                   3
+  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
+ +-----------------------------------------------------------------+
+ |E|  Reserved   |                  DropCount                      |
+ +-----------------------------------------------------------------+
+ |                          Timestamp...
+ +-----------------------------------------------------------------+
+                         ...Timestamp                              |
+ +-----------------------------------------------------------------+
+ |                          AckSeqStart                            |
+ +-----------------------------------------------------------------+
+ |                          AckSeqEnd                              |
+ +-----------------------------------------------------------------+
 
 #+end_example
 
-     - Reserved :: set to 0 ignored on receipt.
-     - DropCount :: For ack data block this is the drop count between
-                    AckSeqStart and AckSeqEnd, If the drops exceed the
-                    resolution of the counter then set to the max
-                    value.
-     - AckSeqStart :: The first ESP sequence number of the packet
-                      range that this information relates to.
-     - AckSeqEnd :: The last ESP sequence number of the packet range
-                    that this information relates to.
-     - Timestamp :: The time when this notification data was
-                    created/sent.
+  - ECN ::
+  - Reserved :: set to 0 ignored on receipt.
+  - DropCount :: The drop count that occurred between AckSeqStart and
+                 AckSeqEnd, If the drops exceed the resolution of the
+                 counter then set to the max value.
+  - AckSeqStart :: The first ESP sequence number of the packet range
+                   that this information relates to.
+  - AckSeqEnd :: The last ESP sequence number of the packet range
+                 that this information relates to.
+  - Timestamp :: The time when this notification data was
+                 created/sent. This value does not need to be
+                 synchronized only monotonically increasing at the
+                 sender.
 
 * IANA Considerations
 
-This document requests a protocol number IPTFS_PROTOCOL be allocated by IANA from
-"Assigned Internet Protocol Numbers" registry for identifying the
-IP-TFS ESP payload format.
+This document requests a protocol number IPTFS_PROTOCOL be allocated
+by IANA from "Assigned Internet Protocol Numbers" registry for
+identifying the IP-TFS ESP payload format.
 
   Type: TBD
   Description: IP-TFS ESP payload format.
@@ -479,8 +480,8 @@ IP-TFS ESP payload format.
 # ^IANA-PN^ https://www.iana.org/assignments/protocol-numbers
 
 Additionally this document requests an attribute value
-TFS_INFO_INTERVAL (TBD) be allocated by IANA from "IKEv2 Configuration
-Payload Attribute Types" registry.
+TFS_INFO_INTERVAL (TBD) be allocated by IANA from "IKEv2
+Configuration Payload Attribute Types" registry.
 
   Type: TBD
   Description: The sending rate of congestion information from egress
@@ -491,8 +492,8 @@ Payload Attribute Types" registry.
 # https://www.iana.org/assignments/ikev2-parameters/ikev2-parameters.xhtml#ikev2-parameters-21
 
 Additionally this document requests a notify message status type
-TFS_CONGEST_INFO (TBD) be allocated by IANA from "IKEv2 Notify Message
-Types - Status Types" registry.
+TFS_CONGEST_INFO (TBD) be allocated by IANA from "IKEv2 Notify
+Message Types - Status Types" registry.
 
   Type: TBD
   Description: The sending rate of congestion information from egress
@@ -506,15 +507,15 @@ Types - Status Types" registry.
 
 This document describes a mechanism to add Traffic Flow
 Confidentiality to IP traffic. Use of this mechanism is expected to
-increase the security of the traffic being transported. Other than the
-additional security afforded by using this mechanism, IP-TFS utilizes
-the security protocols ^RFC4303^ and ^RFC7296^ and so their security
-considerations apply to IP-TFS as well.
+increase the security of the traffic being transported. Other than
+the additional security afforded by using this mechanism, IP-TFS
+utilizes the security protocols ^RFC4303^ and ^RFC7296^ and so their
+security considerations apply to IP-TFS as well.
 
 As noted previously in ^congestion-controlled-mode^, for TFC to be
-fully maintained the encapsulated traffic flow should not be affecting
-network congestion in a predictable way, and if it would be then
-non-congestion controlled mode use should be considered instead.
+fully maintained the encapsulated traffic flow should not be
+affecting network congestion in a predictable way, and if it would be
+then non-congestion controlled mode use should be considered instead.
 
 {{document:
     name ;
