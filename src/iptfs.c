@@ -1,5 +1,6 @@
 /*
  * -*- coding: utf-8 -*-*
+ *
  * January 12 2019, Christian E. Hopps <chopps@gmail.com>
  *
  */
@@ -24,38 +25,19 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#include "iptfs.h"
+
 #define HDRSPACE 18
 #define MAXBUF 9000 + HDRSPACE
-#define RINGSZ 32
-uint8_t dropbuf[MAXBUF];
-
-#define MBUF_AVAIL(m) ((m)->espace - (m)->end)
-#define MBUF_LEN(m) ((m)->end - (m)->start)
+#define MAXQSZ 32
 
 extern struct sockaddr_in peeraddr; /* XXX remove */
 extern bool verbose;
-
-struct ratelimit;
-struct ratelimit *new_ratelimit(uint32_t, uint, uint);
-bool limit(struct ratelimit *, uint);
 
 #define DBG(x...)
 #define _DBG(x...)                                                             \
 	if (verbose)                                                           \
 	printf(x)
-
-struct mbuf {
-	uint8_t *space;  /* The buffer. */
-	uint8_t *espace; /* The end of the buffer. */
-	uint8_t *start;  /* The start of the packet */
-	uint8_t *end;    /* The end (one past) of the packet */
-};
-
-static void
-mbuf_reset(struct mbuf *m, int hdrspace)
-{
-	m->end = m->start = &m->space[hdrspace];
-}
 
 struct ring {
 	const char *name;
@@ -270,12 +252,11 @@ read_packets(void *_arg)
  * tunnel - tunnel from tun intf over a TCP connection.
  */
 void
-tfs_tunnel(int fd, int s, uint64_t rxrate)
+tfs_tunnel_ingress(int fd, int s, uint64_t txrate, phread_t *threads)
 {
 	static struct thread_args args[4];
 	static struct thread_args *ap = args;
 	static struct ring red, black;
-	pthread_t threads[4];
 	void *rv;
 
 	DBG("tfs_tunnel: fd: %d s: %d\n", fd, s);
@@ -301,11 +282,39 @@ tfs_tunnel(int fd, int s, uint64_t rxrate)
 	ap->fd = s;
 	ap->type = FDT_UDP;
 	pthread_create(&threads[3], NULL, read_packets, ap++);
+}
 
-	pthread_join(threads[0], &rv);
-	pthread_join(threads[1], &rv);
-	pthread_join(threads[2], &rv);
-	pthread_join(threads[3], &rv);
+void
+tfs_tunnel_egress(int fd, int s, uint64_t congest, pthread_t *threads)
+{
+	static struct thread_args args[4];
+	static struct thread_args *ap = args;
+	static struct mqueue *freeq, *outq;
+	void *rv;
+
+	DBG("tfs_tunnel_egress: fd: %d s: %d\n", fd, s);
+	freeq = mqueue_new_freeq("TFS Egress FreeqQ", MAXQSZ, MAXBUF, HDRSPACE);
+	outq = mqueue_new("TFS Egress OutQ", MAXQSZ);
+
+	ap->r = &black;
+	ap->fd = fd;
+	ap->type = FDT_FILE;
+	pthread_create(&threads[0], NULL, write_packets, ap++);
+
+	ap->r = &red;
+	ap->fd = s;
+	ap->type = FDT_UDP;
+	pthread_create(&threads[1], NULL, write_packets, ap++);
+
+	ap->r = &red;
+	ap->fd = fd;
+	ap->type = FDT_FILE;
+	pthread_create(&threads[2], NULL, read_packets, ap++);
+
+	ap->r = &black;
+	ap->fd = s;
+	ap->type = FDT_UDP;
+	pthread_create(&threads[3], NULL, read_packets, ap++);
 }
 
 /* Local Variables: */

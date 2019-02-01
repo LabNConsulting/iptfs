@@ -11,6 +11,7 @@
 #include <linux/if.h>
 #include <linux/if_tun.h>
 #include <netdb.h>
+#include <pthread.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -19,9 +20,12 @@
 #include <sys/ioctl.h>
 #include <unistd.h>
 
-void tfs_tunnel(int, int, uint64_t);
+int tfs_tunnel_ingress(int, int, uint64_t, pthread_t *);
+int tfs_tunnel_egress(int, int, uint64_t, pthread_t *);
+
 struct sockaddr_in peeraddr; /* XXX remove */
 bool verbose;
+pthread_t threads[4];
 
 char progname[128];
 
@@ -126,7 +130,10 @@ tfs_accept(const char *sname, const char *service)
 	if (recvfrom(s, NULL, 0, MSG_PEEK, (struct sockaddr *)&peeraddr,
 		     &alen) < 0)
 		err(1, "recvfrom for first UDP packet");
-	printf("server got initial UDP packet %s:%s\n", sname, service);
+	printf("server got initial UDP packet %s:%s (connecting)\n", sname,
+	       service);
+	if (connect(s, (const struct sockaddr *)&peeraddr, alen) < 0)
+		err(1, "connect to UDP client");
 	return s;
 }
 
@@ -135,11 +142,12 @@ main(int argc, char **argv)
 {
 	static struct option lopts[] = {
 	    {"help", no_argument, 0, 'h'},
+	    {"congest-rate", required_argument, 0, 'C'},
 	    {"connect", required_argument, 0, 'c'},
 	    {"dev", required_argument, 0, 'd'},
 	    {"listen", required_argument, 0, 'l'},
 	    {"port", required_argument, 0, 'p'},
-	    {"rx-rate", required_argument, 0, 'r'},
+	    {"rate", required_argument, 0, 'r'},
 	    {"verbose", no_argument, 0, 'v'},
 	    {0, 0, 0, 0},
 	};
@@ -147,14 +155,20 @@ main(int argc, char **argv)
 	const char *server = NULL;
 	const char *sport = NULL;
 	char devname[IFNAMSIZ + 1] = "vtun%d";
-	int fd, s, opt, li;
-	uint64_t rxrate = 0;
+	int fd, s, opt, li, i;
+	uint64_t congest, txrate;
 
+	congest = txrate = 0;
 	strncpy(progname, argv[0], sizeof(progname) - 1);
 
-	while ((opt = getopt_long(argc, argv, "c:d:hl:p:uv", lopts, &li)) !=
+	while ((opt = getopt_long(argc, argv, "C:c:d:hl:p:uv", lopts, &li)) !=
 	       -1) {
 		switch (opt) {
+		case 'C':
+			/* congest-rate */
+			congest = (uint64_t)atoi(optarg) * 1000000ULL;
+			printf("Congest Rate: %lu\n", congest);
+			break;
 		case 'c':
 			/* connect */
 			server = optarg;
@@ -174,8 +188,8 @@ main(int argc, char **argv)
 			break;
 		case 'r':
 			/* port */
-			rxrate = (uint64_t)atoi(optarg) * 1000000ULL;
-			printf("RxRate: %lu\n", rxrate);
+			txrate = (uint64_t)atoi(optarg) * 1000000ULL;
+			printf("Tx Rate: %lu\n", txrate);
 			break;
 		case 'v':
 			verbose = true;
@@ -197,9 +211,13 @@ main(int argc, char **argv)
 		printf("connected to server %d\n", s);
 	}
 
-	tfs_tunnel(fd, s, rxrate);
+	if (tfs_tunnel_ingress(fd, s, txrate, &threads[0]) < 0)
+		err(1, "tunnel ingress setup");
+	if (tfs_tunnel_egress(s, fd, congest, &threads[2]) < 0)
+		err(1, "tunnel egress setup");
 
-	sleep(10);
+	for (i = 0; i < 4; i++)
+		pthread_join(threads[i], NULL);
 
 	return 0;
 }
