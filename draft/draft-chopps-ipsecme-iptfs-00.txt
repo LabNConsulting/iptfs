@@ -4,8 +4,8 @@
 
 Network Working Group                                           C. Hopps
 Internet-Draft                                   LabN Consulting, L.L.C.
-Intended status: Standards Track                        February 1, 2019
-Expires: August 5, 2019
+Intended status: Standards Track                        February 2, 2019
+Expires: August 6, 2019
 
 
                         IP Traffic Flow Security
@@ -34,7 +34,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on August 5, 2019.
+   This Internet-Draft will expire on August 6, 2019.
 
 Copyright Notice
 
@@ -53,7 +53,7 @@ Copyright Notice
 
 
 
-Hopps                    Expires August 5, 2019                 [Page 1]
+Hopps                    Expires August 6, 2019                 [Page 1]
 
 Internet-Draft                                             February 2019
 
@@ -109,7 +109,7 @@ Table of Contents
 
 
 
-Hopps                    Expires August 5, 2019                 [Page 2]
+Hopps                    Expires August 6, 2019                 [Page 2]
 
 Internet-Draft                                             February 2019
 
@@ -165,7 +165,7 @@ Internet-Draft                                             February 2019
 
 
 
-Hopps                    Expires August 5, 2019                 [Page 3]
+Hopps                    Expires August 6, 2019                 [Page 3]
 
 Internet-Draft                                             February 2019
 
@@ -221,7 +221,7 @@ Internet-Draft                                             February 2019
 
 
 
-Hopps                    Expires August 5, 2019                 [Page 4]
+Hopps                    Expires August 6, 2019                 [Page 4]
 
 Internet-Draft                                             February 2019
 
@@ -277,7 +277,7 @@ Internet-Draft                                             February 2019
 
 
 
-Hopps                    Expires August 5, 2019                 [Page 5]
+Hopps                    Expires August 6, 2019                 [Page 5]
 
 Internet-Draft                                             February 2019
 
@@ -333,7 +333,7 @@ Internet-Draft                                             February 2019
 
 
 
-Hopps                    Expires August 5, 2019                 [Page 6]
+Hopps                    Expires August 6, 2019                 [Page 6]
 
 Internet-Draft                                             February 2019
 
@@ -389,7 +389,7 @@ Internet-Draft                                             February 2019
 
 
 
-Hopps                    Expires August 5, 2019                 [Page 7]
+Hopps                    Expires August 6, 2019                 [Page 7]
 
 Internet-Draft                                             February 2019
 
@@ -445,7 +445,7 @@ Internet-Draft                                             February 2019
 
 
 
-Hopps                    Expires August 5, 2019                 [Page 8]
+Hopps                    Expires August 6, 2019                 [Page 8]
 
 Internet-Draft                                             February 2019
 
@@ -473,13 +473,7 @@ Internet-Draft                                             February 2019
                       before the next IP/IPv6 data block. It can also
                       point past the end of the containing packet in
                       which case the containing packet is entirely
-                      composed of the continuation of the previous data
-                      block plus possible padding. The small amount of
-                      trailing padding can occur because we use the
-                      length fields in the encapsulated packet to
-                      determine the data block length and so we must
-                      always be able to encode enough bytes to include
-                      this field at the start of a data block.
+                      composed of the continuation of the previous data.
      - Data Blocks :: Variable number of bytes that constitute the start
                       or continuation of a previous data block.
 
@@ -495,17 +489,6 @@ Internet-Draft                                             February 2019
 
 4.1.2.1.  IPv4 Data Block
 
-
-
-
-
-
-
-Hopps                    Expires August 5, 2019                 [Page 9]
-
-Internet-Draft                                             February 2019
-
-
      0                   1                   2                   3
      0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
     +-----------------------------------------------------------------+
@@ -513,6 +496,15 @@ Internet-Draft                                             February 2019
     +------------------------------------------------------------------
     | Rest of inner packet ...
     +
+
+
+
+
+
+Hopps                    Expires August 6, 2019                 [Page 9]
+
+Internet-Draft                                             February 2019
+
 
      - Type :: 0x4 for IPv4 (i.e., first nibble of IPv4 packet).
      - Total Length :: Length of the IPv4 inner packet.
@@ -554,26 +546,28 @@ Internet-Draft                                             February 2019
    INFORMATIONAL exchange (37) to transmit the congestion information
    using a notification payload of type TFS_CONGEST_INFO (TBD).  The The
    Response bit should be set to 0.  As no response is expected the only
-
-
-
-Hopps                    Expires August 5, 2019                [Page 10]
-
-Internet-Draft                                             February 2019
-
-
    payload should be the congestion information in the notification
    payload.  The following diagram defines the notification payload
    data.
+
+
+
+
+
+
+
+
+Hopps                    Expires August 6, 2019                [Page 10]
+
+Internet-Draft                                             February 2019
+
 
      0                   1                   2                   3
      0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
     +-----------------------------------------------------------------+
     |E|  Reserved   |                  DropCount                      |
     +-----------------------------------------------------------------+
-    |                          Timestamp...
-    +-----------------------------------------------------------------+
-                            ...Timestamp                              |
+    |                          Timestamp                              |
     +-----------------------------------------------------------------+
     |                          AckSeqStart                            |
     +-----------------------------------------------------------------+
@@ -589,10 +583,12 @@ Internet-Draft                                             February 2019
                       that this information relates to.
      - AckSeqEnd :: The last ESP sequence number of the packet range
                     that this information relates to.
-     - Timestamp :: The time when this notification data was
-                    created/sent. This value does not need to be
-                    synchronized only monotonically increasing at the
-                    sender.
+     - Timestamp :: The lower 32 bits of a running monotonic millisecond
+                    timer of when this notification data was
+                    created/sent. This value is used to determine
+                    duplicates and drop counts of this information.
+                    Implementations should deal with wrapping of this
+                    timer value.
 
 5.  IANA Considerations
 
@@ -608,20 +604,19 @@ Internet-Draft                                             February 2019
    TFS_INFO_INTERVAL (TBD) be allocated by IANA from "IKEv2
    Configuration Payload Attribute Types" registry.
 
-
-
-
-
-
-Hopps                    Expires August 5, 2019                [Page 11]
-
-Internet-Draft                                             February 2019
-
-
      Type: TBD
      Description: The sending rate of congestion information from egress
                   tunnel endpoint.
      Reference: This document
+
+
+
+
+
+Hopps                    Expires August 6, 2019                [Page 11]
+
+Internet-Draft                                             February 2019
+
 
    Additionally this document requests a notify message status type
    TFS_CONGEST_INFO (TBD) be allocated by IANA from "IKEv2 Notify
@@ -664,19 +659,20 @@ Internet-Draft                                             February 2019
               (IKEv2)", STD 79, RFC 7296, DOI 10.17487/RFC7296, October
               2014, <https://www.rfc-editor.org/info/rfc7296>.
 
-
-
-
-
-
-Hopps                    Expires August 5, 2019                [Page 12]
-
-Internet-Draft                                             February 2019
-
-
    [RFC8174]  Leiba, B., "Ambiguity of Uppercase vs Lowercase in RFC
               2119 Key Words", BCP 14, RFC 8174, DOI 10.17487/RFC8174,
               May 2017, <https://www.rfc-editor.org/info/rfc8174>.
+
+
+
+
+
+
+
+Hopps                    Expires August 6, 2019                [Page 12]
+
+Internet-Draft                                             February 2019
+
 
 7.2.  Informative References
 
@@ -721,19 +717,18 @@ Internet-Draft                                             February 2019
               BCP 208, RFC 8084, DOI 10.17487/RFC8084, March 2017,
               <https://www.rfc-editor.org/info/rfc8084>.
 
-
-
-
-
-Hopps                    Expires August 5, 2019                [Page 13]
-
-Internet-Draft                                             February 2019
-
-
    [RFC8200]  Deering, S. and R. Hinden, "Internet Protocol, Version 6
               (IPv6) Specification", STD 86, RFC 8200,
               DOI 10.17487/RFC8200, July 2017,
               <https://www.rfc-editor.org/info/rfc8200>.
+
+
+
+
+Hopps                    Expires August 6, 2019                [Page 13]
+
+Internet-Draft                                             February 2019
+
 
    [RFC8201]  McCann, J., Deering, S., Mogul, J., and R. Hinden, Ed.,
               "Path MTU Discovery for IP version 6", STD 87, RFC 8201,
@@ -781,4 +776,9 @@ Author's Address
 
 
 
-Hopps                    Expires August 5, 2019                [Page 14]
+
+
+
+
+
+Hopps                    Expires August 6, 2019                [Page 14]

@@ -405,13 +405,7 @@ information.
                    before the next IP/IPv6 data block. It can also
                    point past the end of the containing packet in
                    which case the containing packet is entirely
-                   composed of the continuation of the previous data
-                   block plus possible padding. The small amount of
-                   trailing padding can occur because we use the
-                   length fields in the encapsulated packet to
-                   determine the data block length and so we must
-                   always be able to encode enough bytes to include
-                   this field at the start of a data block.
+                   composed of the continuation of the previous data.
   - Data Blocks :: Variable number of bytes that constitute the start
                    or continuation of a previous data block.
 	    ]]></artwork>
@@ -511,9 +505,7 @@ payload. The following diagram defines the notification payload data.
  +-----------------------------------------------------------------+
  |E|  Reserved   |                  DropCount                      |
  +-----------------------------------------------------------------+
- |                          Timestamp...
- +-----------------------------------------------------------------+
-                         ...Timestamp                              |
+ |                          Timestamp                              |
  +-----------------------------------------------------------------+
  |                          AckSeqStart                            |
  +-----------------------------------------------------------------+
@@ -532,10 +524,12 @@ payload. The following diagram defines the notification payload data.
                    that this information relates to.
   - AckSeqEnd :: The last ESP sequence number of the packet range
                  that this information relates to.
-  - Timestamp :: The time when this notification data was
-                 created/sent. This value does not need to be
-                 synchronized only monotonically increasing at the
-                 sender.
+  - Timestamp :: The lower 32 bits of a running monotonic millisecond
+                 timer of when this notification data was
+                 created/sent. This value is used to determine
+                 duplicates and drop counts of this information.
+                 Implementations should deal with wrapping of this
+                 timer value.
 	    ]]></artwork>
 	</figure>
 </section>
