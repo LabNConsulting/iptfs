@@ -441,9 +441,7 @@ payload. The following diagram defines the notification payload data.
  +-----------------------------------------------------------------+
  |E|  Reserved   |                  DropCount                      |
  +-----------------------------------------------------------------+
- |                          Timestamp...
- +-----------------------------------------------------------------+
-                         ...Timestamp                              |
+ |                          Timestamp                              |
  +-----------------------------------------------------------------+
  |                          AckSeqStart                            |
  +-----------------------------------------------------------------+
@@ -461,10 +459,12 @@ payload. The following diagram defines the notification payload data.
                    that this information relates to.
   - AckSeqEnd :: The last ESP sequence number of the packet range
                  that this information relates to.
-  - Timestamp :: The time when this notification data was
-                 created/sent. This value does not need to be
-                 synchronized only monotonically increasing at the
-                 sender.
+  - Timestamp :: The lower 32 bits of a running monotonic millisecond
+                 timer of when this notification data was
+                 created/sent. This value is used to determine
+                 duplicates and drop counts of this information.
+                 Implementations should deal with wrapping of this
+                 timer value.
 
 * IANA Considerations
 
