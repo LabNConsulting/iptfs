@@ -9,6 +9,16 @@
 #include <pthread.h>
 #include <string.h>
 
+struct mbuf *
+mbuf_new(size_t max, size_t hdrspace)
+{
+	struct mbuf *m = xzmalloc(max + sizeof(*m));
+	m->space = (void *)&m[1];
+	m->espace = m->space[max];
+	m->end = m->start = &m->space[hdrspace];
+	return m
+}
+
 struct ackinfo {
 	uint32_t start;
 	uint32_t last;

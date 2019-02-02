@@ -16,6 +16,7 @@
 #else
 #include <asm-x86_64/atomic.h>
 #endif
+#include "iptfs.h"
 
 #define NSECS_IN_SEC 1000000000
 
@@ -34,6 +35,39 @@ xzmalloc(size_t sz)
 	void *m = xmalloc(sz);
 	memset(m, 0, sz);
 	return m;
+}
+
+struct runavg *
+runavg_new(uint runlen, uint min)
+{
+	struct runavg *avg = xzmalloc(sizeof(*avg) + sizeof(uint) * runlen);
+	avg->values = (uint *)&avg[1];
+	avg->runlen = runlen;
+	avg->min = min;
+	return avg;
+}
+
+bool
+runavg_add(struct runavg *avg, uint value)
+{
+	if (avg->ticks) {
+		// remove oldest value from total.
+		uint i = (avg->index + avg->runlen - 1) % avg->runlen;
+		avg->total -= avg->values[i];
+	}
+	avg->total += value;
+	avg->values[avg->index++] = value;
+	if (avg->ticks)
+		avg->average = avg->total / avg->runlen;
+	else
+		avg->average = avg->total / avg->index;
+	if (avg->total && avg->average < avg->min)
+		avg->average = avg->min;
+	if (avg->index != avg->runlen)
+		return false;
+	avg->ticks++;
+	avg->index = 0;
+	return true;
 }
 
 struct ratelimit {

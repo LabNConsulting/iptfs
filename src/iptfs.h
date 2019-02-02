@@ -27,6 +27,8 @@ struct mbuf {
     ssize_t left;    /* used to track what's left to read */
 };
 
+struct mbuf *mbuf_new(size_t max, size_t hdrspace);
+
 #define MBUF_AVAIL(m) ((m)->espace - (m)->end)
 #define MBUF_LEN(m) ((m)->end - (m)->start)
 
@@ -41,11 +43,24 @@ void mqueue_get_ackinfo(struct mqueue *outq, uint32_t *drops, uint32_t *start, u
  * util.h
  */
 
+struct runavg {
+    uint runlen;  /* length of the running average */
+    uint *values; /* runlen worth of values */
+    uint ticks;   /* number of wraps */
+    uint index;   /* index into values of next value */
+    uint average; /* running average */
+    uint total;   /* sum of values */
+    uint min;     /* minimum average value */
+};
+
 void *xmalloc(size_t sz);
 void *xzmalloc(size_t sz);
 
 struct ratelimit *new_ratelimit(uint32_t, uint, uint);
 bool limit(struct ratelimit *, uint);
+
+struct runavg *runavg_new(uint runlen, uint min);
+bool runavg_add(struct runavg *avg, uint value);
 
 struct periodic *periodic_new(uint64_t nsecs);
 void periodic_change_rate(struct periodic *pp, uint64_t nsecs);

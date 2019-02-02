@@ -45,7 +45,7 @@ struct pps *g_pps;
 			printf(x)                                              \
 	} while (0)
 
-static inline void
+static __inline__ void
 put32(uint8_t *buf, uint32_t value)
 {
 	*buf++ = (value >> 24);
@@ -54,21 +54,21 @@ put32(uint8_t *buf, uint32_t value)
 	*buf++ = value;
 }
 
-static inline void
+static __inline__ void
 put16(uint8_t *buf, uint32_t value)
 {
 	*buf++ = (value >> 8);
 	*buf++ = value;
 }
 
-static inline uint32_t
+static __inline__ uint32_t
 get32(uint8_t *buf)
 {
 	return ((uint32_t)buf[0] << 24) + ((uint32_t)buf[1] << 16) +
 	       ((uint32_t)buf[2] << 8) + buf[3];
 }
 
-static inline uint16_t
+static __inline__ uint16_t
 get16(uint8_t *buf)
 {
 	return ((uint16_t)buf[0] << 8) + buf[1];
@@ -135,16 +135,54 @@ tfs_get_recv_mbuf(struct mqueue *freeq)
 			m->left = -1;
 			return m;
 		}
-		// XXX recv_ack(m);
+		recv_ack(m);
 		mqueue_push(freeq, m, true);
 	}
 }
 
+struct mbuf *
+add_to_inner_packet(struct mbuf *tbuf, bool new, struct mbuf *m,
+		    struct mqueue *outq, uint32_t seq)
+{
+	/* XXX write me */
+}
+
+uint32_t
+read_tfs_get_outer(int s, struct mbuf *tbuf, struct mqueue *outq,
+		   struct ratelimit *rl, bool *reset)
+{
+	/* XXX write me */
+}
+
 void
-read_tfs_pkts(int fd, struct mqueue *freeq, struct mqueue *outq,
+read_tfs_pkts(int s, struct mqueue *freeq, struct mqueue *outq,
 	      uint64_t congest_rate)
 {
+	struct mbuf *tbuf = mbuf_new(MAXBUF, HDRSPACE);
+	struct ratelimit *rl = NULL;
+
+	if (congest_rate > 0) {
+		// uint overhead = 20 + 8 + 20 + 20 + 12;
+		rl = new_ratelimit(congest_rate, 0, 10);
+	}
+
+	struct mbuf *m;
+	uint32_t seq = 0;
+	while (true) {
+		reset = false;
+		seq = read_tfs_get_outer(s, tbuf, outq, rl, &reset);
+		if (m && reset) {
+			mbuf_reset(m, HDRSPACE);
+		}
+		m = add_to_inner_packet(tbuf, true, m, outq, seq)
+	}
 }
+
+/*
+ * -----------------
+ * Write TFS Packets
+ * -----------------
+ */
 
 uint32_t
 write_empty_tfs_pkt(int s, uint32_t seq, uint32_t mtu)
@@ -159,16 +197,16 @@ write_empty_tfs_pkt(int s, uint32_t seq, uint32_t mtu)
 	return seq;
 }
 
+#ifndef NDEBUG
 ssize_t
 iovlen(struct iovec *iov, int count)
 {
 	ssize_t n = 0;
-	int i;
-
-	for (i = 0; i < count; i++)
+	for (int i = 0; i < count; i++)
 		n += iov->iov_len;
 	return n;
 }
+#endif
 
 #define MAXPKT (TFSMTU / 20) /* smallest packet is 20b IP. */
 
@@ -297,49 +335,6 @@ write_tfs_pkts(int s, struct mqueue *outq, struct mqueue *freeq, uint mtu,
  * ====
  */
 
-struct runavg {
-	uint runlen;  /* length of the running average */
-	uint *values; /* runlen worth of values */
-	uint ticks;   /* number of wraps */
-	uint index;   /* index into values of next value */
-	uint average; /* running average */
-	uint total;   /* sum of values */
-	uint min;     /* minimum average value */
-};
-
-struct runavg *
-runavg_new(uint runlen, uint min)
-{
-	struct runavg *avg = xzmalloc(sizeof(*avg) + sizeof(uint) * runlen);
-	avg->values = (uint *)&avg[1];
-	avg->runlen = runlen;
-	avg->min = min;
-	return avg;
-}
-
-bool
-runavg_add(struct runavg *avg, uint value)
-{
-	if (avg->ticks) {
-		// remove oldest value from total.
-		uint i = (avg->index + avg->runlen - 1) % avg->runlen;
-		avg->total -= avg->values[i];
-	}
-	avg->total += value;
-	avg->values[avg->index++] = value;
-	if (avg->ticks)
-		avg->average = avg->total / avg->runlen;
-	else
-		avg->average = avg->total / avg->index;
-	if (avg->total && avg->average < avg->min)
-		avg->average = avg->min;
-	if (avg->index != avg->runlen)
-		return false;
-	avg->ticks++;
-	avg->index = 0;
-	return true;
-}
-
 static struct runavg *g_avgpps;
 static struct runavg *g_avgdrops;
 
@@ -363,6 +358,7 @@ recv_ack(struct mbuf *m)
 		DBG("recv_ack: bad sequence range %d, %d\n", start, end);
 		return;
 	}
+
 	// XXX Lou thinks thinks its pointless to try and deal
 	// with lost ACk info b/c outbound congestion has no
 	// direct bearing on inbound ACK info. Probably right.
@@ -419,150 +415,6 @@ send_acks(int s, int permsec, struct mqueue *outq)
 			DBG("write ack: %ld bytes\n", n);
 	}
 }
-
-/* static ssize_t */
-/* read_packet(int fd, struct ring *r, bool udp) */
-/* { */
-/* 	struct sockaddr_in sin; */
-/* 	socklen_t slen; */
-/* 	struct mbuf *m = &r->mbuf[r->reading]; */
-/* 	ssize_t n = m->espace - m->start; */
-
-/* 	if (!udp) { */
-/* 		n = read(fd, m->end, n); */
-/* 		DBG("read_packet: read() returns %ld on %s\n",
- * n, r->name); */
-/* 	} else { */
-/* 		slen = sizeof(sin); */
-/* 		n = recvfrom(fd, m->end, n, 0, (struct sockaddr
- * *)&sin, &slen);
- */
-/* 		DBG("read_packet: recvfrom() returns %ld on " */
-/* 		    "%s\n", */
-/* 		    n, r->name); */
-/* 	} */
-/* 	if (n <= 0) { */
-/* 		if (n == 0) */
-/* 			err(1, "EOF on intf tunnel %d on %s",
- * fd, r->name);
- */
-/* 		warn("bad read %ld on %s for packet read (udp "
- */
-/* 		     "%d)", */
-/* 		     n, r->name, udp); */
-/* 		if (udp) { */
-/* 			exit(1); */
-/* 		} */
-/* 		return 0; */
-/* 	} else { */
-/* 		/\* XXX UDP validate the recvfrom addr *\/ */
-/* 		m->end += n; */
-/* 		return n; */
-/* 	} */
-/* } */
-
-/* static void */
-/* write_packet(int fd, struct ring *r, bool isudp) */
-/* { */
-/* 	struct mbuf *m = &r->mbuf[r->writing]; */
-/* 	ssize_t n, mlen; */
-
-/* 	assert(r->writing != r->reading); */
-
-/* 	mlen = MBUF_LEN(m); */
-/* 	if (isudp) */
-/* 		n = sendto(fd, m->start, mlen, 0, (struct
- * sockaddr
- * *)&peeraddr,
- */
-/* 			   sizeof(peeraddr)); */
-/* 	else */
-/* 		n = write(fd, m->start, mlen); */
-/* 	if (n < 0) { */
-/* 		warn("write_packet: bad write on %s %d for " */
-/* 		     "write_packet", */
-/* 		     r->name, fd); */
-/* 	} else if (n != mlen) { */
-/* 		warn("write_packet: short write (%ld of %ld) "
- */
-/* 		     "on %s for ", */
-/* 		     n, mlen, r->name); */
-/* 	} */
-
-/* 	DBG("write_packet: write() returns %ld on %s\n", n,
- * r->name); */
-/* 	ring_wdone(r); */
-/* } */
-
-/* void * */
-/* write_packets(void *_arg) */
-/* { */
-/* 	struct thread_args *args = (struct thread_args *)_arg;
- */
-/* 	struct ring *r = args->r; */
-/* 	enum fdtype fdtype = args->type; */
-/* 	int fd = args->fd; */
-
-/* 	while (true) { */
-/* 		pthread_mutex_lock(&r->lock); */
-/* 		while (ring_isempty(r)) { */
-/* 			DBG("write_packets: ring %s is empty\n",
- * r->name);
- */
-/* 			pthread_cond_wait(&r->wcv, &r->lock); */
-/* 		} */
-/* 		pthread_mutex_unlock(&r->lock); */
-/* 		DBG("write_packets: ready on %s\n", r->name); */
-
-/* 		write_packet(fd, r, fdtype == FDT_UDP); */
-/* 	} */
-
-/* 	return NULL; */
-/* } */
-
-/* void * */
-/* read_packets(void *_arg) */
-/* { */
-/* 	struct ratelimit *rl = NULL; */
-/* 	struct thread_args *args = (struct thread_args *)_arg;
- */
-/* 	struct ring *r = args->r; */
-/* 	enum fdtype fdtype = args->type; */
-/* 	int fd = args->fd; */
-/* 	size_t n; */
-
-/* 	if (r->rxrate > 0) { */
-/* 		// uint overhead = 20 + 8 + 20 + 20 + 12; */
-/* 		rl = new_ratelimit(r->rxrate, 0, 10); */
-/* 	} */
-
-/* 	while (true) { */
-/* 		pthread_mutex_lock(&r->lock); */
-/* 		while (ring_isfull(r)) { */
-/* 			DBG("read_packets: ring %s is full\n",
- * r->name);
- */
-/* 			pthread_cond_wait(&r->rcv, &r->lock); */
-/* 		} */
-/* 		pthread_mutex_unlock(&r->lock); */
-/* 		DBG("read_packets: ready on ring %s\n",
- * r->name);
- */
-
-/* 		switch (fdtype) { */
-/* 		case FDT_UDP: */
-/* 			n = read_packet(fd, r, true); */
-/* 			break; */
-/* 		case FDT_FILE: */
-/* 			n = read_packet(fd, r, false); */
-/* 			break; */
-/* 		} */
-/* 		if (rl == NULL || (n > 0 && !limit(rl, n))) */
-/* 			ring_rdone(r); */
-/* 	} */
-
-/* 	return NULL; */
-/* } */
 
 struct thread_args {
 	struct mqueue *freeq, *outq;
