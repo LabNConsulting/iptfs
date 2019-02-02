@@ -27,11 +27,7 @@ struct mbuf {
     ssize_t left;    /* used to track what's left to read */
 };
 
-void inline
-mbuf_reset(struct mbuf *m, int hdrspace)
-{
-    m->end = m->start = &m->space[hdrspace];
-}
+void mbuf_reset(struct mbuf *m, int hdrspace);
 
 #define MBUF_AVAIL(m) ((m)->espace - (m)->end)
 #define MBUF_LEN(m) ((m)->end - (m)->start)

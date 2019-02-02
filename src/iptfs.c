@@ -170,24 +170,25 @@ iovlen(struct iovec *iov, int count)
 	return n;
 }
 
+#define MAXPKT (TFSMTU / 20) /* smallest packet is 20b IP. */
+
 uint32_t
 write_tfs_pkt(int s, struct mqueue *inq, struct mqueue *freeq, uint32_t seq,
 	      ssize_t mtu, struct mbuf **leftover)
 {
 	static uint8_t tfshdr[8];
-	static const int maxpkt = TFSMTU / 20; /* smallest packet is 20b IP. */
-	static struct iovec iovecs[maxpkt] = {
+	static struct iovec iovecs[MAXPKT] = {
 	    {.iov_base = tfshdr, .iov_len = sizeof(tfshdr)}};
 	static struct msghdr msg = {.msg_iov = iovecs};
-	static struct mbuf *freembufs[maxpkt];
+	static struct mbuf *freembufs[MAXPKT];
+
 	struct mbuf **efreem = freembufs;
 	struct mbuf **freem;
 	struct iovec *iov = &iovecs[1];
 	struct mbuf *m;
 	ssize_t mtuenter = mtu;
-	ssize_t iovl, mlen, n, tlen;
+	ssize_t mlen, n;
 	uint16_t offset;
-	int count, niov;
 
 	if (*leftover) {
 		DBG("write_tfs_pkt: seq %d mtu %d leftover %p\n", seq, mtu,
@@ -211,10 +212,8 @@ write_tfs_pkt(int s, struct mqueue *inq, struct mqueue *freeq, uint32_t seq,
 	put32(tfshdr, seq++);
 	put16(&tfshdr[6], offset);
 	mtu -= sizeof(tfshdr);
-	tlen
 
-	    assert(mlen > 0);
-	for (count = 1; mtu > 0; count++) {
+	while (mtu > 0) {
 		if (mtu <= 6 || m == NULL) {
 			/* No room for dbhdr or no more data -- pad */
 			mlen = mtu;
@@ -256,14 +255,12 @@ write_tfs_pkt(int s, struct mqueue *inq, struct mqueue *freeq, uint32_t seq,
 	}
 
 	/* Send the TFS packet */
-	niov = iov - iovecs;
-	iovl = iovlen(iovecs, niov);
-	assert(iovl == mtuenter);
-	msg.msg_iovlen = niov;
+	assert(iovlen(iovecs, iov - iovecs) == mtuenter);
+	msg.msg_iovlen = iov - iovecs;
 	n = sendmsg(s, &msg, 0);
-	if (n != iovl) {
+	if (n != mtuenter) {
 		warn("write_tfs_pkt: short write %ld of %ld on TFSLINK\n", n,
-		     iovl);
+		     mtuenter);
 		if (*leftover)
 			*efreem++ = *leftover;
 		*leftover = NULL;

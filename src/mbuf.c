@@ -7,12 +7,13 @@
 #include "iptfs.h"
 #include <err.h>
 #include <pthread.h>
+#include <string.h>
 
 struct ackinfo {
 	uint32_t start;
 	uint32_t last;
 	uint32_t ndrop;
-}
+};
 
 struct mqueue {
 	const char *name;
@@ -25,6 +26,12 @@ struct mqueue {
 	pthread_cond_t popcv;
 	struct ackinfo ackinfo;
 };
+
+void
+mbuf_reset(struct mbuf *m, int hdrspace)
+{
+	m->end = m->start = &m->space[hdrspace];
+}
 
 #define MQ_FULL(mq) ((mq)->depth == (mq)->size)
 #define MQ_EMPTY(mq) ((mq)->depth == 0)

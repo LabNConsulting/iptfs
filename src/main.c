@@ -4,6 +4,7 @@
  *
  */
 
+#include "iptfs.h"
 #include <arpa/inet.h>
 #include <err.h>
 #include <fcntl.h>
