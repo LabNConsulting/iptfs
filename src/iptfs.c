@@ -172,7 +172,7 @@ iovlen(struct iovec *iov, int count)
 
 uint32_t
 write_tfs_pkt(int s, struct mqueue *inq, struct mqueue *freeq, uint32_t seq,
-	      ssize_t mtu, struct mbuf **leftoverp)
+	      ssize_t mtu, struct mbuf **leftover)
 {
 	static uint8_t tfshdr[8];
 	static const int maxpkt = TFSMTU / 20; /* smallest packet is 20b IP. */
@@ -185,15 +185,15 @@ write_tfs_pkt(int s, struct mqueue *inq, struct mqueue *freeq, uint32_t seq,
 	struct iovec *iov = &iovecs[1];
 	struct mbuf *m;
 	ssize_t mtuenter = mtu;
-	ssize_t iovl, mlen, n;
+	ssize_t iovl, mlen, n, tlen;
 	uint16_t offset;
 	int count, niov;
 
-	if (*leftoverp) {
+	if (*leftover) {
 		DBG("write_tfs_pkt: seq %d mtu %d leftover %p\n", seq, mtu,
-		    *leftoverp);
-		m = *leftoverp;
-		*leftoverp = NULL;
+		    *leftover);
+		m = *leftover;
+		*leftover = NULL;
 		offset = MBUF_LEN(m);
 	} else {
 		m = mqueue_trypop(inq);
@@ -203,6 +203,7 @@ write_tfs_pkt(int s, struct mqueue *inq, struct mqueue *freeq, uint32_t seq,
 		}
 	}
 	if (m == NULL) {
+		*leftover = NULL;
 		return write_empty_tfs_pkt(s, seq, mtu);
 	}
 
@@ -210,8 +211,9 @@ write_tfs_pkt(int s, struct mqueue *inq, struct mqueue *freeq, uint32_t seq,
 	put32(tfshdr, seq++);
 	put16(&tfshdr[6], offset);
 	mtu -= sizeof(tfshdr);
+	tlen
 
-	assert(mlen > 0);
+	    assert(mlen > 0);
 	for (count = 1; mtu > 0; count++) {
 		if (mtu <= 6 || m == NULL) {
 			/* No room for dbhdr or no more data -- pad */
@@ -230,7 +232,7 @@ write_tfs_pkt(int s, struct mqueue *inq, struct mqueue *freeq, uint32_t seq,
 			(*iov).iov_base = m->start;
 			(*iov++).iov_len = mtu;
 			m->start += mtu;
-			*leftoverp = m;
+			*leftover = m;
 			DBG("write_tfs_pkt: seq %d add partial mtu %d of %d "
 			    "enter %d\n",
 			    seq, mtu, mlen, mtuenter);
@@ -262,9 +264,9 @@ write_tfs_pkt(int s, struct mqueue *inq, struct mqueue *freeq, uint32_t seq,
 	if (n != iovl) {
 		warn("write_tfs_pkt: short write %ld of %ld on TFSLINK\n", n,
 		     iovl);
-		if (*leftoverp)
-			*efreem++ = *leftoverp;
-		*leftoverp = NULL;
+		if (*leftover)
+			*efreem++ = *leftover;
+		*leftover = NULL;
 	}
 
 	/* Pushed used MBUFS onto freeq XXX make this a single call. */
@@ -278,13 +280,18 @@ void
 write_tfs_pkts(int s, struct mqueue *outq, struct mqueue *freeq, uint mtu,
 	       uint64_t txrate)
 {
+	struct mbuf *leftover = NULL;
+	uint32_t seq = 1;
 	uint mtub = (mtu - 32) * 8;
 	uint pps = txrate / mtub;
 
-	printf("Writing TFS packets at rate of %d pps for %d "
-	       "bps\n",
-	       pps, pps * mtub);
 	g_pps = pps_new(pps);
+	printf("Writing TFS %d pps for %d bps\n", pps, pps * mtub);
+
+	while (true) {
+		pps_wait(g_pps);
+		seq = write_tfs_pkt(s, outq, freeq, seq, mtu, &leftover);
+	}
 }
 
 /*
