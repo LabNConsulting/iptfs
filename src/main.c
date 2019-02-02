@@ -20,9 +20,6 @@
 #include <sys/ioctl.h>
 #include <unistd.h>
 
-int tfs_tunnel_ingress(int, int, uint64_t, pthread_t *);
-int tfs_tunnel_egress(int, int, uint64_t, pthread_t *);
-
 struct sockaddr_in peeraddr; /* XXX remove */
 bool verbose;
 pthread_t threads[4];

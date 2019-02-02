@@ -8,6 +8,12 @@
 #include <err.h>
 #include <pthread.h>
 
+struct ackinfo {
+	uint32_t start;
+	uint32_t last;
+	uint32_t ndrop;
+}
+
 struct mqueue {
 	const char *name;
 	struct mbuf **queue;
@@ -17,6 +23,7 @@ struct mqueue {
 	pthread_mutex_t lock;
 	pthread_cond_t pushcv;
 	pthread_cond_t popcv;
+	struct ackinfo ackinfo;
 };
 
 #define MQ_FULL(mq) ((mq)->depth == (mq)->size)
@@ -31,6 +38,7 @@ mqueue_new(const char *name, int size)
 	if ((mq->queue = malloc(sizeof(struct mbuf *) * size)) == NULL)
 		err(1, "mqueue_new: malloc queue");
 
+	memset(&mq->ackinfo, 0, sizeof(mq->ackinfo));
 	mq->name = name;
 	mq->size = size;
 	mq->depth = 0;
@@ -123,6 +131,18 @@ mqueue_push(struct mqueue *mq, struct mbuf *m, bool reset)
 	}
 
 	mq->queue[mq->depth++] = m;
+	pthread_mutex_unlock(&mq->lock);
+}
+
+void
+mqueue_get_ackinfo(struct mqueue *mq, uint32_t *drops, uint32_t *start,
+		   uint32_t *end)
+{
+	pthread_mutex_lock(&mq->lock);
+	*drops = mq->ackinfo.ndrop;
+	*start = mq->ackinfo.start;
+	*end = mq->ackinfo.last;
+	memset(&mq->ackinfo, 0, sizeof(mq->ackinfo));
 	pthread_mutex_unlock(&mq->lock);
 }
 
