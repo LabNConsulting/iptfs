@@ -32,6 +32,8 @@
 #define MAXBUF 9000 + HDRSPACE
 #define MAXQSZ 32
 
+uint8_t padbytes[MAXBUF];
+
 extern struct sockaddr_in peeraddr; /* XXX remove */
 extern bool verbose;
 struct pps *g_pps;
@@ -144,15 +146,144 @@ read_tfs_pkts(int fd, struct mqueue *freeq, struct mqueue *outq,
 {
 }
 
+uint32_t
+write_empty_tfs_pkt(int s, uint32_t seq, uint32_t mtu)
+{
+	static uint8_t ebytes[MAXBUF];
+	ssize_t n;
+
+	put32(ebytes, seq++);
+	if ((n = send(s, ebytes, mtu, 0)) != mtu)
+		warn("write_empty_tfs_pkt: short write %ld\n", n);
+
+	return seq;
+}
+
+ssize_t
+iovlen(struct iovec *iov, int count)
+{
+	ssize_t n = 0;
+	int i;
+
+	for (i = 0; i < count; i++)
+		n += iov->iov_len;
+	return n;
+}
+
+uint32_t
+write_tfs_pkt(int s, struct mqueue *inq, struct mqueue *freeq, uint32_t seq,
+	      ssize_t mtu, struct mbuf **leftoverp)
+{
+	static uint8_t tfshdr[8];
+	static const int maxpkt = TFSMTU / 20; /* smallest packet is 20b IP. */
+	static struct iovec iovecs[maxpkt] = {
+	    {.iov_base = tfshdr, .iov_len = sizeof(tfshdr)}};
+	static struct msghdr msg = {.msg_iov = iovecs};
+	static struct mbuf *freembufs[maxpkt];
+	struct mbuf **efreem = freembufs;
+	struct mbuf **freem;
+	struct iovec *iov = &iovecs[1];
+	struct mbuf *m;
+	ssize_t mtuenter = mtu;
+	ssize_t iovl, mlen, n;
+	uint16_t offset;
+	int count, niov;
+
+	if (*leftoverp) {
+		DBG("write_tfs_pkt: seq %d mtu %d leftover %p\n", seq, mtu,
+		    *leftoverp);
+		m = *leftoverp;
+		*leftoverp = NULL;
+		offset = MBUF_LEN(m);
+	} else {
+		m = mqueue_trypop(inq);
+		offset = 0;
+		if (m) {
+			DBG("write_tfs_pkt: seq %d mtu %d m %p\n", seq, mtu, m);
+		}
+	}
+	if (m == NULL) {
+		return write_empty_tfs_pkt(s, seq, mtu);
+	}
+
+	/* Set the header */
+	put32(tfshdr, seq++);
+	put16(&tfshdr[6], offset);
+	mtu -= sizeof(tfshdr);
+
+	assert(mlen > 0);
+	for (count = 1; mtu > 0; count++) {
+		if (mtu <= 6 || m == NULL) {
+			/* No room for dbhdr or no more data -- pad */
+			mlen = mtu;
+			DBG("write_tfs_pkt: seq %d pad %d enter %d\n", seq, mtu,
+			    mtuenter);
+			(*iov).iov_base = padbytes;
+			(*iov++).iov_len = mtu;
+			mtu = 0;
+			break;
+		}
+
+		mlen = MBUF_LEN(m);
+		if (mlen > mtu) {
+			/* Room for partial MBUF */
+			(*iov).iov_base = m->start;
+			(*iov++).iov_len = mtu;
+			m->start += mtu;
+			*leftoverp = m;
+			DBG("write_tfs_pkt: seq %d add partial mtu %d of %d "
+			    "enter %d\n",
+			    seq, mtu, mlen, mtuenter);
+			mtu = 0;
+			break;
+		}
+
+		/* Room for full MBUF */
+		(*iov).iov_base = m->start;
+		(*iov++).iov_len = mlen;
+		*efreem++ = m;
+		m = NULL;
+		DBG("write_tfs_pkt: seq %d add mbuf %d of mtu %d enter "
+		    "%d\n",
+		    seq, mlen, mtu, mtuenter);
+		mtu -= mlen;
+
+		/* Get next MBUF if we have space */
+		if (mtu > 6)
+			m = mqueue_trypop(inq);
+	}
+
+	/* Send the TFS packet */
+	niov = iov - iovecs;
+	iovl = iovlen(iovecs, niov);
+	assert(iovl == mtuenter);
+	msg.msg_iovlen = niov;
+	n = sendmsg(s, &msg, 0);
+	if (n != iovl) {
+		warn("write_tfs_pkt: short write %ld of %ld on TFSLINK\n", n,
+		     iovl);
+		if (*leftoverp)
+			*efreem++ = *leftoverp;
+		*leftoverp = NULL;
+	}
+
+	/* Pushed used MBUFS onto freeq XXX make this a single call. */
+	for (freem = freembufs; freem < efreem; freem++)
+		mqueue_push(freeq, *freem, true);
+
+	return seq;
+}
+
 void
-write_tfs_pkts(int fd, struct mqueue *outq, struct mqueue *freeq, uint mtu,
+write_tfs_pkts(int s, struct mqueue *outq, struct mqueue *freeq, uint mtu,
 	       uint64_t txrate)
 {
 	uint mtub = (mtu - 32) * 8;
 	uint pps = txrate / mtub;
 
-	printf("Writing TFS packets at rate of %d pps for %d bps\n", pps,
-	       pps * mtub);
+	printf("Writing TFS packets at rate of %d pps for %d "
+	       "bps\n",
+	       pps, pps * mtub);
 	g_pps = pps_new(pps);
 }
 
@@ -228,9 +359,9 @@ recv_ack(struct mbuf *m)
 		DBG("recv_ack: bad sequence range %d, %d\n", start, end);
 		return;
 	}
-	// XXX Lou thinks thinks its pointless to try and deal with lost ACk
-	// info b/c outbound congestion has no direct bearing on inbound ACK
-	// info. Probably right.
+	// XXX Lou thinks thinks its pointless to try and deal
+	// with lost ACk info b/c outbound congestion has no
+	// direct bearing on inbound ACK info. Probably right.
 
 	runavg_add(g_avgpps, runlen);
 	if (!runavg_add(g_avgdrops, ndrop)) {
@@ -295,12 +426,12 @@ send_acks(int s, int permsec, struct mqueue *outq)
 
 /* 	if (!udp) { */
 /* 		n = read(fd, m->end, n); */
-/* 		DBG("read_packet: read() returns %ld on %s\n", n,
- * r->name); */
+/* 		DBG("read_packet: read() returns %ld on %s\n",
+ * n, r->name); */
 /* 	} else { */
 /* 		slen = sizeof(sin); */
-/* 		n = recvfrom(fd, m->end, n, 0, (struct sockaddr *)&sin,
- * &slen);
+/* 		n = recvfrom(fd, m->end, n, 0, (struct sockaddr
+ * *)&sin, &slen);
  */
 /* 		DBG("read_packet: recvfrom() returns %ld on " */
 /* 		    "%s\n", */
@@ -308,10 +439,11 @@ send_acks(int s, int permsec, struct mqueue *outq)
 /* 	} */
 /* 	if (n <= 0) { */
 /* 		if (n == 0) */
-/* 			err(1, "EOF on intf tunnel %d on %s", fd,
- * r->name);
+/* 			err(1, "EOF on intf tunnel %d on %s",
+ * fd, r->name);
  */
-/* 		warn("bad read %ld on %s for packet read (udp " */
+/* 		warn("bad read %ld on %s for packet read (udp "
+ */
 /* 		     "%d)", */
 /* 		     n, r->name, udp); */
 /* 		if (udp) { */
@@ -335,7 +467,8 @@ send_acks(int s, int permsec, struct mqueue *outq)
 
 /* 	mlen = MBUF_LEN(m); */
 /* 	if (isudp) */
-/* 		n = sendto(fd, m->start, mlen, 0, (struct sockaddr
+/* 		n = sendto(fd, m->start, mlen, 0, (struct
+ * sockaddr
  * *)&peeraddr,
  */
 /* 			   sizeof(peeraddr)); */
@@ -346,19 +479,22 @@ send_acks(int s, int permsec, struct mqueue *outq)
 /* 		     "write_packet", */
 /* 		     r->name, fd); */
 /* 	} else if (n != mlen) { */
-/* 		warn("write_packet: short write (%ld of %ld) " */
+/* 		warn("write_packet: short write (%ld of %ld) "
+ */
 /* 		     "on %s for ", */
 /* 		     n, mlen, r->name); */
 /* 	} */
 
-/* 	DBG("write_packet: write() returns %ld on %s\n", n, r->name); */
+/* 	DBG("write_packet: write() returns %ld on %s\n", n,
+ * r->name); */
 /* 	ring_wdone(r); */
 /* } */
 
 /* void * */
 /* write_packets(void *_arg) */
 /* { */
-/* 	struct thread_args *args = (struct thread_args *)_arg; */
+/* 	struct thread_args *args = (struct thread_args *)_arg;
+ */
 /* 	struct ring *r = args->r; */
 /* 	enum fdtype fdtype = args->type; */
 /* 	int fd = args->fd; */
@@ -384,7 +520,8 @@ send_acks(int s, int permsec, struct mqueue *outq)
 /* read_packets(void *_arg) */
 /* { */
 /* 	struct ratelimit *rl = NULL; */
-/* 	struct thread_args *args = (struct thread_args *)_arg; */
+/* 	struct thread_args *args = (struct thread_args *)_arg;
+ */
 /* 	struct ring *r = args->r; */
 /* 	enum fdtype fdtype = args->type; */
 /* 	int fd = args->fd; */
@@ -398,12 +535,15 @@ send_acks(int s, int permsec, struct mqueue *outq)
 /* 	while (true) { */
 /* 		pthread_mutex_lock(&r->lock); */
 /* 		while (ring_isfull(r)) { */
-/* 			DBG("read_packets: ring %s is full\n", r->name);
+/* 			DBG("read_packets: ring %s is full\n",
+ * r->name);
  */
 /* 			pthread_cond_wait(&r->rcv, &r->lock); */
 /* 		} */
 /* 		pthread_mutex_unlock(&r->lock); */
-/* 		DBG("read_packets: ready on ring %s\n", r->name); */
+/* 		DBG("read_packets: ready on ring %s\n",
+ * r->name);
+ */
 
 /* 		switch (fdtype) { */
 /* 		case FDT_UDP: */
