@@ -19,6 +19,23 @@
 
 #define NSECS_IN_SEC 1000000000
 
+void *
+xmalloc(size_t sz)
+{
+	void *m = malloc(sz);
+	if (m == NULL)
+		err(1, "xmalloc: %ld\n", sz);
+	return m;
+}
+
+void *
+xzmalloc(size_t sz)
+{
+	void *m = xmalloc(sz);
+	memset(m, 0, sz);
+	return m;
+}
+
 struct ratelimit {
 	uint64_t rate;
 	uint overhead;
@@ -97,34 +114,35 @@ limit(struct ratelimit *rl, uint n)
 	return false;
 }
 
-struct pps {
+struct periodic {
 	struct timespec timestamp;
 	atomic_uint_least64_t ival;
 };
 
-struct pps *
-pps_new(int pps)
+static struct periodic *
+periodic_init(struct periodic *pp, uint64_t nsecs)
 {
-	struct pps *pp;
-
-	if ((pp = malloc(sizeof(*pp))) == NULL)
-		err(1, "pps_init");
 	clock_gettime(CLOCK_MONOTONIC, &pp->timestamp);
-	pp->ival = ATOMIC_VAR_INIT(NSECS_IN_SEC / pps);
+	pp->ival = ATOMIC_VAR_INIT(nsecs);
 	return pp;
 }
 
-void
-pps_change_rate(struct pps *pp, int pps)
+struct periodic *
+periodic_new(uint64_t nsecs)
 {
-	uint64_t nval = NSECS_IN_SEC / pps;
-	uint64_t oval = atomic_exchange(&pp->ival, nval);
-	if (nval == oval)
+	return periodic_init(xmalloc(sizeof(struct periodic)), nsecs);
+}
+
+void
+periodic_change_rate(struct periodic *pp, uint64_t nsecs)
+{
+	uint64_t oval = atomic_exchange(&pp->ival, nsecs);
+	if (nsecs == oval)
 		return;
 }
 
-bool
-pps_is_expired(struct timespec *now, struct timespec *expire)
+static bool
+periodic_is_expired(struct timespec *now, struct timespec *expire)
 {
 	if (now->tv_sec > expire->tv_sec)
 		return true;
@@ -134,7 +152,7 @@ pps_is_expired(struct timespec *now, struct timespec *expire)
 }
 
 void
-pps_wait(struct pps *pp)
+periodic_wait(struct periodic *pp)
 {
 	uint64_t ival = atomic_load(&pp->ival);
 	struct timespec expire, now;
@@ -146,7 +164,7 @@ pps_wait(struct pps *pp)
 	}
 
 	clock_gettime(CLOCK_MONOTONIC, &now);
-	if (!pps_is_expired(&now, &expire)) {
+	if (!periodic_is_expired(&now, &expire)) {
 		struct timespec ns;
 		ns.tv_sec = expire.tv_sec - now.tv_sec;
 		if (expire.tv_nsec >= now.tv_nsec) {
@@ -161,6 +179,56 @@ pps_wait(struct pps *pp)
 		clock_gettime(CLOCK_MONOTONIC, &now);
 	}
 	pp->timestamp = now;
+}
+
+struct pps {
+	struct periodic periodic;
+	atomic_uint_least32_t pps;
+	uint target_pps; /* immutable */
+};
+
+struct pps *
+pps_new(int target_pps)
+{
+	struct pps *pp = xmalloc(sizeof(*pp));
+	pp->target_pps = target_pps;
+	pp->pps = ATOMIC_VAR_INIT(target_pps);
+	periodic_init(&pp->periodic, NSECS_IN_SEC / target_pps);
+	return pp;
+}
+
+void
+pps_incrate(struct pps *pp, int inc)
+{
+	uint32_t oval = atomic_load(&pp->pps);
+	uint32_t nval = oval + inc;
+	if (nval > pp->target_pps)
+		nval = pp->target_pps;
+	if (nval != oval) {
+		atomic_store(&pp->pps, nval);
+		periodic_change_rate(&pp->periodic, NSECS_IN_SEC / nval);
+	}
+}
+
+void
+pps_decrate(struct pps *pp, int pct)
+{
+	uint32_t oval = atomic_load(&pp->pps);
+	uint32_t nval = oval * pct / 100;
+	if (nval > pp->target_pps)
+		nval = pp->target_pps;
+	if (nval == 0)
+		nval = 1;
+	if (nval != oval) {
+		atomic_store(&pp->pps, nval);
+		periodic_change_rate(&pp->periodic, NSECS_IN_SEC / nval);
+	}
+}
+
+void
+pps_wait(struct pps *pp)
+{
+	periodic_wait(&pp->periodic);
 }
 
 /* Local Variables: */

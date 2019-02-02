@@ -47,11 +47,19 @@ void mqueue_get_ackinfo(struct mqueue *outq, uint32_t *drops, uint32_t *start, u
  * util.h
  */
 
+void *xmalloc(size_t sz);
+void *xzmalloc(size_t sz);
+
 struct ratelimit *new_ratelimit(uint32_t, uint, uint);
 bool limit(struct ratelimit *, uint);
+
+struct periodic *periodic_new(uint64_t nsecs);
+void periodic_change_rate(struct periodic *pp, uint64_t nsecs);
+void periodic_wait(struct periodic *pp);
+
 struct pps *pps_new(int pps);
-void pps_change_rate(struct pps *pp, int pps);
-bool pps_is_expired(struct timespec *now, struct timespec *expire);
+void pps_incrate(struct pps *pp, int inc);
+void pps_decrate(struct pps *pp, int pct);
 void pps_wait(struct pps *pp);
 
 #endif /* IPTFS_H */

@@ -27,12 +27,14 @@
 
 #include "iptfs.h"
 
+#define TFSMTU 1500
 #define HDRSPACE 18
 #define MAXBUF 9000 + HDRSPACE
 #define MAXQSZ 32
 
 extern struct sockaddr_in peeraddr; /* XXX remove */
 extern bool verbose;
+struct pps *g_pps;
 
 #define DBG(x...)
 #define _DBG(x...)                                                             \
@@ -136,19 +138,125 @@ tfs_get_recv_mbuf(struct mqueue *freeq)
 	}
 }
 
+void
+read_tfs_pkts(int fd, struct mqueue *freeq, struct mqueue *outq,
+	      uint64_t congest_rate)
+{
+}
+
+void
+write_tfs_pkts(int fd, struct mqueue *outq, struct mqueue *freeq, uint mtu,
+	       uint64_t txrate)
+{
+	uint mtub = (mtu - 32) * 8;
+	uint pps = txrate / mtub;
+
+	printf("Writing TFS packets at rate of %d pps for %d bps\n", pps,
+	       pps * mtub);
+	g_pps = pps_new(pps);
+}
+
 /*
  * ====
  * ACKs
  * ====
  */
 
+struct runavg {
+	uint runlen;  /* length of the running average */
+	uint *values; /* runlen worth of values */
+	uint ticks;   /* number of wraps */
+	uint index;   /* index into values of next value */
+	uint average; /* running average */
+	uint total;   /* sum of values */
+	uint min;     /* minimum average value */
+};
+
+struct runavg *
+runavg_new(uint runlen, uint min)
+{
+	struct runavg *avg = xzmalloc(sizeof(*avg) + sizeof(uint) * runlen);
+	avg->values = (uint *)&avg[1];
+	avg->runlen = runlen;
+	avg->min = min;
+	return avg;
+}
+
+bool
+runavg_add(struct runavg *avg, uint value)
+{
+	if (avg->ticks) {
+		// remove oldest value from total.
+		uint i = (avg->index + avg->runlen - 1) % avg->runlen;
+		avg->total -= avg->values[i];
+	}
+	avg->total += value;
+	avg->values[avg->index++] = value;
+	if (avg->ticks)
+		avg->average = avg->total / avg->runlen;
+	else
+		avg->average = avg->total / avg->index;
+	if (avg->total && avg->average < avg->min)
+		avg->average = avg->min;
+	if (avg->index != avg->runlen)
+		return false;
+	avg->ticks++;
+	avg->index = 0;
+	return true;
+}
+
+static struct runavg *g_avgpps;
+static struct runavg *g_avgdrops;
+static uint target_pps;
+
+void
+recv_ack(struct mbuf *m)
+{
+	if (MBUF_LEN(m) != 24) {
+		warn("recv_ack: bad length %ld\n", MBUF_LEN(m));
+		return;
+	}
+	uint8_t *mstart = &m->start[4];
+	uint32_t ndrop = get32(mstart) & 0xFFFFFF;
+	uint32_t start, end, runlen;
+
+	/* Unpack congestion information */
+	start = get32(&mstart[8]);
+	end = get32(&mstart[12]);
+	runlen = end - start;
+
+	if (end > start) {
+		DBG("recv_ack: bad sequence range %d, %d\n", start, end);
+		return;
+	}
+	// XXX Lou thinks thinks its pointless to try and deal with lost ACk
+	// info b/c outbound congestion has no direct bearing on inbound ACK
+	// info. Probably right.
+
+	runavg_add(g_avgpps, runlen);
+	if (!runavg_add(g_avgdrops, ndrop)) {
+		// Wait for enough data to start.
+		return;
+	}
+	if (g_avgdrops->average == 0) {
+		// Not degraded, increase rate
+		pps_incrate(g_pps, 1);
+	} else {
+		// Degraded, slow rate byte 50% of the droprate.
+		int droppct = (g_avgdrops->average * 50) / g_avgpps->average;
+		if (!droppct)
+			droppct = 1;
+		pps_decrate(g_pps, droppct);
+	}
+	DBG("recv_ack: ndrop %d start %d end %d\n", ndrop, start, end);
+}
+
 void
 send_acks(int s, int permsec, struct mqueue *outq)
 {
-	uint8_t buffer[24], *bp;
+	uint8_t buffer[20], *bp;
 	struct timespec ts;
 	uint32_t ndrop, start, end;
-	uint64_t ticks;
 	ssize_t n;
 
 	/* No sequence number */
@@ -166,12 +274,10 @@ send_acks(int s, int permsec, struct mqueue *outq)
 		if (ndrop > 0xFFFFFF)
 			ndrop = 0xFFFFFF;
 		clock_gettime(CLOCK_MONOTONIC, &ts);
-		ticks = ts.tv_sec * 1000000 + ts.tv_nsec / 1000;
 		put32(bp, 0x40000000 | ndrop);
-		put32(&bp[4], ticks >> 32);
-		put32(&bp[8], ticks & 0xFFFFFFFF);
-		put32(&bp[12], start);
-		put32(&bp[16], end);
+		put32(&bp[4], ts.tv_sec * 1000 + ts.tv_nsec / 1000000);
+		put32(&bp[8], start);
+		put32(&bp[12], end);
 
 		if ((n = send(s, buffer, sizeof(buffer))) != sizeof(buffer))
 			warn("send_acks: short write: %ld\n", n);
@@ -190,10 +296,12 @@ send_acks(int s, int permsec, struct mqueue *outq)
 
 /* 	if (!udp) { */
 /* 		n = read(fd, m->end, n); */
-/* 		DBG("read_packet: read() returns %ld on %s\n", n, r->name); */
+/* 		DBG("read_packet: read() returns %ld on %s\n", n,
+ * r->name); */
 /* 	} else { */
 /* 		slen = sizeof(sin); */
-/* 		n = recvfrom(fd, m->end, n, 0, (struct sockaddr *)&sin, &slen);
+/* 		n = recvfrom(fd, m->end, n, 0, (struct sockaddr *)&sin,
+ * &slen);
  */
 /* 		DBG("read_packet: recvfrom() returns %ld on " */
 /* 		    "%s\n", */
@@ -201,7 +309,9 @@ send_acks(int s, int permsec, struct mqueue *outq)
 /* 	} */
 /* 	if (n <= 0) { */
 /* 		if (n == 0) */
-/* 			err(1, "EOF on intf tunnel %d on %s", fd, r->name); */
+/* 			err(1, "EOF on intf tunnel %d on %s", fd,
+ * r->name);
+ */
 /* 		warn("bad read %ld on %s for packet read (udp " */
 /* 		     "%d)", */
 /* 		     n, r->name, udp); */
@@ -226,7 +336,8 @@ send_acks(int s, int permsec, struct mqueue *outq)
 
 /* 	mlen = MBUF_LEN(m); */
 /* 	if (isudp) */
-/* 		n = sendto(fd, m->start, mlen, 0, (struct sockaddr *)&peeraddr,
+/* 		n = sendto(fd, m->start, mlen, 0, (struct sockaddr
+ * *)&peeraddr,
  */
 /* 			   sizeof(peeraddr)); */
 /* 	else */
@@ -256,7 +367,9 @@ send_acks(int s, int permsec, struct mqueue *outq)
 /* 	while (true) { */
 /* 		pthread_mutex_lock(&r->lock); */
 /* 		while (ring_isempty(r)) { */
-/* 			DBG("write_packets: ring %s is empty\n", r->name); */
+/* 			DBG("write_packets: ring %s is empty\n",
+ * r->name);
+ */
 /* 			pthread_cond_wait(&r->wcv, &r->lock); */
 /* 		} */
 /* 		pthread_mutex_unlock(&r->lock); */
@@ -286,7 +399,8 @@ send_acks(int s, int permsec, struct mqueue *outq)
 /* 	while (true) { */
 /* 		pthread_mutex_lock(&r->lock); */
 /* 		while (ring_isfull(r)) { */
-/* 			DBG("read_packets: ring %s is full\n", r->name); */
+/* 			DBG("read_packets: ring %s is full\n", r->name);
+ */
 /* 			pthread_cond_wait(&r->rcv, &r->lock); */
 /* 		} */
 /* 		pthread_mutex_unlock(&r->lock); */
@@ -315,34 +429,34 @@ struct thread_args {
 };
 
 static void *
-_read_intf_packets(void *_arg)
+_read_intf_pkts(void *_arg)
 {
 	struct thread_args *args = _arg;
-	read_intf_packets(args->fd, &args->freeq, &args->outq);
+	read_intf_pkts(args->fd, args->freeq, args->outq);
 	return NULL;
 }
 
 static void *
-_write_intf_packets(void *_arg)
+_write_intf_pkts(void *_arg)
 {
 	struct thread_args *args = _arg;
-	write_intf_packets(args->fd, &args->outq, &args->freeq);
+	write_intf_pkts(args->fd, args->outq, args->freeq);
 	return NULL;
 }
 
 static void *
-_read_tunnel_packets(void *_arg)
+_read_tfs_pkts(void *_arg)
 {
 	struct thread_args *args = _arg;
-	read_intf_packets(args->s, &args->freeq, &args->outq, args->rate);
+	read_tfs_pkts(args->s, args->freeq, args->outq, args->rate);
 	return NULL;
 }
 
 static void *
-_write_tunnel_packets(void *_arg)
+_write_tfs_pkts(void *_arg)
 {
 	struct thread_args *args = _arg;
-	write_intf_packets(args->s, &args->outq, &args->freeq, args->rate);
+	write_tfs_pkts(args->s, args->outq, args->freeq, TFSMTU, args->rate);
 	return NULL;
 }
 
@@ -350,7 +464,7 @@ static void *
 _send_acks(void *_arg)
 {
 	struct thread_args *args = _arg;
-	send_acks(args->s, 1000, &args->outq);
+	send_acks(args->s, 1000, args->outq);
 	return NULL;
 }
 
@@ -373,7 +487,7 @@ tfs_tunnel_ingress(int fd, int s, uint64_t txrate, pthread_t(*threads[2]))
 	args.s = s;
 
 	pthread_create(&threads[0], NULL, _read_intf_pkts, &args);
-	pthread_create(&threads[1], NULL, _write_tunnel_pkts, &args);
+	pthread_create(&threads[1], NULL, _write_tfs_pkts, &args);
 	return 0;
 }
 
@@ -392,8 +506,11 @@ tfs_tunnel_egress(int fd, int s, uint64_t congest, pthread_t(*threads[3]))
 	args.fd = fd;
 	args.s = s;
 
-	pthread_create(&threads[0], NULL, _read_tunnel_pkts, &args);
+	pthread_create(&threads[0], NULL, _read_tfs_pkts, &args);
 	pthread_create(&threads[1], NULL, _write_intf_pkts, &args);
+
+	g_avgpps = runavg_new(5, 1);
+	g_avgdrops = runavg_new(5, 1);
 	pthread_create(&threads[2], NULL, _send_acks, &args);
 	return 0;
 }
