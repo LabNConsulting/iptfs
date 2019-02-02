@@ -27,8 +27,7 @@ struct mqueue {
 	struct ackinfo ackinfo;
 };
 
-void
-mbuf_reset(struct mbuf *m, int hdrspace)
+static void __inline__ mbuf_reset(struct mbuf *m, int hdrspace)
 {
 	m->end = m->start = &m->space[hdrspace];
 }
