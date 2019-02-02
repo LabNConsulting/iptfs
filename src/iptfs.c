@@ -207,7 +207,6 @@ runavg_add(struct runavg *avg, uint value)
 
 static struct runavg *g_avgpps;
 static struct runavg *g_avgdrops;
-static uint target_pps;
 
 void
 recv_ack(struct mbuf *m)
@@ -279,7 +278,7 @@ send_acks(int s, int permsec, struct mqueue *outq)
 		put32(&bp[8], start);
 		put32(&bp[12], end);
 
-		if ((n = send(s, buffer, sizeof(buffer))) != sizeof(buffer))
+		if ((n = send(s, buffer, sizeof(buffer), 0)) != sizeof(buffer))
 			warn("send_acks: short write: %ld\n", n);
 		else
 			DBG("write ack: %ld bytes\n", n);
@@ -472,11 +471,9 @@ _send_acks(void *_arg)
  * tunnel - tunnel from tun intf over a TCP connection.
  */
 int
-tfs_tunnel_ingress(int fd, int s, uint64_t txrate, pthread_t(*threads[2]))
+tfs_tunnel_ingress(int fd, int s, uint64_t txrate, pthread_t *threads)
 {
 	static struct thread_args args;
-	static struct mqueue *freeq, *outq;
-	void *rv;
 
 	DBG("tfs_tunnel_ingress: fd: %d s: %d\n", fd, s);
 	args.freeq =
@@ -492,11 +489,9 @@ tfs_tunnel_ingress(int fd, int s, uint64_t txrate, pthread_t(*threads[2]))
 }
 
 int
-tfs_tunnel_egress(int fd, int s, uint64_t congest, pthread_t(*threads[3]))
+tfs_tunnel_egress(int fd, int s, uint64_t congest, pthread_t *threads)
 {
 	static struct thread_args args;
-	static struct mqueue *freeq, *outq;
-	void *rv;
 
 	DBG("tfs_tunnel_egress: fd: %d s: %d\n", fd, s);
 	args.freeq =
