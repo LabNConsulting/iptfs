@@ -12,6 +12,12 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+extern bool debug, verbose;
+#define DBG(x...)                               \
+    do { if (debug) printf(x); } while (0)
+#define LOG(x...)                               \
+    do { if (verbose) printf(x); } while (0)
+
 int tfs_tunnel_ingress(int, int, uint64_t, pthread_t *);
 int tfs_tunnel_egress(int, int, uint64_t, pthread_t *);
 

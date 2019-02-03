@@ -9,14 +9,18 @@
 #include <pthread.h>
 #include <string.h>
 
+/*
+ * mbuFs
+ */
+
 struct mbuf *
 mbuf_new(size_t max, size_t hdrspace)
 {
 	struct mbuf *m = xzmalloc(max + sizeof(*m));
 	m->space = (void *)&m[1];
-	m->espace = m->space[max];
+	m->espace = &m->space[max];
 	m->end = m->start = &m->space[hdrspace];
-	return m
+	return m;
 }
 
 struct mqueue {
@@ -31,10 +35,14 @@ struct mqueue {
 	struct ackinfo ackinfo;
 };
 
-static void __inline__ mbuf_reset(struct mbuf *m, int hdrspace)
-{
-	m->end = m->start = &m->space[hdrspace];
-}
+/* static void __inline__ mbuf_reset(struct mbuf *m, int hdrspace) */
+/* { */
+/* 	m->end = m->start = &m->space[hdrspace]; */
+/* } */
+
+/*
+ * mqueues - mbuf queues
+ */
 
 #define MQ_FULL(mq) ((mq)->depth == (mq)->size)
 #define MQ_EMPTY(mq) ((mq)->depth == 0)
@@ -81,6 +89,8 @@ mqueue_new_freeq(const char *name, int size, ssize_t maxbuf, ssize_t hdrspace)
 		m->espace = m->space + maxbuf;
 		m->start = &m->space[hdrspace];
 		m->end = m->start;
+		mq->queue[i] = m;
+		mq->depth++;
 	}
 
 	return mq;
@@ -156,7 +166,7 @@ mqueue_get_ackinfo(struct mqueue *mq, uint32_t *drops, uint32_t *start,
 	pthread_mutex_unlock(&mq->lock);
 }
 
-uint32_t *
+struct ackinfo *
 mqueue_get_ackinfop(struct mqueue *mq)
 {
 	return &mq->ackinfo;

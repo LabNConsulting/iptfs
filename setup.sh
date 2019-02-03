@@ -33,14 +33,14 @@ CONGESTRATE=1000
 # COMMON=" --congest-rate=1500 -v --dev tfs0 --port 8001"
 #COMMON="--trace -v --rate=$TXRATEMb --dev tfs0 --port 8001"
 #COMMON="--rate=$TXRATE --congest=$CONGESTRATE --dev tfs0 --port 8001"
-COMMON="--rate=$TXRATE --dev tfs0 --port 8001"
+COMMON="--debug --verbose --rate=$TXRATE --dev tfs0 --port 8001"
 #COMMON="--debug --rate=$TXRATE --dev tfs0 --port 8001"
 if (( VMID == 2 )); then
     OVMID=3
     sleep 1
     . venv/bin/activate
-    # build/iptfs $COMMON --connect 192.168.10.$((OVMID + 64)) &
-    venv/bin/iptfs $COMMON --connect 192.168.10.$((OVMID + 64)) &
+    build/iptfs $COMMON --connect 192.168.10.$((OVMID + 64)) &
+    # venv/bin/iptfs $COMMON --connect 192.168.10.$((OVMID + 64)) &
     tfspid=$!
     sleep 1
     sysctl -w net.ipv6.conf.tfs0.disable_ipv6=1
@@ -50,8 +50,8 @@ if (( VMID == 2 )); then
     ip link set tfs0 up
 else
     . venv/bin/activate
-    # build/iptfs $COMMON --listen 192.168.10.$IPID &
-    venv/bin/iptfs $COMMON --listen 192.168.10.$IPID &
+    build/iptfs $COMMON --listen 192.168.10.$IPID &
+    # venv/bin/iptfs $COMMON --listen 192.168.10.$IPID &
     tfspid=$!
     sleep 1
     sysctl -w net.ipv6.conf.tfs0.disable_ipv6=1

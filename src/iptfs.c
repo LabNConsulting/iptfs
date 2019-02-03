@@ -35,15 +35,7 @@
 uint8_t padbytes[MAXBUF];
 
 extern struct sockaddr_in peeraddr; /* XXX remove */
-extern bool verbose;
 struct pps *g_pps;
-
-#define DBG(x...)
-#define _DBG(x...)                                                             \
-	do {                                                                   \
-		if (verbose)                                                   \
-			printf(x)                                              \
-	} while (0)
 
 static __inline__ void
 put32(uint8_t *buf, uint32_t value)
@@ -85,7 +77,7 @@ void recv_ack(struct mbuf *m);
 void
 read_intf_pkts(int fd, struct mqueue *freeq, struct mqueue *outq)
 {
-	DBG("read_intf_pkts: start\n");
+	LOG("read_intf_pkts: START\n");
 	while (true) {
 		struct mbuf *m = mqueue_pop(freeq);
 		ssize_t n;
@@ -104,14 +96,14 @@ read_intf_pkts(int fd, struct mqueue *freeq, struct mqueue *outq)
 void
 write_intf_pkts(int fd, struct mqueue *outq, struct mqueue *freeq)
 {
-	DBG("write_intf_pkts: start\n");
+	LOG("write_intf_pkts: START\n");
 	while (true) {
 		struct mbuf *m = mqueue_pop(outq);
 		ssize_t n, mlen = MBUF_LEN(m);
 		if ((n = write(fd, m->start, mlen)) != mlen)
 			warn("write_intf_pkts: bad write %ld/%ld\n", n, mlen);
 		else
-			DBG("write_intf_pkts: %d bytes\n", n);
+			DBG("write_intf_pkts: %ld bytes\n", n);
 		mqueue_push(freeq, m, true);
 	}
 }
@@ -142,11 +134,146 @@ tfs_get_recv_mbuf(struct mqueue *freeq)
 	}
 }
 
+/*
+ * add_to_inner_packet adds data from an outer packet mbuf to an inner one
+ */
 struct mbuf *
 add_to_inner_packet(struct mbuf *tbuf, bool new, struct mbuf *m,
-		    struct mqueue *outq, uint32_t seq)
+		    struct mqueue *freeq, struct mqueue *outq, uint32_t seq)
 {
-	/* XXX write me */
+	ssize_t ltlen = MBUF_LEN(tbuf);
+	uint16_t tlen, offset = 0;
+	uint8_t *start;
+
+	if (ltlen <= 0)
+		err(1, "tlen %ld <= 0", ltlen);
+
+	if (new) {
+		/* Starting a new tfs buf */
+		assert(ltlen > 8);
+		offset = get16(&tbuf->start[6]);
+		tbuf->start += 8;
+	}
+
+	start = tbuf->start;
+	tlen = MBUF_LEN(tbuf);
+
+	/*
+	 * Get a new inner packet buf if we have none
+	 */
+	if (!m)
+		m = tfs_get_recv_mbuf(freeq);
+
+	if (MBUF_LEN(m) == 0) {
+		if (!new)
+			DBG("add_to_inner_packet: recurse mlen 0 off %d\n",
+			    offset);
+		/*
+		 * Start new inner packet
+		 */
+
+		if (offset > tlen) {
+			/* next data block is past the end of this packet. */
+			tbuf->start = tbuf->end;
+			return m;
+		}
+		/* Skip past unknown leading packet part */
+		start = tbuf->start = tbuf->start + offset;
+		tlen -= offset;
+
+		uint8_t vnib = start[0] & 0xF0;
+		uint16_t iplen;
+		if (vnib == 0x40) /* IPv4 */
+			iplen = get16(&start[2]);
+		else if (vnib == 0x60) /* IPv6 */
+			iplen = get16(&start[4]);
+		else { /* Pad or wrong. */
+			// DBG("PAD: add_to_inner_packet: new %d v %d len %d\n",
+			//    new, vnib, tlen);
+			tbuf->start = tbuf->end;
+			return m;
+		}
+		DBG("START: add_to_inner_packet: new %d off %d iplen %d\n", new,
+		    offset, iplen);
+		/* XXX we can always reconstruct this too */
+		m->left = iplen;
+		/* FALLTHROUGH*/
+	} else if (offset > tlen) {
+		/* This is us logging here what we didn't in in get outer */
+		if (new)
+			DBG("got_outer: seq %d tlen %ld\n", seq, ltlen);
+
+		if (m->left > tlen) {
+			// XXX copy A
+			DBG("MORE: off>tlen: new %d off %d mleft %ld tlen "
+			    "%ld\n",
+			    new, offset, m->left, tlen);
+			memcpy(m->end, start, tlen); // XXX remove copy
+			m->end += tlen;
+			m->left -= tlen;
+			tbuf->start += tlen;
+			assert(MBUF_LEN(tbuf) == 0);
+			return m;
+		}
+
+		/*
+		 * XXX Offset points into subsequent packet, but we had enough
+		 * room in this packet. This should never happen, but if it does
+		 * we treat the slop at the end as pad.
+		 */
+		// XXX copy B
+		DBG("SLOPPY END: off>tlen: new %d off %d mleft %ld tlen %ld\n",
+		    new, offset, m->left, tlen);
+		memcpy(m->end, start, m->left); /* XXX remove copy */
+		m->end += m->left;
+		tbuf->start += m->left;
+		m->left = 0;
+		mqueue_push(outq, m, false);
+
+		tbuf->start = tbuf->end; /* Skip slop */
+		return (NULL);
+	} else {
+		/*
+		 * Existing inner packet where offset is within the TFS buffer.
+		 */
+		/* This is us logging here what we didn't in in get outer */
+		if (new)
+			DBG("got_outer: seq %d tlen %ld\n", seq, ltlen);
+		DBG("CONTINUED: new %d off for next %d mleft %ld tlen %ld\n",
+		    new, offset, m->left, tlen);
+		tlen = offset;
+		assert(m->left == tlen);
+	}
+
+	if (m->left > tlen) {
+		// XXX copy A
+		DBG("MORELEFT: new %d off %d mleft %d tlen %ld\n", new, offset,
+		    m->left, tlen);
+		memcpy(m->end, start, tlen); // XXX remove copy
+		m->end += tlen;
+		m->left -= tlen;
+		tbuf->start += tlen;
+		assert(MBUF_LEN(tbuf) == 0);
+		return m;
+	}
+
+	// XXX copy B
+	DBG("COMPLETE: new %d off %d mleft %ld tlen %ld\n", new, offset,
+	    m->left, tlen);
+	memcpy(m->end, start, m->left); /* XXX remove copy */
+	m->end += m->left;
+	tbuf->start += m->left;
+	tlen -= m->left;
+	m->left = 0;
+	mqueue_push(outq, m, false);
+
+	assert(tlen >= 0);
+	if (tlen == 0)
+		return NULL;
+
+	// Recurse!
+	DBG("recurse: new %d\n", new);
+	return add_to_inner_packet(tbuf, false, NULL, freeq, outq, seq);
 }
 
 uint32_t
@@ -163,18 +290,26 @@ read_tfs_get_outer(int s, struct mbuf *tbuf, struct mqueue *outq,
 	while (true) {
 		mbuf_reset(tbuf, HDRSPACE);
 		addrlen = sizeof(sender);
-		n = recvfrom(s, tbuf->start, MBUF_LEN(tbuf), 0,
-			     (struct sockaddr *)&sender, &addrlen);
+		if ((n = recvfrom(s, tbuf->start, MBUF_AVAIL(tbuf), 0,
+				  (struct sockaddr *)&sender, &addrlen)) < 0) {
+			warn("read_tfs_get_outer: %ld\n", n);
+			continue;
+		}
 
 		/* Check that sender == peeraddr */
 
-		if (n <= 8) {
-			warn("read_tfs_get_outer: bad read len %ld\n", n);
+		if (n == 0) {
+			warnx("read_tfs_get_outer: zero-length read\n");
+			continue;
+		}
+		if (n < 8) {
+			warnx("read_tfs_get_outer: bad read len %ld\n", n);
 			ack->ndrop++;
 			continue;
 		}
 		if (rl && limit(rl, n)) {
-			DBG("read_tfs_get_outer: congestion creation\n");
+			DBG("read_tfs_get_outer: congestion "
+			    "creation\n");
 			ack->ndrop++;
 			continue;
 		}
@@ -187,7 +322,8 @@ read_tfs_get_outer(int s, struct mbuf *tbuf, struct mqueue *outq,
 			continue;
 		}
 		if ((offset & 0x80000000) != 0) {
-			warn("read_tfs_get_outer: Invalid version dropping");
+			warn("read_tfs_get_outer: Invalid version "
+			     "dropping");
 			ack->ndrop++;
 			continue;
 		}
@@ -201,7 +337,8 @@ read_tfs_get_outer(int s, struct mbuf *tbuf, struct mqueue *outq,
 			return seq;
 		}
 		if (seq <= ack->last) {
-			warn("read_tfs_get_outer: prev/dup seq %d detected\n",
+			warn("read_tfs_get_outer: prev/dup seq %d "
+			     "detected\n",
 			     seq);
 			continue;
 		}
@@ -229,15 +366,15 @@ read_tfs_pkts(int s, struct mqueue *freeq, struct mqueue *outq,
 		rl = new_ratelimit(congest_rate, 0, 10);
 	}
 
-	struct mbuf *m;
+	struct mbuf *m = NULL;
 	uint32_t seq = 0;
 	while (true) {
-		reset = false;
+		bool reset = false;
 		seq = read_tfs_get_outer(s, tbuf, outq, rl, &reset);
 		if (m && reset) {
 			mbuf_reset(m, HDRSPACE);
 		}
-		m = add_to_inner_packet(tbuf, true, m, outq, seq)
+		m = add_to_inner_packet(tbuf, true, m, freeq, outq, seq);
 	}
 }
 
@@ -292,7 +429,7 @@ write_tfs_pkt(int s, struct mqueue *inq, struct mqueue *freeq, uint32_t seq,
 	uint16_t offset;
 
 	if (*leftover) {
-		DBG("write_tfs_pkt: seq %d mtu %d leftover %p\n", seq, mtu,
+		DBG("write_tfs_pkt: seq %d mtu %ld leftover %p\n", seq, mtu,
 		    *leftover);
 		m = *leftover;
 		*leftover = NULL;
@@ -301,7 +438,8 @@ write_tfs_pkt(int s, struct mqueue *inq, struct mqueue *freeq, uint32_t seq,
 		m = mqueue_trypop(inq);
 		offset = 0;
 		if (m) {
-			DBG("write_tfs_pkt: seq %d mtu %d m %p\n", seq, mtu, m);
+			DBG("write_tfs_pkt: seq %d mtu %ld m %p\n", seq, mtu,
+			    m);
 		}
 	}
 	if (m == NULL) {
@@ -318,8 +456,8 @@ write_tfs_pkt(int s, struct mqueue *inq, struct mqueue *freeq, uint32_t seq,
 		if (mtu <= 6 || m == NULL) {
 			/* No room for dbhdr or no more data -- pad */
 			mlen = mtu;
-			DBG("write_tfs_pkt: seq %d pad %d enter %d\n", seq, mtu,
-			    mtuenter);
+			DBG("write_tfs_pkt: seq %d pad %d enter %ld\n", seq,
+			    mtu, mtuenter);
 			(*iov).iov_base = padbytes;
 			(*iov++).iov_len = mtu;
 			mtu = 0;
@@ -333,9 +471,9 @@ write_tfs_pkt(int s, struct mqueue *inq, struct mqueue *freeq, uint32_t seq,
 			(*iov++).iov_len = mtu;
 			m->start += mtu;
 			*leftover = m;
-			DBG("write_tfs_pkt: seq %d add partial mtu %d "
-			    "of %d "
-			    "enter %d\n",
+			DBG("write_tfs_pkt: seq %d add partial mtu %ld "
+			    "of %ld "
+			    "enter %ld\n",
 			    seq, mtu, mlen, mtuenter);
 			mtu = 0;
 			break;
@@ -346,8 +484,7 @@ write_tfs_pkt(int s, struct mqueue *inq, struct mqueue *freeq, uint32_t seq,
 		(*iov++).iov_len = mlen;
 		*efreem++ = m;
 		m = NULL;
-		DBG("write_tfs_pkt: seq %d add mbuf %d of mtu %d enter "
-		    "%d\n",
+		DBG("write_tfs_pkt: seq %d add mbuf %ld of mtu %ld enter %ld\n",
 		    seq, mlen, mtu, mtuenter);
 		mtu -= mlen;
 
@@ -386,7 +523,7 @@ write_tfs_pkts(int s, struct mqueue *outq, struct mqueue *freeq, uint mtu,
 	uint pps = txrate / mtub;
 
 	g_pps = pps_new(pps);
-	printf("Writing TFS %d pps for %d bps\n", pps, pps * mtub);
+	LOG("Writing TFS %d pps for %d bps\n", pps, pps * mtub);
 
 	while (true) {
 		pps_wait(g_pps);
@@ -406,7 +543,7 @@ static struct runavg *g_avgdrops;
 void
 recv_ack(struct mbuf *m)
 {
-	if (MBUF_LEN(m) != 24) {
+	if (MBUF_LEN(m) != 20) {
 		warn("recv_ack: bad length %ld\n", MBUF_LEN(m));
 		return;
 	}
@@ -419,7 +556,7 @@ recv_ack(struct mbuf *m)
 	end = get32(&mstart[12]);
 	runlen = end - start;
 
-	if (end > start) {
+	if (end < start) {
 		DBG("recv_ack: bad sequence range %d, %d\n", start, end);
 		return;
 	}
@@ -453,6 +590,8 @@ send_acks(int s, int permsec, struct mqueue *outq)
 	struct timespec ts;
 	uint32_t ndrop, start, end;
 	ssize_t n;
+
+	LOG("send_acks: START: permsec %d\n", permsec);
 
 	/* No sequence number */
 	put32(buffer, 0xFFFFFFFF);

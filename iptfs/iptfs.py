@@ -239,8 +239,8 @@ def add_to_inner_packet(tmbuf: MBuf, new: bool, m: MBuf, freeq: MQueue, outq: MQ
         # XXX remove copy
         m.end[:m.left] = start[:m.left]
         m.end = m.end[m.left:]
-        m.left = 0
         tmbuf.start = tmbuf.start[m.left:]
+        m.left = 0
         outq.push(m)
 
         # So m.left is not > than tmlen, but the offset points past the tmbuf, so this must be

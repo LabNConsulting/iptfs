@@ -22,7 +22,7 @@
 #include <unistd.h>
 
 struct sockaddr_in peeraddr; /* XXX remove */
-bool verbose;
+bool debug, verbose;
 pthread_t threads[4];
 
 char progname[128];
@@ -140,6 +140,7 @@ main(int argc, char **argv)
 {
 	static struct option lopts[] = {
 	    {"help", no_argument, 0, 'h'},
+	    {"debug", no_argument, 0, 0},
 	    {"congest-rate", required_argument, 0, 'C'},
 	    {"connect", required_argument, 0, 'c'},
 	    {"dev", required_argument, 0, 'd'},
@@ -162,6 +163,13 @@ main(int argc, char **argv)
 	while ((opt = getopt_long(argc, argv, "C:c:d:hl:p:uv", lopts, &li)) !=
 	       -1) {
 		switch (opt) {
+		case 0:
+			if (!strcmp(lopts[li].name, "debug")) {
+				verbose = true;
+				debug = true;
+				printf("DBG enabled\n");
+			}
+			break;
 		case 'C':
 			/* congest-rate */
 			congest = (uint64_t)atoi(optarg) * 1000000ULL;
@@ -211,10 +219,10 @@ main(int argc, char **argv)
 
 	if (tfs_tunnel_ingress(fd, s, txrate, &threads[0]) < 0)
 		err(1, "tunnel ingress setup");
-	if (tfs_tunnel_egress(s, fd, congest, &threads[2]) < 0)
+	if (tfs_tunnel_egress(fd, s, congest, &threads[2]) < 0)
 		err(1, "tunnel egress setup");
 
-	for (i = 0; i < 4; i++)
+	for (i = 0; i < 5; i++)
 		pthread_join(threads[i], NULL);
 
 	return 0;
