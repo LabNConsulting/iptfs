@@ -19,12 +19,6 @@ mbuf_new(size_t max, size_t hdrspace)
 	return m
 }
 
-struct ackinfo {
-	uint32_t start;
-	uint32_t last;
-	uint32_t ndrop;
-};
-
 struct mqueue {
 	const char *name;
 	struct mbuf **queue;
@@ -160,6 +154,12 @@ mqueue_get_ackinfo(struct mqueue *mq, uint32_t *drops, uint32_t *start,
 	*end = mq->ackinfo.last;
 	memset(&mq->ackinfo, 0, sizeof(mq->ackinfo));
 	pthread_mutex_unlock(&mq->lock);
+}
+
+uint32_t *
+mqueue_get_ackinfop(struct mqueue *mq)
+{
+	return &mq->ackinfo;
 }
 
 /* Local Variables: */

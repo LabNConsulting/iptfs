@@ -74,6 +74,8 @@ get16(uint8_t *buf)
 	return ((uint16_t)buf[0] << 8) + buf[1];
 }
 
+void recv_ack(struct mbuf *m);
+
 /*
  * =================
  * Interface Packets
@@ -151,7 +153,68 @@ uint32_t
 read_tfs_get_outer(int s, struct mbuf *tbuf, struct mqueue *outq,
 		   struct ratelimit *rl, bool *reset)
 {
+	struct ackinfo *ack = mqueue_get_ackinfop(outq);
+	struct sockaddr_storage sender;
+	socklen_t addrlen;
+	ssize_t offset, n;
+	uint32_t seq;
+
 	/* XXX write me */
+	while (true) {
+		mbuf_reset(tbuf, HDRSPACE);
+		addrlen = sizeof(sender);
+		n = recvfrom(s, tbuf->start, MBUF_LEN(tbuf), 0,
+			     (struct sockaddr *)&sender, &addrlen);
+
+		/* Check that sender == peeraddr */
+
+		if (n <= 8) {
+			warn("read_tfs_get_outer: bad read len %ld\n", n);
+			ack->ndrop++;
+			continue;
+		}
+		if (rl && limit(rl, n)) {
+			DBG("read_tfs_get_outer: congestion creation\n");
+			ack->ndrop++;
+			continue;
+		}
+
+		tbuf->end = &tbuf->start[n];
+		offset = get32(&tbuf->start[4]);
+
+		if ((offset & 0xC0000000) == 0x40000000) {
+			recv_ack(tbuf);
+			continue;
+		}
+		if ((offset & 0x80000000) != 0) {
+			warn("read_tfs_get_outer: Invalid version dropping");
+			ack->ndrop++;
+			continue;
+		}
+
+		seq = get32(tbuf->start);
+		if (ack->start == 0)
+			ack->start = seq;
+		if (seq == ack->last + 1 || ack->last == 0) {
+			/* Mark valid and return */
+			ack->last = seq;
+			return seq;
+		}
+		if (seq <= ack->last) {
+			warn("read_tfs_get_outer: prev/dup seq %d detected\n",
+			     seq);
+			continue;
+		}
+
+		uint32_t ndrop = seq - (ack->last + 1);
+		ack->ndrop += ndrop;
+		DBG("read_tfs_get_outer: packet loss %d total %d\n", ndrop,
+		    ack->ndrop);
+
+		*reset = true; /* Lost packets so drop any in-progress */
+		ack->last = seq;
+		return seq;
+	}
 }
 
 void
@@ -270,7 +333,8 @@ write_tfs_pkt(int s, struct mqueue *inq, struct mqueue *freeq, uint32_t seq,
 			(*iov++).iov_len = mtu;
 			m->start += mtu;
 			*leftover = m;
-			DBG("write_tfs_pkt: seq %d add partial mtu %d of %d "
+			DBG("write_tfs_pkt: seq %d add partial mtu %d "
+			    "of %d "
 			    "enter %d\n",
 			    seq, mtu, mlen, mtuenter);
 			mtu = 0;
@@ -297,8 +361,9 @@ write_tfs_pkt(int s, struct mqueue *inq, struct mqueue *freeq, uint32_t seq,
 	msg.msg_iovlen = iov - iovecs;
 	n = sendmsg(s, &msg, 0);
 	if (n != mtuenter) {
-		warn("write_tfs_pkt: short write %ld of %ld on TFSLINK\n", n,
-		     mtuenter);
+		warn("write_tfs_pkt: short write %ld of %ld on "
+		     "TFSLINK\n",
+		     n, mtuenter);
 		if (*leftover)
 			*efreem++ = *leftover;
 		*leftover = NULL;
@@ -396,7 +461,9 @@ send_acks(int s, int permsec, struct mqueue *outq)
 	int ival = permsec / 1000;
 	while (true) {
 		sleep(ival);
+
 		mqueue_get_ackinfo(outq, &ndrop, &start, &end);
+
 		if (start == 0) {
 			/* nothing to talk about */
 			continue;

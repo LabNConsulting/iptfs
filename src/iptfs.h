@@ -19,6 +19,12 @@ int tfs_tunnel_egress(int, int, uint64_t, pthread_t *);
  * mbuf.h
  */
 
+struct ackinfo {
+    uint32_t start;
+    uint32_t last;
+    uint32_t ndrop;
+};
+
 struct mbuf {
     uint8_t *space;  /* The buffer. */
     uint8_t *espace; /* The end of the buffer. */
@@ -26,6 +32,12 @@ struct mbuf {
     uint8_t *end;    /* The end (one past) of the packet */
     ssize_t left;    /* used to track what's left to read */
 };
+
+static void __inline__
+mbuf_reset(struct mbuf *m, int hdrspace)
+{
+    m->end = m->start = &m->space[hdrspace];
+}
 
 struct mbuf *mbuf_new(size_t max, size_t hdrspace);
 
@@ -38,6 +50,7 @@ struct mbuf *mqueue_pop(struct mqueue *mq);
 struct mbuf *mqueue_trypop(struct mqueue *mq);
 void mqueue_push(struct mqueue *mq, struct mbuf *m, bool reset);
 void mqueue_get_ackinfo(struct mqueue *outq, uint32_t *drops, uint32_t *start, uint32_t *end);
+struct ackinfo *mqueue_get_ackinfop(struct mqueue *outq);
 
 /*
  * util.h
