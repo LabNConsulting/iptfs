@@ -669,6 +669,7 @@ send_ack(int s, struct timespec *now, struct ackinfo *ack)
 
 struct thread_args {
 	struct mqueue *freeq, *outq;
+	struct miovq *iovfreeq, *iovoutq;
 	uint64_t rate;
 	int fd;
 	int s;
@@ -722,7 +723,6 @@ tfs_tunnel_ingress(int fd, int s, uint64_t txrate, pthread_t *threads)
 	args.fd = fd;
 	args.s = s;
 
-	g_tfsmtu = 1500;
 	g_max_inner_pkt = MAXBUF / 20;
 
 	pthread_create(&threads[0], NULL, _read_intf_pkts, &args);
@@ -738,7 +738,12 @@ tfs_tunnel_egress(int fd, int s, uint64_t congest, pthread_t *threads)
 	DBG("tfs_tunnel_egress: fd: %d s: %d\n", fd, s);
 	args.freeq =
 	    mqueue_new_freeq("TFS Egress FreeqQ", OUTERQSZ, MAXBUF, HDRSPACE);
-	args.outq = mqueue_new("TFS Egress OutQ", OUTERQSZ);
+
+	uint maxiov = (MAXBUF / g_tfsmtu) + 2;
+	args.iovfreeq = miovq_new_freeq("TFS IOV Egress FreeqQ", OUTERQSZ,
+					maxiov, args.freeq);
+	args.iovoutq = miovq_new("TFS Egress OutQ", OUTERQSZ);
+
 	args.rate = congest;
 	args.fd = fd;
 	args.s = s;

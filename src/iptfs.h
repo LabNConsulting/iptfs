@@ -46,6 +46,14 @@ struct mbuf {
     uint8_t *start;  /* The start of the packet */
     uint8_t *end;    /* The end (one past) of the packet */
     ssize_t left;    /* used to track what's left to read */
+    uint refcnt;     /* if this has mbufrefs the count of references */
+};
+
+struct miovbuf {
+    struct iovec *iovecs;       /* iovec space. */
+    struct mbuf **mbufs;        /* mbuf we point into */
+    struct iovec *iov;          /* current next iov to use */
+    uint maxiov;                /* Max number of iov/mbuf */
 };
 
 static void __inline__
@@ -66,6 +74,18 @@ struct mbuf *mqueue_trypop(struct mqueue *mq);
 int mqueue_push(struct mqueue *mq, struct mbuf *m, bool reset);
 void mqueue_get_ackinfo(struct mqueue *outq, uint32_t *drops, uint32_t *start, uint32_t *end);
 struct ackinfo *mqueue_get_ackinfop(struct mqueue *outq);
+
+static void __inline__
+mbuf_deref(struct mqueue *freeq, struct mbuf *m)
+{
+    if (--m->refcnt == 0)
+        mqueue_push(freeq, m, true);
+}
+
+struct miovq *miovq_new(const char *name, int size);
+struct miovq *miovq_new_freeq(const char *name, int size, int maxiov, struct mqueue *freeq);
+struct miovbuf *miovq_pop(struct miovq *mq);
+int miovq_push(struct miovq *mq, struct miovbuf *m);
 
 /*
  * util.h

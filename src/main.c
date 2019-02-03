@@ -148,6 +148,7 @@ main(int argc, char **argv)
 	    {"connect", required_argument, 0, 'c'},
 	    {"dev", required_argument, 0, 'd'},
 	    {"listen", required_argument, 0, 'l'},
+	    {"mtu", required_argument, 0, 'm'},
 	    {"port", required_argument, 0, 'p'},
 	    {"rate", required_argument, 0, 'r'},
 	    {"verbose", no_argument, 0, 'v'},
@@ -160,6 +161,7 @@ main(int argc, char **argv)
 	int fd, s, opt, li, i;
 	uint64_t congest, txrate;
 
+	g_tfsmtu = 1500;
 	congest = txrate = 0;
 	strncpy(progname, argv[0], sizeof(progname) - 1);
 
@@ -191,6 +193,10 @@ main(int argc, char **argv)
 			listen = optarg;
 			break;
 		case 'h':
+		case 'm':
+			/* port */
+			g_tfsmtu = atoi(optarg);
+			break;
 		case 'p':
 			/* port */
 			sport = optarg;

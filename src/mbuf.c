@@ -8,17 +8,18 @@
 #include <err.h>
 #include <pthread.h>
 #include <string.h>
+#include <sys/uio.h>
 
 /*
  * mbuFs
  */
 
 struct mbuf *
-mbuf_new(size_t max, size_t hdrspace)
+mbuf_new(size_t maxbuf, size_t hdrspace)
 {
-	struct mbuf *m = xzmalloc(max + sizeof(*m));
+	struct mbuf *m = xzmalloc(maxbuf + sizeof(*m));
 	m->space = (void *)&m[1];
-	m->espace = &m->space[max];
+	m->espace = m->space + maxbuf;
 	m->end = m->start = &m->space[hdrspace];
 	return m;
 }
@@ -35,10 +36,16 @@ struct mqueue {
 	struct ackinfo ackinfo;
 };
 
-/* static void __inline__ mbuf_reset(struct mbuf *m, int hdrspace) */
-/* { */
-/* 	m->end = m->start = &m->space[hdrspace]; */
-/* } */
+struct miovq {
+	const char *name;
+	struct mqueue *freeq;
+	struct miovbuf **queue;
+	int size;
+	int depth;
+	pthread_mutex_t lock;
+	pthread_cond_t pushcv;
+	pthread_cond_t popcv;
+};
 
 /*
  * mqueues - mbuf queues
@@ -165,6 +172,93 @@ struct ackinfo *
 mqueue_get_ackinfop(struct mqueue *mq)
 {
 	return &mq->ackinfo;
+}
+
+struct miovq *
+miovq_new(const char *name, int size)
+{
+	struct miovq *mq;
+	if ((mq = xzmalloc(sizeof(struct miovq))) == NULL)
+		err(1, "miovq_new: malloc miovq");
+	if ((mq->queue = malloc(sizeof(struct miovbuf *) * size)) == NULL)
+		err(1, "miovq_new: malloc queue");
+	mq->name = name;
+	mq->size = size;
+
+	pthread_mutex_init(&mq->lock, NULL);
+	pthread_cond_init(&mq->pushcv, NULL);
+	pthread_cond_init(&mq->popcv, NULL);
+
+	return mq;
+}
+
+struct miovq *
+miovq_new_freeq(const char *name, int size, int maxiov, struct mqueue *freeq)
+{
+	struct miovq *mq = miovq_new(name, size);
+	uint8_t *space;
+	int i, sz;
+
+	mq->freeq = freeq;
+	sz = sizeof(struct miovbuf) +
+	     (sizeof(struct iovec) + sizeof(struct mbuf *)) * maxiov;
+	if ((space = malloc(size * sz)) == NULL)
+		err(1, "miovq_new_freeq: malloc miovbufs");
+
+	for (i = 0; i < size; i++) {
+		struct miovbuf *m = (struct miovbuf *)(space + i * sz);
+		m->iovecs = (struct iovec *)(m + 1);
+		m->mbufs = (struct mbufs **)(m->iovecs + maxiov);
+		m->iov = m->iovecs;
+		m->maxiov = maxiov;
+		mq->queue[i] = m;
+		mq->depth++;
+	}
+
+	return mq;
+}
+
+struct miovbuf *
+miovq_pop(struct miovq *mq)
+{
+	/* XXX an exact copy of mqueue_pop except for the types.. sigh, C */
+	struct miovbuf *m;
+
+	pthread_mutex_lock(&mq->lock);
+	while (MQ_EMPTY(mq)) {
+		DBG("miovq_pop: %s empty\n", mq->name);
+		pthread_cond_wait(&mq->popcv, &mq->lock);
+	}
+	pthread_cond_signal(&mq->pushcv);
+	m = mq->queue[--mq->depth];
+	pthread_mutex_unlock(&mq->lock);
+
+	return m;
+}
+
+int
+miovq_push(struct miovq *mq, struct miovbuf *m)
+{
+	int depth;
+	if (mq->freeq) {
+		int niov = m->iov - m->iovecs;
+		for (int i = 0; i < niov; i++)
+			mbuf_deref(mq->freeq, m->mbufs[i]);
+		m->iov = m->iovecs;
+	}
+
+	pthread_mutex_lock(&mq->lock);
+	while (MQ_FULL(mq)) {
+		DBG("miovq_push: %s full\n", mq->name);
+		pthread_cond_wait(&mq->pushcv, &mq->lock);
+	}
+
+	pthread_cond_signal(&mq->popcv);
+	mq->queue[mq->depth++] = m;
+	depth = mq->depth;
+	pthread_mutex_unlock(&mq->lock);
+
+	return depth;
 }
 
 /* Local Variables: */
