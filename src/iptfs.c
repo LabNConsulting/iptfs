@@ -110,17 +110,18 @@ read_intf_pkts(int fd, struct mqueue *freeq, struct mqueue *outq)
 }
 
 void
-write_intf_pkts(int fd, struct mqueue *outq, struct mqueue *freeq)
+write_intf_pkts(int fd, struct miovq *outq, struct miovq *freeq)
 {
 	LOG("write_intf_pkts: START\n");
 	while (true) {
-		struct mbuf *m = mqueue_pop(outq);
-		ssize_t n, mlen = MBUF_LEN(m);
-		if ((n = write(fd, m->start, mlen)) != mlen)
-			warn("write_intf_pkts: bad write %ld/%ld\n", n, mlen);
+		struct miov *m = miovq_pop(outq);
+		ssize_t n;
+
+		if ((n = writev(fd, m->iov, m->niov)) != m->len)
+			warn("write_intf_pkts: bad write %ld/%ld\n", n, m->len);
 		else
 			DBG("write_intf_pkts: %ld bytes\n", n);
-		mqueue_push(freeq, m, true);
+		miovq_push(freeq, m);
 	}
 }
 
@@ -696,7 +697,7 @@ static void *
 _write_intf_pkts(void *_arg)
 {
 	struct thread_args *args = _arg;
-	write_intf_pkts(args->fd, args->outq, args->freeq);
+	write_intf_pkts(args->fd, args->iovoutq, args->iovfreeq);
 	return NULL;
 }
 
