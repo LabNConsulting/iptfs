@@ -222,7 +222,7 @@ main(int argc, char **argv)
 	if (tfs_tunnel_egress(fd, s, congest, &threads[2]) < 0)
 		err(1, "tunnel egress setup");
 
-	for (i = 0; i < 5; i++)
+	for (i = 0; i < 4; i++)
 		pthread_join(threads[i], NULL);
 
 	return 0;

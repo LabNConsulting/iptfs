@@ -62,6 +62,8 @@ struct ackinfo *mqueue_get_ackinfop(struct mqueue *outq);
  * util.h
  */
 
+#define NSECS_IN_SEC 1000000000
+
 struct runavg {
     uint runlen;  /* length of the running average */
     uint *values; /* runlen worth of values */
@@ -80,6 +82,8 @@ bool limit(struct ratelimit *, uint);
 
 struct runavg *runavg_new(uint runlen, uint min);
 bool runavg_add(struct runavg *avg, uint value);
+
+uint64_t clock_delta(struct timespec *recent, struct timespec *past);
 
 struct periodic *periodic_new(uint64_t nsecs);
 void periodic_change_rate(struct periodic *pp, uint64_t nsecs);

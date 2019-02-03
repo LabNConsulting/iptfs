@@ -66,6 +66,7 @@ get16(uint8_t *buf)
 	return ((uint16_t)buf[0] << 8) + buf[1];
 }
 
+void send_ack(int s, struct timespec *now, struct ackinfo *ack);
 void recv_ack(struct mbuf *m);
 
 /*
@@ -205,8 +206,7 @@ add_to_inner_packet(struct mbuf *tbuf, bool new, struct mbuf *m,
 
 		if (m->left > tlen) {
 			// XXX copy A
-			DBG("MORE: off>tlen: new %d off %d mleft %ld tlen "
-			    "%ld\n",
+			DBG("MORE: off>tlen: new %d off %d mleft %ld tlen %d\n",
 			    new, offset, m->left, tlen);
 			memcpy(m->end, start, tlen); // XXX remove copy
 			m->end += tlen;
@@ -222,7 +222,7 @@ add_to_inner_packet(struct mbuf *tbuf, bool new, struct mbuf *m,
 		 * we treat the slop at the end as pad.
 		 */
 		// XXX copy B
-		DBG("SLOPPY END: off>tlen: new %d off %d mleft %ld tlen %ld\n",
+		DBG("SLOPPY END: off>tlen: new %d off %d mleft %ld tlen %d\n",
 		    new, offset, m->left, tlen);
 		memcpy(m->end, start, m->left); /* XXX remove copy */
 		m->end += m->left;
@@ -239,7 +239,7 @@ add_to_inner_packet(struct mbuf *tbuf, bool new, struct mbuf *m,
 		/* This is us logging here what we didn't in in get outer */
 		if (new)
 			DBG("got_outer: seq %d tlen %ld\n", seq, ltlen);
-		DBG("CONTINUED: new %d off for next %d mleft %ld tlen %ld\n",
+		DBG("CONTINUED: new %d off for next %d mleft %ld tlen %d\n",
 		    new, offset, m->left, tlen);
 		tlen = offset;
 		assert(m->left == tlen);
@@ -247,7 +247,7 @@ add_to_inner_packet(struct mbuf *tbuf, bool new, struct mbuf *m,
 
 	if (m->left > tlen) {
 		// XXX copy A
-		DBG("MORELEFT: new %d off %d mleft %d tlen %ld\n", new, offset,
+		DBG("MORELEFT: new %d off %d mleft %ld tlen %d\n", new, offset,
 		    m->left, tlen);
 		memcpy(m->end, start, tlen); // XXX remove copy
 		m->end += tlen;
@@ -258,8 +258,8 @@ add_to_inner_packet(struct mbuf *tbuf, bool new, struct mbuf *m,
 	}
 
 	// XXX copy B
-	DBG("COMPLETE: new %d off %d mleft %ld tlen %ld\n", new, offset,
-	    m->left, tlen);
+	DBG("COMPLETE: new %d off %d mleft %ld tlen %d\n", new, offset, m->left,
+	    tlen);
 	memcpy(m->end, start, m->left); /* XXX remove copy */
 	m->end += m->left;
 	tbuf->start += m->left;
@@ -276,18 +276,40 @@ add_to_inner_packet(struct mbuf *tbuf, bool new, struct mbuf *m,
 	return add_to_inner_packet(tbuf, false, NULL, freeq, outq, seq);
 }
 
-uint32_t
-read_tfs_get_outer(int s, struct mbuf *tbuf, struct mqueue *outq,
-		   struct ratelimit *rl, bool *reset)
+void
+read_tfs_pkts(int s, struct mqueue *freeq, struct mqueue *outq,
+	      uint64_t ack_rate, uint64_t congest_rate)
 {
-	struct ackinfo *ack = mqueue_get_ackinfop(outq);
+	struct timespec ts, now;
+	struct mbuf *tbuf = mbuf_new(MAXBUF, HDRSPACE);
+	struct ratelimit *rl = NULL;
+	if (congest_rate > 0) {
+		// uint overhead = 20 + 8 + 20 + 20 + 12;
+		rl = new_ratelimit(congest_rate, 0, 10);
+	}
+
+	/* convert ack rate from ms to ns */
+	ack_rate *= 1000000;
+
+	struct ackinfo ack;
 	struct sockaddr_storage sender;
 	socklen_t addrlen;
 	ssize_t offset, n;
-	uint32_t seq;
+	uint32_t seq = 0;
 
-	/* XXX write me */
+	struct mbuf *m = NULL;
+	clock_gettime(CLOCK_MONOTONIC, &ts);
+
+	memset(&ack, 0, sizeof(ack));
+
 	while (true) {
+		/* Check to see if we should send ack info */
+		clock_gettime(CLOCK_MONOTONIC, &now);
+		if (clock_delta(&now, &ts) > ack_rate) {
+			ts = now;
+			send_ack(s, &now, &ack);
+		}
+
 		mbuf_reset(tbuf, HDRSPACE);
 		addrlen = sizeof(sender);
 		if ((n = recvfrom(s, tbuf->start, MBUF_AVAIL(tbuf), 0,
@@ -304,13 +326,13 @@ read_tfs_get_outer(int s, struct mbuf *tbuf, struct mqueue *outq,
 		}
 		if (n < 8) {
 			warnx("read_tfs_get_outer: bad read len %ld\n", n);
-			ack->ndrop++;
+			ack.ndrop++;
 			continue;
 		}
 		if (rl && limit(rl, n)) {
 			DBG("read_tfs_get_outer: congestion "
 			    "creation\n");
-			ack->ndrop++;
+			ack.ndrop++;
 			continue;
 		}
 
@@ -324,56 +346,30 @@ read_tfs_get_outer(int s, struct mbuf *tbuf, struct mqueue *outq,
 		if ((offset & 0x80000000) != 0) {
 			warn("read_tfs_get_outer: Invalid version "
 			     "dropping");
-			ack->ndrop++;
+			ack.ndrop++;
 			continue;
 		}
 
 		seq = get32(tbuf->start);
-		if (ack->start == 0)
-			ack->start = seq;
-		if (seq == ack->last + 1 || ack->last == 0) {
-			/* Mark valid and return */
-			ack->last = seq;
-			return seq;
-		}
-		if (seq <= ack->last) {
+		if (ack.start == 0)
+			ack.start = seq;
+		if (seq <= ack.last) {
 			warn("read_tfs_get_outer: prev/dup seq %d "
 			     "detected\n",
 			     seq);
 			continue;
 		}
+		if (seq != ack.last + 1 && ack.last != 0) {
+			uint32_t ndrop = seq - (ack.last + 1);
+			ack.ndrop += ndrop;
+			DBG("read_tfs_get_outer: packet loss %d total %d\n",
+			    ndrop, ack.ndrop);
 
-		uint32_t ndrop = seq - (ack->last + 1);
-		ack->ndrop += ndrop;
-		DBG("read_tfs_get_outer: packet loss %d total %d\n", ndrop,
-		    ack->ndrop);
-
-		*reset = true; /* Lost packets so drop any in-progress */
-		ack->last = seq;
-		return seq;
-	}
-}
-
-void
-read_tfs_pkts(int s, struct mqueue *freeq, struct mqueue *outq,
-	      uint64_t congest_rate)
-{
-	struct mbuf *tbuf = mbuf_new(MAXBUF, HDRSPACE);
-	struct ratelimit *rl = NULL;
-
-	if (congest_rate > 0) {
-		// uint overhead = 20 + 8 + 20 + 20 + 12;
-		rl = new_ratelimit(congest_rate, 0, 10);
-	}
-
-	struct mbuf *m = NULL;
-	uint32_t seq = 0;
-	while (true) {
-		bool reset = false;
-		seq = read_tfs_get_outer(s, tbuf, outq, rl, &reset);
-		if (m && reset) {
-			mbuf_reset(m, HDRSPACE);
+			/* drop any in-progress inner packet reconstruction */
+			if (m)
+				mbuf_reset(m, HDRSPACE);
 		}
+		ack.last = seq;
 		m = add_to_inner_packet(tbuf, true, m, freeq, outq, seq);
 	}
 }
@@ -552,7 +548,10 @@ recv_ack(struct mbuf *m)
 		warn("recv_ack: bad length %ld\n", MBUF_LEN(m));
 		return;
 	}
-	uint8_t *mstart = &m->start[4];
+	uint8_t *mstart = m->start;
+	assert(get32(mstart) == 0xFFFFFFFF);
+	mstart += 4;
+	uint32_t seq = get32(mstart);
 	uint32_t ndrop = get32(mstart) & 0xFFFFFF;
 	uint32_t start, end, runlen;
 
@@ -585,46 +584,41 @@ recv_ack(struct mbuf *m)
 			droppct = 1;
 		pps_decrate(g_pps, droppct);
 	}
-	DBG("recv_ack: ndrop %d start %d end %d\n", ndrop, start, end);
+	LOG("recv_ack: ndrop %d start %d end %d\n", ndrop, start, end);
 }
 
 void
-send_acks(int s, int permsec, struct mqueue *outq)
+send_ack(int s, struct timespec *now, struct ackinfo *ack)
 {
-	uint8_t buffer[20], *bp;
+	/* first 4 bytes are sequence which acks have none */
+	static uint8_t buffer[20] = {
+	    0xFF,
+	    0xFF,
+	    0xFF,
+	    0xFF,
+	};
+	static uint8_t *bp = &buffer[4];
 	struct timespec ts;
-	uint32_t ndrop, start, end;
-	ssize_t n;
 
-	LOG("send_acks: START: permsec %d\n", permsec);
-
-	/* No sequence number */
-	put32(buffer, 0xFFFFFFFF);
-	bp = &buffer[4];
-
-	int ival = permsec / 1000;
-	while (true) {
-		sleep(ival);
-
-		mqueue_get_ackinfo(outq, &ndrop, &start, &end);
-
-		if (start == 0) {
-			/* nothing to talk about */
-			continue;
-		}
-		if (ndrop > 0xFFFFFF)
-			ndrop = 0xFFFFFF;
-		clock_gettime(CLOCK_MONOTONIC, &ts);
-		put32(bp, 0x40000000 | ndrop);
-		put32(&bp[4], ts.tv_sec * 1000 + ts.tv_nsec / 1000000);
-		put32(&bp[8], start);
-		put32(&bp[12], end);
-
-		if ((n = send(s, buffer, sizeof(buffer), 0)) != sizeof(buffer))
-			warn("send_acks: short write: %ld\n", n);
-		else
-			DBG("write ack: %ld bytes\n", n);
+	if (ack->start == 0) {
+		/* nothing to talk about */
+		return;
 	}
+
+	uint32_t ndrop = ack->ndrop;
+	if (ndrop > 0xFFFFFF)
+		ndrop = 0xFFFFFF;
+	put32(bp, 0x40000000 | ndrop);
+	put32(&bp[4], now->tv_sec * 1000 + now->tv_nsec / 1000000);
+	put32(&bp[8], ack->start);
+	put32(&bp[12], ack->last);
+	memset(ack, 0, sizeof(*ack));
+
+	ssize_t n;
+	if ((n = send(s, buffer, sizeof(buffer), 0)) != sizeof(buffer))
+		warn("send_acks: short write: %ld\n", n);
+	else
+		LOG("write ack: %ld bytes\n", n);
 }
 
 struct thread_args {
@@ -654,7 +648,7 @@ static void *
 _read_tfs_pkts(void *_arg)
 {
 	struct thread_args *args = _arg;
-	read_tfs_pkts(args->s, args->freeq, args->outq, args->rate);
+	read_tfs_pkts(args->s, args->freeq, args->outq, 1000, args->rate);
 	return NULL;
 }
 
@@ -663,14 +657,6 @@ _write_tfs_pkts(void *_arg)
 {
 	struct thread_args *args = _arg;
 	write_tfs_pkts(args->s, args->outq, args->freeq, TFSMTU, args->rate);
-	return NULL;
-}
-
-static void *
-_send_acks(void *_arg)
-{
-	struct thread_args *args = _arg;
-	send_acks(args->s, 1000, args->outq);
 	return NULL;
 }
 
@@ -713,7 +699,6 @@ tfs_tunnel_egress(int fd, int s, uint64_t congest, pthread_t *threads)
 
 	g_avgpps = runavg_new(5, 1);
 	g_avgdrops = runavg_new(5, 1);
-	pthread_create(&threads[2], NULL, _send_acks, &args);
 	return 0;
 }
 

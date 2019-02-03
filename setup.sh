@@ -26,14 +26,15 @@ trap cleanup EXIT ERR
 IPID=$(ip addr | sed -e '/192\.168\.2\./!d;s,.*192\.168\.2\.\([0-9]*\)/.*,\1,')
 VMID=$((IPID - 64))
 
-FRAMESZ=1400
-TXRATE=100 # (Mbps)
+# FRAMESZ=1400
+TXRATE=1000 # (Mbps)
+TXRATE=750 # (Mbps)
 # CONGESTRATE=1000
 
 # COMMON=" --congest-rate=1500 -v --dev tfs0 --port 8001"
 #COMMON="--trace -v --rate=$TXRATEMb --dev tfs0 --port 8001"
 #COMMON="--rate=$TXRATE --congest=$CONGESTRATE --dev tfs0 --port 8001"
-COMMON="--rate=$TXRATE --dev tfs0 --port 8001"
+COMMON="--verbose --rate=$TXRATE --dev tfs0 --port 8001"
 #COMMON="--debug --rate=$TXRATE --dev tfs0 --port 8001"
 if (( VMID == 2 )); then
     OVMID=3
