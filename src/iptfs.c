@@ -153,9 +153,9 @@ tfs_get_recv_mbuf(struct mqueue *freeq)
 /*
  * add_to_inner_packet adds data from an outer packet mbuf to an inner one
  */
-struct mbuf *
-add_to_inner_packet(struct mbuf *tbuf, bool new, struct mbuf *m,
-		    struct mqueue *freeq, struct mqueue *outq, uint32_t seq)
+struct miov *
+add_to_inner_packet(struct mbuf *tbuf, bool new, struct miov *m,
+		    struct miovq *freeq, struct miovq *outq, uint32_t seq)
 {
 	ssize_t ltlen = MBUF_LEN(tbuf);
 	uint16_t tlen, offset = 0;
@@ -178,9 +178,9 @@ add_to_inner_packet(struct mbuf *tbuf, bool new, struct mbuf *m,
 	 * Get a new inner packet buf if we have none
 	 */
 	if (!m)
-		m = tfs_get_recv_mbuf(freeq);
+		m = miovq_pop(freeq);
 
-	if (MBUF_LEN(m) == 0) {
+	if (m->len == 0) {
 		if (!new)
 			DBG("add_to_inner_packet: recurse mlen 0 off %d\n",
 			    offset);
@@ -223,8 +223,8 @@ add_to_inner_packet(struct mbuf *tbuf, bool new, struct mbuf *m,
 			// XXX copy A
 			DBG("MORE: off>tlen: new %d off %d mleft %ld tlen %d\n",
 			    new, offset, m->left, tlen);
-			memcpy(m->end, start, tlen); // XXX remove copy
-			m->end += tlen;
+
+			miov_addmbuf(m, tbuf, start, tlen);
 			m->left -= tlen;
 			tbuf->start += tlen;
 			assert(MBUF_LEN(tbuf) == 0);
@@ -239,11 +239,10 @@ add_to_inner_packet(struct mbuf *tbuf, bool new, struct mbuf *m,
 		// XXX copy B
 		DBG("SLOPPY END: off>tlen: new %d off %d mleft %ld tlen %d\n",
 		    new, offset, m->left, tlen);
-		memcpy(m->end, start, m->left); /* XXX remove copy */
-		m->end += m->left;
+		miov_addmbuf(m, tbuf, start, m->left);
 		tbuf->start += m->left;
 		m->left = 0;
-		mqueue_push(outq, m, false);
+		miovq_push(outq, m);
 
 		tbuf->start = tbuf->end; /* Skip slop */
 		return (NULL);
@@ -264,8 +263,7 @@ add_to_inner_packet(struct mbuf *tbuf, bool new, struct mbuf *m,
 		// XXX copy A
 		DBG("MORELEFT: new %d off %d mleft %ld tlen %d\n", new, offset,
 		    m->left, tlen);
-		memcpy(m->end, start, tlen); // XXX remove copy
-		m->end += tlen;
+		miov_addmbuf(m, tbuf, start, tlen);
 		m->left -= tlen;
 		tbuf->start += tlen;
 		assert(MBUF_LEN(tbuf) == 0);
@@ -275,12 +273,11 @@ add_to_inner_packet(struct mbuf *tbuf, bool new, struct mbuf *m,
 	// XXX copy B
 	DBG("COMPLETE: new %d off %d mleft %ld tlen %d\n", new, offset, m->left,
 	    tlen);
-	memcpy(m->end, start, m->left); /* XXX remove copy */
-	m->end += m->left;
+	miov_addmbuf(m, tbuf, start, m->left);
 	tbuf->start += m->left;
 	tlen -= m->left;
 	m->left = 0;
-	mqueue_push(outq, m, false);
+	miovq_push(outq, m);
 
 	assert(tlen >= 0);
 	if (tlen == 0)
@@ -292,11 +289,11 @@ add_to_inner_packet(struct mbuf *tbuf, bool new, struct mbuf *m,
 }
 
 void
-read_tfs_pkts(int s, struct mqueue *freeq, struct mqueue *outq,
-	      uint64_t ack_rate, uint64_t congest_rate)
+read_tfs_pkts(int s, struct mqueue *freeq, struct miovq *iovfreeq,
+	      struct miovq *outq, uint64_t ack_rate, uint64_t congest_rate)
 {
 	stimer_t acktimer;
-	struct mbuf *tbuf = mbuf_new(MAXBUF, HDRSPACE);
+
 	struct ratelimit *rl = NULL;
 	if (congest_rate > 0) {
 		// uint overhead = 20 + 8 + 20 + 20 + 12;
@@ -313,16 +310,28 @@ read_tfs_pkts(int s, struct mqueue *freeq, struct mqueue *outq,
 	ssize_t offset, n;
 	uint32_t seq = 0;
 
-	struct mbuf *m = NULL;
+	struct miov *m = NULL;
 
 	memset(&ack, 0, sizeof(ack));
+
+	struct mbuf *tbuf = mqueue_pop(freeq);
 
 	while (true) {
 		/* Check to see if we should send ack info */
 		if (st_check(&acktimer))
 			send_ack(s, &acktimer.ts, &ack);
 
-		mbuf_reset(tbuf, HDRSPACE);
+		/* If no one referenced the mbuf reset and re-use it */
+		if (!tbuf->refcnt)
+			mbuf_reset(tbuf, HDRSPACE);
+		else {
+			/*
+			 * tbuf will get freed when all references to it
+			 * drop get a new one
+			 */
+			tbuf = mqueue_pop(freeq);
+		}
+
 		addrlen = sizeof(sender);
 		if ((n = recvfrom(s, tbuf->start, MBUF_AVAIL(tbuf), 0,
 				  (struct sockaddr *)&sender, &addrlen)) < 0) {
@@ -379,10 +388,10 @@ read_tfs_pkts(int s, struct mqueue *freeq, struct mqueue *outq,
 
 			/* drop any in-progress inner packet reconstruction */
 			if (m)
-				mbuf_reset(m, HDRSPACE);
+				miov_reset(m, iovfreeq);
 		}
 		ack.last = seq;
-		m = add_to_inner_packet(tbuf, true, m, freeq, outq, seq);
+		m = add_to_inner_packet(tbuf, true, m, iovfreeq, outq, seq);
 	}
 }
 
@@ -695,7 +704,8 @@ static void *
 _read_tfs_pkts(void *_arg)
 {
 	struct thread_args *args = _arg;
-	read_tfs_pkts(args->s, args->freeq, args->outq, 1000, args->rate);
+	read_tfs_pkts(args->s, args->freeq, args->iovfreeq, args->iovoutq, 1000,
+		      args->rate);
 	return NULL;
 }
 

@@ -39,7 +39,7 @@ struct mqueue {
 struct miovq {
 	const char *name;
 	struct mqueue *freeq;
-	struct miovbuf **queue;
+	struct miov **queue;
 	int size;
 	int depth;
 	pthread_mutex_t lock;
@@ -180,7 +180,7 @@ miovq_new(const char *name, int size)
 	struct miovq *mq;
 	if ((mq = xzmalloc(sizeof(struct miovq))) == NULL)
 		err(1, "miovq_new: malloc miovq");
-	if ((mq->queue = malloc(sizeof(struct miovbuf *) * size)) == NULL)
+	if ((mq->queue = malloc(sizeof(struct miov *) * size)) == NULL)
 		err(1, "miovq_new: malloc queue");
 	mq->name = name;
 	mq->size = size;
@@ -200,16 +200,15 @@ miovq_new_freeq(const char *name, int size, int maxiov, struct mqueue *freeq)
 	int i, sz;
 
 	mq->freeq = freeq;
-	sz = sizeof(struct miovbuf) +
+	sz = sizeof(struct miov) +
 	     (sizeof(struct iovec) + sizeof(struct mbuf *)) * maxiov;
 	if ((space = malloc(size * sz)) == NULL)
-		err(1, "miovq_new_freeq: malloc miovbufs");
+		err(1, "miovq_new_freeq: malloc miov");
 
 	for (i = 0; i < size; i++) {
-		struct miovbuf *m = (struct miovbuf *)(space + i * sz);
-		m->iovecs = (struct iovec *)(m + 1);
-		m->mbufs = (struct mbufs **)(m->iovecs + maxiov);
-		m->iov = m->iovecs;
+		struct miov *m = (struct miov *)(space + i * sz);
+		m->iov = (struct iovec *)(m + 1);
+		m->mbufs = (struct mbuf **)(m->iov + maxiov);
 		m->maxiov = maxiov;
 		mq->queue[i] = m;
 		mq->depth++;
@@ -218,11 +217,11 @@ miovq_new_freeq(const char *name, int size, int maxiov, struct mqueue *freeq)
 	return mq;
 }
 
-struct miovbuf *
+struct miov *
 miovq_pop(struct miovq *mq)
 {
 	/* XXX an exact copy of mqueue_pop except for the types.. sigh, C */
-	struct miovbuf *m;
+	struct miov *m;
 
 	pthread_mutex_lock(&mq->lock);
 	while (MQ_EMPTY(mq)) {
@@ -236,16 +235,23 @@ miovq_pop(struct miovq *mq)
 	return m;
 }
 
+void
+miov_reset(struct miov *m, struct miovq *mq)
+{
+	int niov = m->niov;
+	for (int i = 0; i < niov; i++)
+		mbuf_deref(mq->freeq, m->mbufs[i]);
+	m->niov = 0;
+	m->len = 0;
+	m->left = -1;
+}
+
 int
-miovq_push(struct miovq *mq, struct miovbuf *m)
+miovq_push(struct miovq *mq, struct miov *m)
 {
 	int depth;
-	if (mq->freeq) {
-		int niov = m->iov - m->iovecs;
-		for (int i = 0; i < niov; i++)
-			mbuf_deref(mq->freeq, m->mbufs[i]);
-		m->iov = m->iovecs;
-	}
+	if (mq->freeq)
+		miov_reset(m, mq);
 
 	pthread_mutex_lock(&mq->lock);
 	while (MQ_FULL(mq)) {

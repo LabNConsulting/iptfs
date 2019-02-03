@@ -8,6 +8,7 @@
 #ifndef IPTFS_H
 #define IPTFS_H
 
+#include <sys/uio.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -49,10 +50,12 @@ struct mbuf {
     uint refcnt;     /* if this has mbufrefs the count of references */
 };
 
-struct miovbuf {
-    struct iovec *iovecs;       /* iovec space. */
+struct miov {
+    struct iovec *iov;          /* iovec space. */
     struct mbuf **mbufs;        /* mbuf we point into */
-    struct iovec *iov;          /* current next iov to use */
+    ssize_t len;                /* total length */
+    ssize_t left;               /* used to track what's left to read */
+    uint niov;                  /* currently used iov */
     uint maxiov;                /* Max number of iov/mbuf */
 };
 
@@ -60,6 +63,16 @@ static void __inline__
 mbuf_reset(struct mbuf *m, int hdrspace)
 {
     m->end = m->start = &m->space[hdrspace];
+}
+
+static void __inline__
+miov_addmbuf(struct miov *mi, struct mbuf *m, uint8_t *start, ssize_t len)
+{
+    int i = mi->niov++;
+    mi->iov[i].iov_base = start;
+    mi->iov[i].iov_len = len;
+    mi->mbufs[i] = m;
+    mi->len += len;
 }
 
 struct mbuf *mbuf_new(size_t max, size_t hdrspace);
@@ -82,10 +95,12 @@ mbuf_deref(struct mqueue *freeq, struct mbuf *m)
         mqueue_push(freeq, m, true);
 }
 
+struct miovq;
 struct miovq *miovq_new(const char *name, int size);
 struct miovq *miovq_new_freeq(const char *name, int size, int maxiov, struct mqueue *freeq);
-struct miovbuf *miovq_pop(struct miovq *mq);
-int miovq_push(struct miovq *mq, struct miovbuf *m);
+struct miov *miovq_pop(struct miovq *mq);
+int miovq_push(struct miovq *mq, struct miov *m);
+void miov_reset(struct miov *m, struct miovq *freeq);
 
 /*
  * util.h
