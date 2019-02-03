@@ -48,24 +48,28 @@ runavg_new(uint runlen, uint min)
 bool
 runavg_add(struct runavg *avg, uint value)
 {
+	bool ticked = false;
 	if (avg->ticks) {
-		// remove oldest value from total.
-		uint i = (avg->index + avg->runlen - 1) % avg->runlen;
-		avg->total -= avg->values[i];
+		/* remove the oldest value that we are about to overwrite */
+		avg->total -= avg->values[avg->index];
 	}
+
 	avg->total += value;
 	avg->values[avg->index++] = value;
+	if (avg->index == avg->runlen) {
+		avg->index = 0;
+		avg->ticks++;
+		ticked = true;
+	}
+
 	if (avg->ticks)
 		avg->average = avg->total / avg->runlen;
 	else
 		avg->average = avg->total / avg->index;
 	if (avg->total && avg->average < avg->min)
 		avg->average = avg->min;
-	if (avg->index != avg->runlen)
-		return false;
-	avg->ticks++;
-	avg->index = 0;
-	return true;
+
+	return ticked;
 }
 
 struct ratelimit {
@@ -229,7 +233,7 @@ pps_new(int target_pps)
 	return pp;
 }
 
-void
+uint
 pps_incrate(struct pps *pp, int inc)
 {
 	uint32_t oval = atomic_load(&pp->pps);
@@ -240,9 +244,10 @@ pps_incrate(struct pps *pp, int inc)
 		atomic_store(&pp->pps, nval);
 		periodic_change_rate(&pp->periodic, NSECS_IN_SEC / nval);
 	}
+	return nval;
 }
 
-void
+uint
 pps_decrate(struct pps *pp, int pct)
 {
 	uint32_t oval = atomic_load(&pp->pps);
@@ -255,12 +260,51 @@ pps_decrate(struct pps *pp, int pct)
 		atomic_store(&pp->pps, nval);
 		periodic_change_rate(&pp->periodic, NSECS_IN_SEC / nval);
 	}
+	return nval;
+}
+
+uint
+pps_change_pps(struct pps *pp, int pps)
+{
+	uint32_t oval = atomic_load(&pp->pps);
+	uint32_t nval = oval + pps;
+	if (nval > pp->target_pps)
+		nval = pp->target_pps;
+	if (nval == 0)
+		nval = 1;
+	if (nval != oval) {
+		atomic_store(&pp->pps, nval);
+		periodic_change_rate(&pp->periodic, NSECS_IN_SEC / nval);
+	}
+	return nval;
 }
 
 void
 pps_wait(struct pps *pp)
 {
 	periodic_wait(&pp->periodic);
+}
+
+void
+st_reset(stimer_t *t, uint64_t nsecs)
+{
+	clock_gettime(CLOCK_MONOTONIC, &t->ts);
+	t->nsecs = nsecs;
+}
+
+/*
+ * st_check checks if the timer has expired and if so returns true after
+ * resetting the timer to the current time.
+ */
+bool
+st_check(stimer_t *t)
+{
+	struct timespec now;
+	clock_gettime(CLOCK_MONOTONIC, &now);
+	if (clock_delta(&now, &t->ts) < t->nsecs)
+		return false;
+	t->ts = now;
+	return true;
 }
 
 /* Local Variables: */

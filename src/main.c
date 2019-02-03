@@ -22,7 +22,7 @@
 #include <unistd.h>
 
 struct sockaddr_in peeraddr; /* XXX remove */
-bool debug, verbose;
+bool g_debug, g_verbose;
 pthread_t threads[4];
 
 char progname[128];
@@ -56,6 +56,9 @@ tun_alloc(char *dev)
 
 	if (ioctl(fd, TUNSETIFF, (void *)&ifr) < 0)
 		err(1, "ioctl(TUNSETIFF)");
+
+	int saved_flags = fcntl(fd, F_GETFL);
+	fcntl(fd, F_SETFL, saved_flags & ~O_NONBLOCK);
 
 	strcpy(dev, ifr.ifr_name);
 
@@ -165,8 +168,8 @@ main(int argc, char **argv)
 		switch (opt) {
 		case 0:
 			if (!strcmp(lopts[li].name, "debug")) {
-				verbose = true;
-				debug = true;
+				g_verbose = true;
+				g_debug = true;
 				printf("DBG enabled\n");
 			}
 			break;
@@ -198,7 +201,7 @@ main(int argc, char **argv)
 			printf("Tx Rate: %lu\n", txrate);
 			break;
 		case 'v':
-			verbose = true;
+			g_verbose = true;
 			break;
 		case '?':
 			usage();

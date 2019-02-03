@@ -102,13 +102,11 @@ mqueue_pop(struct mqueue *mq)
 	struct mbuf *m;
 
 	pthread_mutex_lock(&mq->lock);
-	while (MQ_EMPTY(mq))
+	while (MQ_EMPTY(mq)) {
+		DBG("mqueue_pop: %s empty\n", mq->name);
 		pthread_cond_wait(&mq->popcv, &mq->lock);
-
-	if (MQ_FULL(mq)) {
-		pthread_cond_signal(&mq->pushcv);
 	}
-
+	pthread_cond_signal(&mq->pushcv);
 	m = mq->queue[--mq->depth];
 	pthread_mutex_unlock(&mq->lock);
 
@@ -125,33 +123,30 @@ mqueue_trypop(struct mqueue *mq)
 		m = NULL;
 		goto out;
 	}
-
-	if (MQ_FULL(mq)) {
-		pthread_cond_signal(&mq->pushcv);
-	}
-
+	pthread_cond_signal(&mq->pushcv);
 	m = mq->queue[--mq->depth];
 out:
 	pthread_mutex_unlock(&mq->lock);
 	return m;
 }
 
-void
+int
 mqueue_push(struct mqueue *mq, struct mbuf *m, bool reset)
 {
+	int depth;
 	if (reset)
 		mbuf_reset(m, mq->hdrspace);
 
 	pthread_mutex_lock(&mq->lock);
-	while (MQ_FULL(mq))
+	while (MQ_FULL(mq)) {
+		DBG("mqueue_push: %s full\n", mq->name);
 		pthread_cond_wait(&mq->pushcv, &mq->lock);
-
-	if (MQ_EMPTY(mq)) {
-		pthread_cond_signal(&mq->popcv);
 	}
-
+	pthread_cond_signal(&mq->popcv);
 	mq->queue[mq->depth++] = m;
+	depth = mq->depth;
 	pthread_mutex_unlock(&mq->lock);
+	return depth;
 }
 
 void

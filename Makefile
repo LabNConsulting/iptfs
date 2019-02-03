@@ -16,5 +16,5 @@ $(BIN): $(OBJDIR) $(OBJ)
 
 $(OBJ): $(SRC)
 
-$(OBJDIR)/%.o: src/%.c
+$(OBJDIR)/%.o: src/%.c src/iptfs.h
 	gcc -c -o $@ $<

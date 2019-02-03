@@ -27,10 +27,14 @@
 
 #include "iptfs.h"
 
-#define TFSMTU 1500
-#define HDRSPACE 18
-#define MAXBUF 9000 + HDRSPACE
-#define MAXQSZ 32
+/* Globals for write_tfs_pkt */
+ssize_t g_tfsmtu;
+uint g_max_inner_pkt;
+struct msghdr g_wtfs_msg;
+struct iovec *g_wtfs_iovecs;
+struct mbuf **g_wtfs_freem;
+uint g_wtfs_niov;
+uint8_t g_wtfs_hdr[8];
 
 uint8_t padbytes[MAXBUF];
 
@@ -78,6 +82,7 @@ void recv_ack(struct mbuf *m);
 void
 read_intf_pkts(int fd, struct mqueue *freeq, struct mqueue *outq)
 {
+	int zeros;
 	LOG("read_intf_pkts: START\n");
 	while (true) {
 		struct mbuf *m = mqueue_pop(freeq);
@@ -88,9 +93,19 @@ read_intf_pkts(int fd, struct mqueue *freeq, struct mqueue *outq)
 			mqueue_push(freeq, m, true);
 			continue;
 		}
-		DBG("read_intf_pkts: %ld bytes on interface\n", n);
+
+		if (n == 0) {
+			zeros++;
+			continue;
+		}
+
+		// DBG("read_intf_pkts: %ld bytes on interface\n", n);
 		m->end = m->start + n;
-		mqueue_push(outq, m, false);
+		int depth = mqueue_push(outq, m, false);
+		DBG("read_intf_pkts: pushed %ld bytes outq depth %d zero read "
+		    "count %d\n",
+		    n, depth, zeros);
+		zeros = 0;
 	}
 }
 
@@ -280,7 +295,7 @@ void
 read_tfs_pkts(int s, struct mqueue *freeq, struct mqueue *outq,
 	      uint64_t ack_rate, uint64_t congest_rate)
 {
-	struct timespec ts, now;
+	stimer_t acktimer;
 	struct mbuf *tbuf = mbuf_new(MAXBUF, HDRSPACE);
 	struct ratelimit *rl = NULL;
 	if (congest_rate > 0) {
@@ -290,6 +305,7 @@ read_tfs_pkts(int s, struct mqueue *freeq, struct mqueue *outq,
 
 	/* convert ack rate from ms to ns */
 	ack_rate *= 1000000;
+	st_reset(&acktimer, ack_rate);
 
 	struct ackinfo ack;
 	struct sockaddr_storage sender;
@@ -298,17 +314,13 @@ read_tfs_pkts(int s, struct mqueue *freeq, struct mqueue *outq,
 	uint32_t seq = 0;
 
 	struct mbuf *m = NULL;
-	clock_gettime(CLOCK_MONOTONIC, &ts);
 
 	memset(&ack, 0, sizeof(ack));
 
 	while (true) {
 		/* Check to see if we should send ack info */
-		clock_gettime(CLOCK_MONOTONIC, &now);
-		if (clock_delta(&now, &ts) > ack_rate) {
-			ts = now;
-			send_ack(s, &now, &ack);
-		}
+		if (st_check(&acktimer))
+			send_ack(s, &acktimer.ts, &ack);
 
 		mbuf_reset(tbuf, HDRSPACE);
 		addrlen = sizeof(sender);
@@ -404,26 +416,23 @@ iovlen(struct iovec *iov, int count)
 }
 #endif
 
-#define MAXPKT (TFSMTU / 20) /* smallest packet is 20b IP. */
+static stimer_t sectimer;
 
 uint32_t
 write_tfs_pkt(int s, struct mqueue *inq, struct mqueue *freeq, uint32_t seq,
-	      ssize_t mtu, struct mbuf **leftover)
+	      struct mbuf **leftover)
 {
-	static uint8_t tfshdr[8];
-	static struct iovec iovecs[MAXPKT] = {
-	    {.iov_base = tfshdr, .iov_len = sizeof(tfshdr)}};
-	static struct msghdr msg = {.msg_iov = iovecs};
-	static struct mbuf *freembufs[MAXPKT];
+	static uint tcount;
+	static uint ecount;
 
-	struct mbuf **efreem = freembufs;
-	struct mbuf **freem;
-	struct iovec *iov = &iovecs[1];
-	struct mbuf *m;
-	ssize_t mtuenter = mtu;
-	ssize_t mlen, n;
+	/* XXX check for use of all iov */
+	struct iovec *iov = &g_wtfs_iovecs[1];
+	struct mbuf **efreem = g_wtfs_freem;
+	struct mbuf *m, **freem;
+	ssize_t mlen, mtu, n;
 	uint16_t offset;
 
+	mtu = g_tfsmtu;
 	if (*leftover) {
 		DBG("write_tfs_pkt: seq %d mtu %ld leftover %p\n", seq, mtu,
 		    *leftover);
@@ -438,22 +447,34 @@ write_tfs_pkt(int s, struct mqueue *inq, struct mqueue *freeq, uint32_t seq,
 			    mtu, m);
 		}
 	}
+	tcount++;
+
+	if (!st_check(&sectimer)) {
+		if (m == NULL)
+			ecount++;
+	} else {
+		LOG("write_tfs_pkt: empty %d of %d (used %d)\n", ecount, tcount,
+		    tcount - ecount);
+		ecount = 0;
+		tcount = 0;
+	}
+
 	if (m == NULL) {
 		*leftover = NULL;
 		return write_empty_tfs_pkt(s, seq, mtu);
 	}
 
 	/* Set the header */
-	put32(tfshdr, seq);
-	put16(&tfshdr[6], offset);
-	mtu -= sizeof(tfshdr);
+	put32(g_wtfs_hdr, seq);
+	put16(&g_wtfs_hdr[6], offset);
+	mtu -= sizeof(g_wtfs_hdr);
 
 	while (mtu > 0) {
 		if (mtu <= 6 || m == NULL) {
 			/* No room for dbhdr or no more data -- pad */
 			mlen = mtu;
-			DBG("write_tfs_pkt: seq %d pad %d enter %ld\n", seq,
-			    mtu, mtuenter);
+			DBG("write_tfs_pkt: seq %d pad %ld enter %ld\n", seq,
+			    mtu, g_tfsmtu);
 			(*iov).iov_base = padbytes;
 			(*iov++).iov_len = mtu;
 			mtu = 0;
@@ -470,7 +491,7 @@ write_tfs_pkt(int s, struct mqueue *inq, struct mqueue *freeq, uint32_t seq,
 			DBG("write_tfs_pkt: seq %d add partial mtu %ld "
 			    "of %ld "
 			    "enter %ld\n",
-			    seq, mtu, mlen, mtuenter);
+			    seq, mtu, mlen, g_tfsmtu);
 			mtu = 0;
 			break;
 		}
@@ -481,7 +502,7 @@ write_tfs_pkt(int s, struct mqueue *inq, struct mqueue *freeq, uint32_t seq,
 		*efreem++ = m;
 		m = NULL;
 		DBG("write_tfs_pkt: seq %d add mbuf %ld of mtu %ld enter %ld\n",
-		    seq, mlen, mtu, mtuenter);
+		    seq, mlen, mtu, g_tfsmtu);
 		mtu -= mlen;
 
 		/* Get next MBUF if we have space */
@@ -489,46 +510,58 @@ write_tfs_pkt(int s, struct mqueue *inq, struct mqueue *freeq, uint32_t seq,
 			m = mqueue_trypop(inq);
 	}
 
-	/* Send the TFS packet */
-	if (iovlen(iovecs, iov - iovecs) != mtuenter) {
-		errx(1, "iovlen(iovecs, %d) %d, mtuenter %ld", iov - iovecs,
-		     iovlen(iovecs, iov - iovecs), mtuenter);
+	/* XXX assert check on length adding up */
+	uint niov = iov - g_wtfs_iovecs;
+	ssize_t iovl = iovlen(g_wtfs_iovecs, niov);
+	if (iovl != g_tfsmtu) {
+		errx(1, "iovlen(g_wtfs_iovecs, %d) => %ld, g_tfsmtu %ld", niov,
+		     iovl, g_tfsmtu);
 	}
-	assert(iovlen(iovecs, iov - iovecs) == mtuenter);
-	msg.msg_iovlen = iov - iovecs;
-	n = sendmsg(s, &msg, 0);
+	assert(iovl == g_tfsmtu);
+
+	/* Send the TFS packet */
+	g_wtfs_msg.msg_iovlen = iov - g_wtfs_iovecs;
+	n = sendmsg(s, &g_wtfs_msg, 0);
 	seq++;
-	if (n != mtuenter) {
-		warn("write_tfs_pkt: short write %ld of %ld on "
-		     "TFSLINK\n",
-		     n, mtuenter);
+	if (n != g_tfsmtu) {
+		warn("write_tfs_pkt: short write %ld of %ld\n", n, g_tfsmtu);
 		if (*leftover)
 			*efreem++ = *leftover;
 		*leftover = NULL;
 	}
 
 	/* Pushed used MBUFS onto freeq XXX make this a single call. */
-	for (freem = freembufs; freem < efreem; freem++)
+	for (freem = g_wtfs_freem; freem < efreem; freem++)
 		mqueue_push(freeq, *freem, true);
 
 	return seq;
 }
 
 void
-write_tfs_pkts(int s, struct mqueue *outq, struct mqueue *freeq, uint mtu,
+write_tfs_pkts(int s, struct mqueue *outq, struct mqueue *freeq,
 	       uint64_t txrate)
 {
 	struct mbuf *leftover = NULL;
 	uint32_t seq = 1;
-	uint mtub = (mtu - 32) * 8;
-	uint pps = txrate / mtub;
+	uint64_t mtub = (g_tfsmtu - 32) * 8;
+	uint64_t pps = txrate / mtub;
+
+	st_reset(&sectimer, NSECS_IN_SEC);
 
 	g_pps = pps_new(pps);
-	LOG("Writing TFS %d pps for %d bps\n", pps, pps * mtub);
+	LOG("Writing TFS %d pps for %d Mbps\n", pps, pps * mtub / 1000000);
+
+	/* Allocate globals for writing to TFS */
+	g_max_inner_pkt = MAXBUF / 20;
+	g_wtfs_iovecs = xmalloc(sizeof(struct iovec) * g_max_inner_pkt);
+	g_wtfs_freem = xmalloc(sizeof(struct mbuf *) * g_max_inner_pkt);
+	g_wtfs_iovecs[0].iov_base = g_wtfs_hdr;
+	g_wtfs_iovecs[0].iov_len = sizeof(g_wtfs_hdr);
+	g_wtfs_msg.msg_iov = g_wtfs_iovecs;
 
 	while (true) {
 		pps_wait(g_pps);
-		seq = write_tfs_pkt(s, outq, freeq, seq, mtu, &leftover);
+		seq = write_tfs_pkt(s, outq, freeq, seq, &leftover);
 	}
 }
 
@@ -551,7 +584,7 @@ recv_ack(struct mbuf *m)
 	uint8_t *mstart = m->start;
 	assert(get32(mstart) == 0xFFFFFFFF);
 	mstart += 4;
-	uint32_t seq = get32(mstart);
+	// uint32_t seq = get32(mstart);
 	uint32_t ndrop = get32(mstart) & 0xFFFFFF;
 	uint32_t start, end, runlen;
 
@@ -572,19 +605,33 @@ recv_ack(struct mbuf *m)
 	runavg_add(g_avgpps, runlen);
 	if (!runavg_add(g_avgdrops, ndrop)) {
 		// Wait for enough data to start.
+		LOG("recv_ack: ndrop %d pcount %d\n", ndrop, end - start);
 		return;
 	}
+	uint64_t mtub = (g_tfsmtu - 32) * 8;
 	if (g_avgdrops->average == 0) {
 		// Not degraded, increase rate
-		pps_incrate(g_pps, 1);
+		uint64_t pps = pps_change_pps(g_pps, 1);
+		LOG("recv_ack: upgrading ndrop %d pcount %d: inc %d to %d pps "
+		    "%dMbps\n",
+		    ndrop, end - start, 1, pps, pps * mtub / 1000000);
 	} else {
-		// Degraded, slow rate byte 50% of the droprate.
-		int droppct = (g_avgdrops->average * 50) / g_avgpps->average;
-		if (!droppct)
+		// Degraded, slow rate byte 1/4 of the droppct.
+		int droppct = (g_avgdrops->average * 100) / g_avgpps->average;
+		if (droppct < 1)
 			droppct = 1;
-		pps_decrate(g_pps, droppct);
+		uint64_t pps = pps_change_pps(g_pps, -g_avgdrops->average);
+		LOG("recv_ack: ndrop %d avg %d pcount %d: reduce to %d pps %d "
+		    "Mbps\n ",
+		    ndrop, g_avgdrops->average, end - start, pps,
+		    (pps * mtub) / 1000000);
+		// uint64_t pps = pps_decrate(g_pps, (100 - droppct));
+		/* LOG("recv_ack: ndrop %d avg %d pcount %d: reduce %d%% to " */
+		/*     "%d pps %d Mbps\n", */
+		/*     ndrop, g_avgdrops->average, end - start, (100 - droppct),
+		 */
+		/*     pps, (pps * mtub) / 1000000); */
 	}
-	LOG("recv_ack: ndrop %d start %d end %d\n", ndrop, start, end);
 }
 
 void
@@ -598,7 +645,6 @@ send_ack(int s, struct timespec *now, struct ackinfo *ack)
 	    0xFF,
 	};
 	static uint8_t *bp = &buffer[4];
-	struct timespec ts;
 
 	if (ack->start == 0) {
 		/* nothing to talk about */
@@ -618,7 +664,7 @@ send_ack(int s, struct timespec *now, struct ackinfo *ack)
 	if ((n = send(s, buffer, sizeof(buffer), 0)) != sizeof(buffer))
 		warn("send_acks: short write: %ld\n", n);
 	else
-		LOG("write ack: %ld bytes\n", n);
+		DBG("write ack: %ld bytes\n", n);
 }
 
 struct thread_args {
@@ -656,7 +702,7 @@ static void *
 _write_tfs_pkts(void *_arg)
 {
 	struct thread_args *args = _arg;
-	write_tfs_pkts(args->s, args->outq, args->freeq, TFSMTU, args->rate);
+	write_tfs_pkts(args->s, args->outq, args->freeq, args->rate);
 	return NULL;
 }
 
@@ -670,11 +716,14 @@ tfs_tunnel_ingress(int fd, int s, uint64_t txrate, pthread_t *threads)
 
 	DBG("tfs_tunnel_ingress: fd: %d s: %d\n", fd, s);
 	args.freeq =
-	    mqueue_new_freeq("TFS Ingress FreeqQ", MAXQSZ, MAXBUF, HDRSPACE);
-	args.outq = mqueue_new("TFS Ingress OutQ", MAXQSZ);
+	    mqueue_new_freeq("TFS Ingress FreeqQ", INNERQSZ, MAXBUF, HDRSPACE);
+	args.outq = mqueue_new("TFS Ingress OutQ", INNERQSZ);
 	args.rate = txrate;
 	args.fd = fd;
 	args.s = s;
+
+	g_tfsmtu = 1500;
+	g_max_inner_pkt = MAXBUF / 20;
 
 	pthread_create(&threads[0], NULL, _read_intf_pkts, &args);
 	pthread_create(&threads[1], NULL, _write_tfs_pkts, &args);
@@ -688,8 +737,8 @@ tfs_tunnel_egress(int fd, int s, uint64_t congest, pthread_t *threads)
 
 	DBG("tfs_tunnel_egress: fd: %d s: %d\n", fd, s);
 	args.freeq =
-	    mqueue_new_freeq("TFS Egress FreeqQ", MAXQSZ, MAXBUF, HDRSPACE);
-	args.outq = mqueue_new("TFS Egress OutQ", MAXQSZ);
+	    mqueue_new_freeq("TFS Egress FreeqQ", OUTERQSZ, MAXBUF, HDRSPACE);
+	args.outq = mqueue_new("TFS Egress OutQ", OUTERQSZ);
 	args.rate = congest;
 	args.fd = fd;
 	args.s = s;
