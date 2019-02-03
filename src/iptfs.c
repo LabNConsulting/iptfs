@@ -390,11 +390,11 @@ write_empty_tfs_pkt(int s, uint32_t seq, uint32_t mtu)
 	static uint8_t ebytes[MAXBUF];
 	ssize_t n;
 
-	put32(ebytes, seq++);
+	put32(ebytes, seq);
 	if ((n = send(s, ebytes, mtu, 0)) != mtu)
 		warn("write_empty_tfs_pkt: short write %ld\n", n);
 
-	return seq;
+	return seq + 1;
 }
 
 #ifndef NDEBUG
@@ -403,7 +403,7 @@ iovlen(struct iovec *iov, int count)
 {
 	ssize_t n = 0;
 	for (int i = 0; i < count; i++)
-		n += iov->iov_len;
+		n += iov[i].iov_len;
 	return n;
 }
 #endif
@@ -438,8 +438,8 @@ write_tfs_pkt(int s, struct mqueue *inq, struct mqueue *freeq, uint32_t seq,
 		m = mqueue_trypop(inq);
 		offset = 0;
 		if (m) {
-			DBG("write_tfs_pkt: seq %d mtu %ld m %p\n", seq, mtu,
-			    m);
+			DBG("write_tfs_pkt: trypop: seq %d mtu %ld m %p\n", seq,
+			    mtu, m);
 		}
 	}
 	if (m == NULL) {
@@ -448,7 +448,7 @@ write_tfs_pkt(int s, struct mqueue *inq, struct mqueue *freeq, uint32_t seq,
 	}
 
 	/* Set the header */
-	put32(tfshdr, seq++);
+	put32(tfshdr, seq);
 	put16(&tfshdr[6], offset);
 	mtu -= sizeof(tfshdr);
 
@@ -494,9 +494,14 @@ write_tfs_pkt(int s, struct mqueue *inq, struct mqueue *freeq, uint32_t seq,
 	}
 
 	/* Send the TFS packet */
+	if (iovlen(iovecs, iov - iovecs) != mtuenter) {
+		errx(1, "iovlen(iovecs, %d) %d, mtuenter %ld", iov - iovecs,
+		     iovlen(iovecs, iov - iovecs), mtuenter);
+	}
 	assert(iovlen(iovecs, iov - iovecs) == mtuenter);
 	msg.msg_iovlen = iov - iovecs;
 	n = sendmsg(s, &msg, 0);
+	seq++;
 	if (n != mtuenter) {
 		warn("write_tfs_pkt: short write %ld of %ld on "
 		     "TFSLINK\n",
