@@ -497,7 +497,6 @@ write_tfs_pkt(int s, struct mqueue *inq, struct mqueue *freeq, uint32_t seq,
 	while (mtu > 0) {
 		if (mtu <= 6 || m == NULL) {
 			/* No room for dbhdr or no more data -- pad */
-			mlen = mtu;
 			DBG("write_tfs_pkt: seq %d pad %ld enter %ld\n", seq,
 			    mtu, g_tfsmtu);
 			(*iov).iov_base = padbytes;
