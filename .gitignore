@@ -1,6 +1,9 @@
 .eggs/
 auto/
 build/
+doc/
+draft/*.pdf
+draft/*.tex
 target/
 README.pdf
 README.tex
