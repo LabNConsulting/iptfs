@@ -220,9 +220,8 @@ def add_to_inner_packet(tmbuf: MBuf, new: bool, m: MBuf, freeq: MQueue, outq: MQ
         # We are continuing to fill an existing inner packet, and this entire buffer is for it.
         if m.left > tmlen:
             if DEBUG:
-                logger.debug(
-                    "MORELEFT: add_to_inner_packet(recurse: %d) offset>tmlen, offset %d m.left %d tmlen %d",
-                    recurse, offset, m.left, tmlen)
+                logger.debug("MORELEFT: recurse: %d offset>tmlen, offset %d m.left %d tmlen %d",
+                             recurse, offset, m.left, tmlen)
             # XXX remove copy
             m.end[:tmlen] = start[:tmlen]
             m.end = m.end[tmlen:]
@@ -232,9 +231,8 @@ def add_to_inner_packet(tmbuf: MBuf, new: bool, m: MBuf, freeq: MQueue, outq: MQ
             return m
 
         if DEBUG:
-            logger.debug(
-                "COMPLETE: add_to_inner_packet(recurse: %d) offset>tmlen, offset: %d m.left %d tmlen %d",
-                recurse, offset, m.left, tmlen)
+            logger.debug("COMPLETE: (recurse: %d) offset>tmlen, offset: %d m.left %d tmlen %d",
+                         recurse, offset, m.left, tmlen)
 
         # XXX remove copy
         m.end[:m.left] = start[:m.left]
@@ -308,12 +306,27 @@ def add_to_inner_packet(tmbuf: MBuf, new: bool, m: MBuf, freeq: MQueue, outq: MQ
     return add_to_inner_packet(tmbuf, False, None, freeq, outq, seq)
 
 
-def read_tfs_into_packet(  # pylint: disable=R0913
-        s: socket.socket, tmbuf: MBuf, freeq: MQueue, outq: MQueue,
-        send_ack_cv: threading.Condition, rxlimit: Limit):
+# We really want MHeaders with MBuf chains here.
+def read_tfs_packets(s, freeq: MQueue, outq: MQueue, send_ack_cv: threading.Condition,
+                     max_rxrate: int):
+    del send_ack_cv  # quiet the warning.
+    logger.info("read: start reading on TFS link")
 
+    outq.startseq = 0
+    outq.lastseq = 0
+    outq.dropcnt = 0
+
+    rxlimit = None
+    if max_rxrate:
+        # IP/UDP + IP/TCP + TCP timestamps
+        # overhead = 20 + 8 + 20 + 20 + 12
+        overhead = 0
+        rxlimit = Limit(max_rxrate, overhead, 10) if max_rxrate else None
+
+    # Loop reconstructing inner packets
     m = None
     seq = 0
+    tmbuf = MBuf(MAXBUF, HDRSPACE)
     while True:
         tmbuf.reset(HDRSPACE)
         (n, addr) = s.recvfrom_into(tmbuf.start)
@@ -361,7 +374,7 @@ def read_tfs_into_packet(  # pylint: disable=R0913
             outq.dropcnt += seq - (outq.lastseq + 1)
             if DEBUG:
                 logger.debug("Detected packet loss (totl count: %d lasseq %d seq %d)", outq.dropcnt,
-                            outq.lastseq, seq)
+                             outq.lastseq, seq)
             # with send_ack_cv:
             #     send_ack_cv.notify()
 
@@ -374,28 +387,6 @@ def read_tfs_into_packet(  # pylint: disable=R0913
         # Consume the outer packet.
         outq.lastseq = seq
         m = add_to_inner_packet(tmbuf, True, m, freeq, outq, seq)
-
-
-# We really want MHeaders with MBuf chains here.
-def read_tfs_packets(s, freeq: MQueue, outq: MQueue, send_ack_cv: threading.Condition,
-                        max_rxrate: int):
-    logger.info("read: start reading on TFS link")
-
-    outq.startseq = 0
-    outq.lastseq = 0
-    outq.dropcnt = 0
-
-    rxlimit = None
-    if max_rxrate:
-        # IP/UDP + IP/TCP + TCP timestamps
-        # overhead = 20 + 8 + 20 + 20 + 12
-        overhead = 0
-        rxlimit = Limit(max_rxrate, overhead, 10) if max_rxrate else None
-
-    # Loop reconstructing inner packets
-    tmbuf = MBuf(MAXBUF, HDRSPACE)
-    while True:
-        read_tfs_into_packet(s, tmbuf, freeq, outq, send_ack_cv, rxlimit)
 
 
 # ------------
@@ -514,7 +505,7 @@ def write_tfs_packet(  # pylint: disable=R0912,R0913,R0914,R0915
 
     with send_lock:
         n = s.sendmsg(iov)
-    seq += 1             # Update sequence number now that we've written it out.
+    seq += 1  # Update sequence number now that we've written it out.
 
     if n != iovl:
         logger.error("write: bad write %d of %d on TFS link", n, mlen)
@@ -537,6 +528,7 @@ def write_tfs_packet(  # pylint: disable=R0912,R0913,R0914,R0915
 tunnel_target_pps = 0
 tunnel_periodic = util.PeriodicPPS(1)
 
+
 def write_tfs_packets(  # pylint: disable=W0613,R0913
         s: socket.socket, send_lock: threading.Lock, mtu: int, inq: MQueue, freeq: MQueue,
         rate: int):
@@ -549,8 +541,8 @@ def write_tfs_packets(  # pylint: disable=W0613,R0913
     nrate = prate * mtub
     logger.info("Writing TFS packets at rate of %d pps for %d bps", prate, nrate)
 
-    global tunnel_target_pps
-    global tunnel_periodic
+    global tunnel_target_pps  # pylint: disable=W0603
+    global tunnel_periodic  # pylint: disable=W0603
 
     tunnel_target_pps = prate
     tunnel_periodic = util.PeriodicPPS(prate)
@@ -712,10 +704,8 @@ def thread_catch(func, name, *args):
 
 
 def tunnel_ingress(riffd: io.RawIOBase, s: socket.socket, send_lock: threading.Lock, rate: int):
-    global targetpps
     freeq = MQueue("TFS Ingress FREEQ", MAXQSZ, MAXBUF, HDRSPACE, DEBUG)
     outq = MQueue("TFS Ingress OUTQ", MAXQSZ, 0, 0, DEBUG)
-    targetpps = rate
 
     threads = [
         thread_catch(read_intf_packets, "IFREAD", riffd, freeq, outq),
