@@ -375,7 +375,7 @@ def tunnel_get_outer_packet(s: socket.socket, tmbuf: MBuf, outq: MQueue, _: thre
         return seq, True
 
 
-def read_tunnel_into_packet(  # pylint: disable=R0913
+def read_tfs_into_packet(  # pylint: disable=R0913
         s: socket.socket, tmbuf: MBuf, freeq: MQueue, outq: MQueue,
         send_ack_cv: threading.Condition, rxlimit: Limit):
     m = None
@@ -395,7 +395,7 @@ def read_tunnel_into_packet(  # pylint: disable=R0913
 
 
 # We really want MHeaders with MBuf chains here.
-def read_tunnel_packets(s, freeq: MQueue, outq: MQueue, send_ack_cv: threading.Condition,
+def read_tfs_packets(s, freeq: MQueue, outq: MQueue, send_ack_cv: threading.Condition,
                         max_rxrate: int):
     logger.info("read: start reading on TFS link")
 
@@ -413,7 +413,7 @@ def read_tunnel_packets(s, freeq: MQueue, outq: MQueue, send_ack_cv: threading.C
     # Loop reconstructing inner packets
     tmbuf = MBuf(MAXBUF, HDRSPACE)
     while True:
-        read_tunnel_into_packet(s, tmbuf, freeq, outq, send_ack_cv, rxlimit)
+        read_tfs_into_packet(s, tmbuf, freeq, outq, send_ack_cv, rxlimit)
 
 
 # ------------
@@ -445,12 +445,12 @@ def iovlen(iov):
     return iovl
 
 
-def write_tunnel_packet(  # pylint: disable=R0912,R0913,R0914,R0915
+def write_tfs_packet(  # pylint: disable=R0912,R0913,R0914,R0915
         s: socket.socket, send_lock: threading.Lock, seq: int, mtu: int, leftover: MBuf,
         inq: MQueue, freeq: MQueue):
 
     # if TRACE:
-    #     logger.debug("write_tunnel_packet seq: %d, mtu %d", seq, mtu)
+    #     logger.debug("write_tfs_packet seq: %d, mtu %d", seq, mtu)
 
     mtuenter = mtu
     iov = []
@@ -458,7 +458,7 @@ def write_tunnel_packet(  # pylint: disable=R0912,R0913,R0914,R0915
 
     if leftover:
         if DEBUG:
-            logger.debug("write_tunnel_packet seq: %d, mtu %d leftover %d", seq, mtu, id(leftover))
+            logger.debug("write_tfs_packet seq: %d, mtu %d leftover %d", seq, mtu, id(leftover))
         # This is an mbuf we didn't finish sending last time.
         m = leftover
         # Set the offset to after this mbuf data.
@@ -468,7 +468,7 @@ def write_tunnel_packet(  # pylint: disable=R0912,R0913,R0914,R0915
         m = inq.trypop()
         offset = 0
         if (DEBUG and m):  # or TRACE:
-            logger.debug("write_tunnel_packet: seq: %d, mtu %d m %d", seq, mtu, id(m))
+            logger.debug("write_tfs_packet: seq: %d, mtu %d m %d", seq, mtu, id(m))
 
     if not m:
         return write_empty_tunnel_packet(s, send_lock, seq, mtu)
@@ -503,7 +503,7 @@ def write_tunnel_packet(  # pylint: disable=R0912,R0913,R0914,R0915
         leftover = m
         if DEBUG:
             logger.debug(
-                "write_tunnel_packet: seq %d Add partial(1) MBUF mtu %d of mlen %d mtuenter %d",
+                "write_tfs_packet: seq %d Add partial(1) MBUF mtu %d of mlen %d mtuenter %d",
                 seq, mtu, mlen, mtuenter)
         mtu = 0
     else:
@@ -519,7 +519,7 @@ def write_tunnel_packet(  # pylint: disable=R0912,R0913,R0914,R0915
 
         freem.append(m)
         m = None
-        logger.debug("write_tunnel_packet: seq %d Add initial MBUF mlen %d of mtu %d mtuenter %d",
+        logger.debug("write_tfs_packet: seq %d Add initial MBUF mlen %d of mtu %d mtuenter %d",
                      seq, mlen, mtu, mtuenter)
         mtu -= mlen
 
@@ -535,7 +535,7 @@ def write_tunnel_packet(  # pylint: disable=R0912,R0913,R0914,R0915
             # We need a minimum of 6 bytes to include IPv6 length field.
             if mtu <= 6:
                 if DEBUG:
-                    logger.debug("write_tunnel_packet: seq %d mtu %d < 6 ", seq, mtu)
+                    logger.debug("write_tfs_packet: seq %d mtu %d < 6 ", seq, mtu)
                 iov.append(PADBYTES[8:8 + mtu])
                 # if iovlen(iov) > mtuenter:
                 #     logger.error("iovlen: %d of mtu %d enter %d", iovlen(iov), mtu, mtuenter)
@@ -547,7 +547,7 @@ def write_tunnel_packet(  # pylint: disable=R0912,R0913,R0914,R0915
             m = inq.trypop()
             if not m:
                 if DEBUG:
-                    logger.debug("write_tunnel_packet: seq %d No MBUF PAD: %d", seq, mtu)
+                    logger.debug("write_tfs_packet: seq %d No MBUF PAD: %d", seq, mtu)
                 iov.append(PADBYTES[8:8 + mtu])
                 # if iovlen(iov) > mtuenter:
                 #     logger.error("iovlen: %d of mtu %d enter %d", iovlen(iov), mtu, mtuenter)
@@ -565,7 +565,7 @@ def write_tunnel_packet(  # pylint: disable=R0912,R0913,R0914,R0915
                 m.start = m.start[mtu:]
                 if DEBUG:
                     logger.debug(
-                        "write_tunnel_packet: seq %d Add part MBUF mtu %d of mlen %d mtuenter %d",
+                        "write_tfs_packet: seq %d Add part MBUF mtu %d of mlen %d mtuenter %d",
                         seq, mtu, mlen, mtuenter)
                 leftover = m
                 mtu = 0
@@ -577,7 +577,7 @@ def write_tunnel_packet(  # pylint: disable=R0912,R0913,R0914,R0915
             #     assert False
             assert (mtu <= mtuenter)
             if DEBUG:
-                logger.debug("write_tunnel_packet: seq %d Add MBUF %d of mtu %d mtuenter %d", seq,
+                logger.debug("write_tfs_packet: seq %d Add MBUF %d of mtu %d mtuenter %d", seq,
                              mlen, mtu, mtuenter)
 
             freem.append(m)
@@ -618,7 +618,7 @@ tunnel_target_pps = 0
 tunnel_periodic = util.PeriodicPPS(1)
 
 
-def write_tunnel_packets(  # pylint: disable=W0613,R0913
+def write_tfs_packets(  # pylint: disable=W0613,R0913
         s: socket.socket, send_lock: threading.Lock, mtu: int, inq: MQueue, freeq: MQueue,
         rate: int):
     logger.info("write_packets: from %s", inq.name)
@@ -639,7 +639,7 @@ def write_tunnel_packets(  # pylint: disable=W0613,R0913
     leftover = None
     seq = 0
     while tunnel_periodic.waitspin():
-        leftover, seq = write_tunnel_packet(s, send_lock, seq, mtu, leftover, inq, freeq)
+        leftover, seq = write_tfs_packet(s, send_lock, seq, mtu, leftover, inq, freeq)
 
 
 # ========
@@ -800,7 +800,7 @@ def tunnel_ingress(riffd: io.RawIOBase, s: socket.socket, send_lock: threading.L
 
     threads = [
         thread_catch(read_intf_packets, "IFREAD", riffd, freeq, outq),
-        thread_catch(write_tunnel_packets, "TFSLINKWRITE", s, send_lock, TUNMTU, outq, freeq, rate),
+        thread_catch(write_tfs_packets, "TFSLINKWRITE", s, send_lock, TUNMTU, outq, freeq, rate),
     ]
 
     for t in threads:
@@ -818,7 +818,7 @@ def tunnel_egress(s: socket.socket, send_lock: threading.Lock, wiffd: io.RawIOBa
     #send_ack_periodic = PeriodicSignal("ACK Signal", ack_rate)
 
     threads = [
-        thread_catch(read_tunnel_packets, "TFSLINKREAD", s, freeq, outq, None, congest_rate),
+        thread_catch(read_tfs_packets, "TFSLINKREAD", s, freeq, outq, None, congest_rate),
         thread_catch(write_intf_packets, "IFWRITE", wiffd, outq, freeq),
         thread_catch(send_ack_infos, "ACKINFO", s, send_lock, ack_rate, outq),
     ]
