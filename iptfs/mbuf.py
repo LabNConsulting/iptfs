@@ -16,20 +16,21 @@ class MBuf:
         self.reset(hdrspace)
         self.end = self.start = self.space[hdrspace:]
         self.seq = self.flags = 0
+        self.refcnt = 0
 
     def reset(self, hdrspace):
         self.end = self.start = self.space[hdrspace:]
         self.flags = self.seq = 0
 
-    # this is broken as start may have shrunk from bothe ends
-    # def prepend(self, space):
-    #     newstart = self.hdrspace() - space
-    #     assert (newstart >= 0)
-    #     self.start = self.space[newstart:]
-    #     return self.start
-    # def hdrspace(self):
-    #     # XXX this is broken if start has been shrunk from the top end.
-    #     # return self.space.nbytes - self.start.nbytes
+    def addref(self):
+        # XXX lock?
+        self.refcnt += 1
+
+    def deref(self, freeq):
+        # XXX lock?
+        self.refcnt -= 1
+        if self.refcnt == 0:
+            freeq.push(self, True)
 
     def after(self):
         return self.end.nbytes
@@ -113,6 +114,97 @@ class MQueue:
             self.pop_cv.notify()
 
             self.mbufs.append(m)
+
+
+class MIOVBuf:
+    def __init__(self):
+        self.mbufs = []
+        self.iov = []
+        self.mlen = 0
+
+    def addmbuf(self, m, start, n):
+        m.addref()
+        self.mbufs.append(m)
+        self.iov.append(start[:n])
+        self.mlen += n
+
+    def reset(self, freeq):
+        for m in self.mbufs:
+            m.deref(freeq)
+        self.mbufs = []
+        self.iov = []
+        self.mlen = 0
+
+    def len(self):
+        return self.mlen
+
+
+class MIOVQ:
+    def __init__(self, name, size, freeq=None, debug=False):
+        """MIOVQ is a queue for MIOVBufs.
+
+        :Parameters:
+            - `name` (`src`) - descriptive name for the queue.
+            - `size` (`int`) - max depth of the queue.
+            - `freeq` (`MQueue`) - queue to free refered mbufs into.
+            - `debug` (`bool`) - enable debug logging.
+
+        If freeq is not None then the queue will allocate and push count empty
+        miovbufs on creation.
+        """
+
+        self.name = name
+        self.mcount = size
+        self.freeq = freeq
+        self.debug = debug
+        self.manage = freeq is not None
+
+        self.lock = threading.Lock()
+        self.push_cv = threading.Condition(self.lock)
+        self.pop_cv = threading.Condition(self.lock)
+        self.queue = []
+        if self.manage:
+            for _ in range(0, size):
+                self.queue.append(MIOVBuf())
+
+    def empty(self):
+        return len(self.queue) == 0
+
+    def full(self):
+        return len(self.queue) >= self.mcount
+
+    def pop(self):
+        with self.pop_cv:
+            while self.empty():
+                if self.debug:
+                    logger.debug("pop: mqueue %s is empty", self.name)
+                self.pop_cv.wait()
+            self.push_cv.notify()
+            return self.queue.pop()
+
+    def trypop(self):
+        with self.pop_cv:
+            if self.empty():
+                return None
+            self.push_cv.notify()
+            return self.queue.pop()
+
+    def push(self, m):
+        """push an MIOVBuf on the queue.
+
+        If this is a free-ing queue then reset the MIOVBuf.
+        """
+        if self.freeq is not None:
+            m.reset(self.freeq)
+
+        with self.push_cv:
+            while self.full():
+                if self.debug:
+                    logger.debug("push: queue %s is full", self.name)
+                self.push_cv.wait()
+
+            self.pop_cv.notify()
+            self.queue.append(m)
 
 
 __author__ = 'Christian Hopps'

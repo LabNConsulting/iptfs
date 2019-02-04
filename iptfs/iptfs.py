@@ -222,7 +222,7 @@ def add_to_inner_packet(tmbuf: MBuf, new: bool, m: MBuf, freeq: MQueue, outq: MQ
             if DEBUG:
                 logger.debug("MORELEFT: recurse: %d offset>tmlen, offset %d m.left %d tmlen %d",
                              recurse, offset, m.left, tmlen)
-            # XXX remove copy
+            # XXX Remove copy
             m.end[:tmlen] = start[:tmlen]
             m.end = m.end[tmlen:]
             m.left -= tmlen
