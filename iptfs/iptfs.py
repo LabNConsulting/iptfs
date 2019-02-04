@@ -308,8 +308,12 @@ def add_to_inner_packet(tmbuf: MBuf, new: bool, m: MBuf, freeq: MQueue, outq: MQ
     return add_to_inner_packet(tmbuf, False, None, freeq, outq, seq)
 
 
-def tunnel_get_outer_packet(s: socket.socket, tmbuf: MBuf, outq: MQueue, _: threading.Condition,
-                            rxlimit: Limit):
+def read_tfs_into_packet(  # pylint: disable=R0913
+        s: socket.socket, tmbuf: MBuf, freeq: MQueue, outq: MQueue,
+        send_ack_cv: threading.Condition, rxlimit: Limit):
+
+    m = None
+    seq = 0
     while True:
         tmbuf.reset(HDRSPACE)
         (n, addr) = s.recvfrom_into(tmbuf.start)
@@ -343,14 +347,6 @@ def tunnel_get_outer_packet(s: socket.socket, tmbuf: MBuf, outq: MQueue, _: thre
         if outq.startseq == 0:
             outq.startseq = seq
 
-        if seq == outq.lastseq + 1 or outq.lastseq == 0:
-            # Make this valid.
-            outq.lastseq = seq
-            # if TRACE:
-            #     logger.debug("Got outer packet seq: %d len: %d tmbuf.len: %d",
-            #                  seq, n, tmbuf.len())
-            return seq, False
-
         # Drops or duplicates
         if seq <= outq.lastseq:
             if seq < outq.lastseq:
@@ -360,37 +356,23 @@ def tunnel_get_outer_packet(s: socket.socket, tmbuf: MBuf, outq: MQueue, _: thre
             # Ignore this packet it's old.
             continue
 
-        # record missing packets.
-        outq.dropcnt += seq - (outq.lastseq + 1)
-        if DEBUG:
-            logger.debug("Detected packet loss (totl count: %d lasseq %d seq %d)", outq.dropcnt,
-                         outq.lastseq, seq)
-
-        # with send_ack_cv:
-        #     send_ack_cv.notify()
-
-        # abandon any in progress packet.
-        tmbuf.end = tmbuf.start[n:]
-        outq.lastseq = seq
-        return seq, True
-
-
-def read_tfs_into_packet(  # pylint: disable=R0913
-        s: socket.socket, tmbuf: MBuf, freeq: MQueue, outq: MQueue,
-        send_ack_cv: threading.Condition, rxlimit: Limit):
-    m = None
-    seq = 0
-    while True:
-        # If we don't have a current outer packet get one.
-        # if seq == 0 or tmbuf.len() == 0:
-        seq, reset = tunnel_get_outer_packet(s, tmbuf, outq, send_ack_cv, rxlimit)
-
-        if m and reset:
+        if seq != outq.lastseq + 1 and outq.lastseq != 0:
+            # record missing packets.
+            outq.dropcnt += seq - (outq.lastseq + 1)
             if DEBUG:
-                logger.debug("reset current inner mbuf")
-            m.reset(freeq.hdrspace)
+                logger.debug("Detected packet loss (totl count: %d lasseq %d seq %d)", outq.dropcnt,
+                            outq.lastseq, seq)
+            # with send_ack_cv:
+            #     send_ack_cv.notify()
+
+            # abandon any in progress packet.
+            if m:
+                if DEBUG:
+                    logger.debug("reset current inner mbuf")
+                m.reset(freeq.hdrspace)
 
         # Consume the outer packet.
+        outq.lastseq = seq
         m = add_to_inner_packet(tmbuf, True, m, freeq, outq, seq)
 
 
@@ -574,7 +556,7 @@ def write_tfs_packets(  # pylint: disable=W0613,R0913
     tunnel_periodic = util.PeriodicPPS(prate)
 
     leftover = None
-    seq = 0
+    seq = 1
     while tunnel_periodic.wait():
         leftover, seq = write_tfs_packet(s, send_lock, seq, mtu, leftover, inq, freeq)
 
