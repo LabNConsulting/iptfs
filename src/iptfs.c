@@ -137,19 +137,19 @@ write_intf_pkts(int fd, struct miovq *outq, struct miovq *freeq)
  * ----------------
  */
 
-struct mbuf *
-tfs_get_recv_mbuf(struct mqueue *freeq)
-{
-	while (true) {
-		struct mbuf *m = mqueue_pop(freeq);
-		if (MBUF_LEN(m) == 0) {
-			m->left = -1;
-			return m;
-		}
-		recv_ack(m);
-		mqueue_push(freeq, m, true);
-	}
-}
+/* struct mbuf * */
+/* tfs_get_recv_mbuf(struct mqueue *freeq) */
+/* { */
+/* 	while (true) { */
+/* 		struct mbuf *m = mqueue_pop(freeq); */
+/* 		if (MBUF_LEN(m) == 0) { */
+/* 			m->left = -1; */
+/* 			return m; */
+/* 		} */
+/* 		recv_ack(m); */
+/* 		mqueue_push(freeq, m, true); */
+/* 	} */
+/* } */
 
 /*
  * add_to_inner_packet adds data from an outer packet mbuf to an inner one
@@ -163,8 +163,9 @@ add_to_inner_packet(struct mbuf *tbuf, bool new, struct miov *m,
 	uint8_t *start;
 
 	if (ltlen <= 0)
-		err(1, "tlen %ld <= 0", ltlen);
+		errx(1, "tlen %ld <= 0 new %d", ltlen, new);
 
+	// XXX why are we failing with tlen
 	if (new) {
 		/* Starting a new tfs buf */
 		assert(ltlen > 8);
@@ -180,6 +181,9 @@ add_to_inner_packet(struct mbuf *tbuf, bool new, struct miov *m,
 	 */
 	if (!m)
 		m = miovq_pop(freeq);
+
+	if (MBUF_LEN(tbuf) != tlen)
+		errx(1, "XXX6 MBUF_LEN(tbuf) %d tlen %d", MBUF_LEN(tbuf), tlen);
 
 	if (m->len == 0) {
 		if (!new)
@@ -215,6 +219,9 @@ add_to_inner_packet(struct mbuf *tbuf, bool new, struct miov *m,
 		/* XXX we can always reconstruct this too */
 		m->left = iplen;
 		/* FALLTHROUGH*/
+		if (MBUF_LEN(tbuf) != tlen)
+			errx(1, "XXX7 MBUF_LEN(tbuf) %d tlen %d",
+			     MBUF_LEN(tbuf), tlen);
 	} else if (offset > tlen) {
 		/* This is us logging here what we didn't in in get outer */
 		if (new)
@@ -280,9 +287,15 @@ add_to_inner_packet(struct mbuf *tbuf, bool new, struct miov *m,
 	m->left = 0;
 	miovq_push(outq, m);
 
-	assert(tlen >= 0);
+	// XXX This is needed if we are fetching the first part of a split
+	// packet.
+	tlen = MBUF_LEN(tbuf);
+
 	if (tlen == 0)
 		return NULL;
+
+	if (MBUF_LEN(tbuf) != tlen)
+		errx(1, "MBUF_LEN(tbuf) %d tlen %d", MBUF_LEN(tbuf), tlen);
 
 	// Recurse!
 	DBG("recurse: new %d\n", new);
@@ -316,6 +329,7 @@ read_tfs_pkts(int s, struct mqueue *freeq, struct miovq *iovfreeq,
 	memset(&ack, 0, sizeof(ack));
 
 	struct mbuf *tbuf = mqueue_pop(freeq);
+	atomic_fetch_add(&tbuf->refcnt, 1);
 
 	while (true) {
 		/* Check to see if we should send ack info */
@@ -323,15 +337,16 @@ read_tfs_pkts(int s, struct mqueue *freeq, struct miovq *iovfreeq,
 			send_ack(s, &acktimer.ts, &ack);
 
 		/* If no one referenced the mbuf reset and re-use it */
-		if (!tbuf->refcnt)
+		if (atomic_fetch_sub(&tbuf->refcnt, 1) == 1) {
 			mbuf_reset(tbuf, HDRSPACE);
-		else {
+		} else {
 			/*
 			 * tbuf will get freed when all references to it
 			 * drop get a new one
 			 */
 			tbuf = mqueue_pop(freeq);
 		}
+		atomic_store(&tbuf->refcnt, 1);
 
 		addrlen = sizeof(sender);
 		if ((n = recvfrom(s, tbuf->start, MBUF_AVAIL(tbuf), 0,
@@ -632,7 +647,7 @@ recv_ack(struct mbuf *m)
 			droppct = 1;
 		uint64_t pps = pps_change_pps(g_pps, -g_avgdrops->average);
 		LOG("recv_ack: ndrop %d avg %d pcount %d: reduce to %d pps %d "
-		    "Mbps\n ",
+		    "Mbps\n",
 		    ndrop, g_avgdrops->average, end - start, pps,
 		    (pps * mtub) / 1000000);
 		// uint64_t pps = pps_decrate(g_pps, (100 - droppct));

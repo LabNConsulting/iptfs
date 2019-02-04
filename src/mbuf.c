@@ -243,7 +243,7 @@ miov_reset(struct miov *m, struct miovq *mq)
 		mbuf_deref(mq->freeq, m->mbufs[i]);
 	m->niov = 0;
 	m->len = 0;
-	m->left = -1;
+	m->left = 0;
 }
 
 int

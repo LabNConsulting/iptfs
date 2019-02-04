@@ -8,11 +8,18 @@
 #ifndef IPTFS_H
 #define IPTFS_H
 
+#include <assert.h>
 #include <sys/uio.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
 #include <stdbool.h>
+
+#ifndef __STDC_NO_ATOMICS__
+#include <stdatomic.h>
+#else
+#include <asm-x86_64/atomic.h>
+#endif
 
 /* Constants */
 #define OUTERQSZ 256
@@ -47,7 +54,7 @@ struct mbuf {
     uint8_t *start;  /* The start of the packet */
     uint8_t *end;    /* The end (one past) of the packet */
     ssize_t left;    /* used to track what's left to read */
-    uint refcnt;     /* if this has mbufrefs the count of references */
+    atomic_uint_least32_t refcnt;
 };
 
 struct miov {
@@ -62,7 +69,9 @@ struct miov {
 static void __inline__
 mbuf_reset(struct mbuf *m, int hdrspace)
 {
+    assert(atomic_load(&m->refcnt) == 0);
     m->end = m->start = &m->space[hdrspace];
+    m->left = 0;
 }
 
 static void __inline__
@@ -72,6 +81,7 @@ miov_addmbuf(struct miov *mi, struct mbuf *m, uint8_t *start, ssize_t len)
     mi->iov[i].iov_base = start;
     mi->iov[i].iov_len = len;
     mi->mbufs[i] = m;
+    atomic_fetch_add(&m->refcnt, 1);
     mi->len += len;
 }
 
@@ -91,7 +101,8 @@ struct ackinfo *mqueue_get_ackinfop(struct mqueue *outq);
 static void __inline__
 mbuf_deref(struct mqueue *freeq, struct mbuf *m)
 {
-    if (--m->refcnt == 0)
+
+    if (atomic_fetch_sub(&m->refcnt, 1) == 1)
         mqueue_push(freeq, m, true);
 }
 
