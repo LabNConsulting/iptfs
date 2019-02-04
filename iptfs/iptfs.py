@@ -184,8 +184,8 @@ def add_to_inner_packet(tmbuf: MBuf, new: bool, m: MBuf, freeq: MQueue, outq: MQ
 
         # This is logging we moved from get_outer_tunnel_packet so we can skip
         # the empties
-        if new:
-            logger.debug("XXX2 Got outer packet seq: %d tmbuf.len: %d", seq, logtmlen)
+        if DEBUG and new:
+            logger.debug("Got outer packet seq: %d tmbuf.len: %d", seq, logtmlen)
 
         # Get the IP length
         vnibble = start[0] & 0xF0
@@ -214,8 +214,8 @@ def add_to_inner_packet(tmbuf: MBuf, new: bool, m: MBuf, freeq: MQueue, outq: MQ
 
         # This is logging we moved from get_outer_tunnel_packet so we can skip
         # the empties
-        if new:
-            logger.debug("XXX3 Got outer packet seq: %d tmbuf.len: %d", seq, logtmlen)
+        if DEBUG and new:
+            logger.debug("Got outer packet seq: %d tmbuf.len: %d", seq, logtmlen)
 
         # We are continuing to fill an existing inner packet, and this entire buffer is for it.
         if m.left > tmlen:
@@ -258,8 +258,8 @@ def add_to_inner_packet(tmbuf: MBuf, new: bool, m: MBuf, freeq: MQueue, outq: MQ
 
         # This is logging we moved from get_outer_tunnel_packet so we can skip
         # the empties
-        if new:
-            logger.debug("XXX4 Got outer packet seq: %d tmbuf.len: %d", seq, logtmlen)
+        if DEBUG and new:
+            logger.debug("Got outer packet seq: %d tmbuf.len: %d", seq, logtmlen)
 
         if DEBUG:
             logger.debug(
@@ -461,6 +461,7 @@ def write_tfs_packet(  # pylint: disable=R0912,R0913,R0914,R0915
             logger.debug("write_tfs_packet seq: %d, mtu %d leftover %d", seq, mtu, id(leftover))
         # This is an mbuf we didn't finish sending last time.
         m = leftover
+        leftover = None
         # Set the offset to after this mbuf data.
         offset = m.len()
     else:
@@ -489,104 +490,41 @@ def write_tfs_packet(  # pylint: disable=R0912,R0913,R0914,R0915
     put16(hdr[4:], 0)
     put16(hdr[6:], offset)
 
-    mlen = m.len()
-    if mlen < 0:
-        logger.error("negative mlen! %d leftover %d", mlen, leftover is None)
-        assert False
+    while mtu > 0:
+        # We need a minimum of 6 bytes to include IPv6 length field.
+        if mtu <= 6 or m is None:
+            if DEBUG:
+                logger.debug("write_tfs_packet: seq %d mtu %d < 6 ", seq, mtu)
+            iov.append(PADBYTES[8:8 + mtu])
+            assert (mtu <= mtuenter)
+            mtu = 0
+            break
 
-    if mlen > mtu:
-        iov.append(m.start[:mtu])
-        # if iovlen(iov) > mtuenter:
-        #     logger.error("iovlen: %d of mtu %d mtuenter %d", iovlen(iov), mtu, mtuenter)
-        #     assert False
-        m.start = m.start[mtu:]
-        leftover = m
-        if DEBUG:
-            logger.debug(
-                "write_tfs_packet: seq %d Add partial(1) MBUF mtu %d of mlen %d mtuenter %d",
-                seq, mtu, mlen, mtuenter)
-        mtu = 0
-    else:
+        mlen = m.len()
+        assert mlen >= 0
+
+        if mlen > mtu:
+            # Room for partial MBUF
+            iov.append(m.start[:mtu])
+            m.start = m.start[mtu:]
+            leftover = m
+            if DEBUG:
+                logger.debug(
+                    "write_tfs_packet: seq %d Add partial(1) MBUF mtu %d of mlen %d mtuenter %d",
+                    seq, mtu, mlen, mtuenter)
+            mtu = 0
+            break
+
+        # Room for full MBUF
         iov.append(m.start[:mlen])
-        # if iovlen(iov) > mtuenter:
-        #     logger.error("iovlen: %d of mtu %d enter %d", iovlen(iov), mtu, mtuenter)
-        #     assert False
-
-        assert (mtu <= mtuenter)
-        if mtu > mtuenter:
-            logger.error("ERROR1: mtu %d mtuenter %d", mtu, mtuenter)
-            assert False
-
         freem.append(m)
         m = None
-        logger.debug("write_tfs_packet: seq %d Add initial MBUF mlen %d of mtu %d mtuenter %d",
-                     seq, mlen, mtu, mtuenter)
+        if DEBUG:
+            logger.debug("write_tfs_packet: seq %d Add initial MBUF mlen %d of mtu %d mtuenter %d",
+                         seq, mlen, mtu, mtuenter)
         mtu -= mlen
-
-        if mtu > mtuenter:
-            logger.error("ERROR2: mtu %d mtuenter %d", mtu, mtuenter)
-            assert False
-
-        leftover = None
-        count = 0
-        while True:
-            count += 1
-            assert (mtu <= mtuenter)
-            # We need a minimum of 6 bytes to include IPv6 length field.
-            if mtu <= 6:
-                if DEBUG:
-                    logger.debug("write_tfs_packet: seq %d mtu %d < 6 ", seq, mtu)
-                iov.append(PADBYTES[8:8 + mtu])
-                # if iovlen(iov) > mtuenter:
-                #     logger.error("iovlen: %d of mtu %d enter %d", iovlen(iov), mtu, mtuenter)
-                #     assert False
-                assert (mtu <= mtuenter)
-                mtu = 0
-                break
-
+        if mtu > 6:
             m = inq.trypop()
-            if not m:
-                if DEBUG:
-                    logger.debug("write_tfs_packet: seq %d No MBUF PAD: %d", seq, mtu)
-                iov.append(PADBYTES[8:8 + mtu])
-                # if iovlen(iov) > mtuenter:
-                #     logger.error("iovlen: %d of mtu %d enter %d", iovlen(iov), mtu, mtuenter)
-                #     assert False
-                assert (mtu <= mtuenter)
-                mtu = 0
-                break
-
-            mlen = m.len()
-            if mlen > mtu:
-                iov.append(m.start[:mtu])
-                # if iovlen(iov) > mtuenter:
-                #     logger.error("iovlen: %d of mtu %d enter %d", iovlen(iov), mtu, mtuenter)
-                #     assert False
-                m.start = m.start[mtu:]
-                if DEBUG:
-                    logger.debug(
-                        "write_tfs_packet: seq %d Add part MBUF mtu %d of mlen %d mtuenter %d",
-                        seq, mtu, mlen, mtuenter)
-                leftover = m
-                mtu = 0
-                break
-
-            iov.append(m.start[:mlen])
-            # if iovlen(iov) > mtuenter:
-            #     logger.error("iovlen: %d of mtu %d enter %d", iovlen(iov), mtu, mtuenter)
-            #     assert False
-            assert (mtu <= mtuenter)
-            if DEBUG:
-                logger.debug("write_tfs_packet: seq %d Add MBUF %d of mtu %d mtuenter %d", seq,
-                             mlen, mtu, mtuenter)
-
-            freem.append(m)
-            m = None
-            mtu -= mlen
-
-    assert (mtu <= mtuenter)
-    # if iovlen(iov) > mtuenter:
-    #     logger.debug("iovlen: %d of mtu %d", iovlen(iov), mtuenter)
 
     iovl = iovlen(iov)
     if iovl != mtuenter:
@@ -594,6 +532,8 @@ def write_tfs_packet(  # pylint: disable=R0912,R0913,R0914,R0915
 
     with send_lock:
         n = s.sendmsg(iov)
+    seq += 1             # Update sequence number now that we've written it out.
+
     if n != iovl:
         logger.error("write: bad write %d of %d on TFS link", n, mlen)
         if leftover:
@@ -602,21 +542,18 @@ def write_tfs_packet(  # pylint: disable=R0912,R0913,R0914,R0915
     elif DEBUG:
         logger.debug("write: wrote %d bytes on TFS Link", n)
 
-    # Update sequence number now that we've written it out.
-    seq += 1
-
     # Free any MBufs we are done with.
     for m in freem:
         freeq.push(m, True)
 
     if leftover:
         assert (leftover.len() > 0)
+
     return leftover, seq
 
 
 tunnel_target_pps = 0
 tunnel_periodic = util.PeriodicPPS(1)
-
 
 def write_tfs_packets(  # pylint: disable=W0613,R0913
         s: socket.socket, send_lock: threading.Lock, mtu: int, inq: MQueue, freeq: MQueue,
@@ -638,7 +575,7 @@ def write_tfs_packets(  # pylint: disable=W0613,R0913
 
     leftover = None
     seq = 0
-    while tunnel_periodic.waitspin():
+    while tunnel_periodic.wait():
         leftover, seq = write_tfs_packet(s, send_lock, seq, mtu, leftover, inq, freeq)
 
 
