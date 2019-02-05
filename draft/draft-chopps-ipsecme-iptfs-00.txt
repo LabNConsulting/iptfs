@@ -80,7 +80,7 @@ Table of Contents
    4.  Packet and Data Formats . . . . . . . . . . . . . . . . . . .   9
      4.1.  IPSec . . . . . . . . . . . . . . . . . . . . . . . . . .   9
        4.1.1.  Payload Format  . . . . . . . . . . . . . . . . . . .   9
-       4.1.2.  Data Blocks . . . . . . . . . . . . . . . . . . . . .   9
+       4.1.2.  Data Blocks . . . . . . . . . . . . . . . . . . . . .  10
      4.2.  IKEv2 . . . . . . . . . . . . . . . . . . . . . . . . . .  11
        4.2.1.  IKEv2 Congestion Information Notification Data  . . .  11
    5.  IANA Considerations . . . . . . . . . . . . . . . . . . . . .  12
@@ -100,12 +100,12 @@ Table of Contents
    Hiding the size and frequency of traffic is referred to as Traffic
    Flow Confidentiality (TFC) [RFC4303]
 
-   [RFC4303] provides for limited TFC by allowing for padding to be
-   added to the encrypted IP packets.  This method has a few
-   limitations.  One limitation is that the frequency of the data being
-   sent is not obscured.  A second limitation is that only a single IP
-   packet of data is encapsulated in any encrypted ESP packet which
-   wastes a large amount of available bandwidth.
+   [RFC4303] provides for limited TFC by allowing padding to be added to
+   the encrypted IP packets and allowing for sending all-pad packets
+   (protocol 59).  This method has a few limitations.  One limitation is
+   that to obscure the frequency of the data being sent all-pad packets
+   may need to be sent.  Sending all-pad packets introduces latency and
+   reduces bandwidth.  Another limitation is that only a single IP
 
 
 
@@ -114,12 +114,16 @@ Hopps                    Expires August 9, 2019                 [Page 2]
 Internet-Draft                                             February 2019
 
 
+   packet of data is encapsulated in any encrypted ESP packet (along
+   with padding to obscure the packet size) which also will increase
+   latency and reduce the available bandwidth.
+
    The IP-TFS solution provides for full TFC without the aforementioned
    timing and bandwidth limitations.  To do this we use a constant send
    rate IPsec [RFC4303] tunnel with fixed-sized encapsulating packets.
    These fixed-sized packets are sent at a constant rate and contain
-   partial, full or multiple IP packets to maximize the bandwidth of the
-   tunnel.
+   partial, full or multiple IP packets to maximize the bandwidth and
+   minimize the latency of the tunnel.
 
    Additionally, IP-TFS provides for dealing with network congestion.
    This is important for when the IP-TFS user is not in full control of
@@ -158,10 +162,6 @@ Internet-Draft                                             February 2019
    The egress of the IP-TFS tunnel SHOULD NOT impose any restrictions on
    tunnel packet arrival rate.  Packet send rate is entirely the
    function of the ingress (sending) side of the IP-TFS tunnel.  Indeed
-   the ingress (sending) side of the IP-TFS tunnel MUST be allowed to
-   vary the rate at which it sends encapsulating packets, including
-   sending them faster or slower than the requested rate.
-
 
 
 
@@ -169,6 +169,10 @@ Hopps                    Expires August 9, 2019                 [Page 3]
 
 Internet-Draft                                             February 2019
 
+
+   the ingress (sending) side of the IP-TFS tunnel MUST be allowed to
+   vary the rate at which it sends encapsulating packets, including
+   sending them faster or slower than the requested rate.
 
 2.1.  Tunnel Content
 
@@ -213,10 +217,6 @@ Internet-Draft                                             February 2019
    block data.  The types values have been carefully chosen to coincide
    with the IPv4/IPv6 version field values so that no per-data-block
    type overhead is required to encapsulate an IP packet.  Likewise, the
-   length of the data block is extracted from the encapsulated packet's
-   length field.
-
-
 
 
 
@@ -225,6 +225,9 @@ Hopps                    Expires August 9, 2019                 [Page 4]
 
 Internet-Draft                                             February 2019
 
+
+   length of the data block is extracted from the encapsulated packet's
+   length field.
 
      0                   1                   2                   3
      0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
@@ -271,9 +274,6 @@ Internet-Draft                                             February 2019
    Congestion Notification (ECN) field [RFC3168].  Unlike [RFC4301] with
    IP-TFS we may and often will be encapsulating more than 1 IP packet
    per ESP packet.  To deal with this we further restrict these
-   mappings.  In particular we never map the inner DF bit as it is
-   unrelated to the IP-TFS tunnel functionality; we never directly
-   fragment the inner packets and the inner packets will not affect the
 
 
 
@@ -282,6 +282,9 @@ Hopps                    Expires August 9, 2019                 [Page 5]
 Internet-Draft                                             February 2019
 
 
+   mappings.  In particular we never map the inner DF bit as it is
+   unrelated to the IP-TFS tunnel functionality; we never directly
+   fragment the inner packets and the inner packets will not affect the
    fragmentation of the outer encapsulation packets.  Likewise, the ECN
    value need not be mapped as any congestion related to the constant
    send rate IP-TFS tunnel is unrelated (by design!) to the inner
@@ -327,9 +330,6 @@ Internet-Draft                                             February 2019
 
    The output of a congestion control algorithm SHOULD adjust the
    frequency that we send our packets until the congestion is
-   accommodated.  We do not standardize the congestion control
-   algorithm, although the algorithm SHOULD conform to guidelines in
-   [RFC2914].
 
 
 
@@ -337,6 +337,10 @@ Hopps                    Expires August 9, 2019                 [Page 6]
 
 Internet-Draft                                             February 2019
 
+
+   accommodated.  We do not standardize the congestion control
+   algorithm, although the algorithm SHOULD conform to guidelines in
+   [RFC2914].
 
    When an implementation is choosing a congestion control algorithm it
    is worth noting that IP-TFS is not providing for reliable delivery of
@@ -382,10 +386,6 @@ Internet-Draft                                             February 2019
    bits in the encapsulating IP header [RFC3168].  If ECN use is enabled
    and a packet arrives at the egress endpoint with the Congestion
    Experienced (CE) value set, then the receiver records that packet as
-   being dropped, although it does not drop it.  When the CE information
-   is used to calculate the packet drop count the receiver also sets the
-   E bit in the congestion information notification data.  In order to
-   respond quickly to the congestion indication the receiver MAY
 
 
 
@@ -394,6 +394,10 @@ Hopps                    Expires August 9, 2019                 [Page 7]
 Internet-Draft                                             February 2019
 
 
+   being dropped, although it does not drop it.  When the CE information
+   is used to calculate the packet drop count the receiver also sets the
+   E bit in the congestion information notification data.  In order to
+   respond quickly to the congestion indication the receiver MAY
    immediately send a congestion information notification to the sender
    upon receiving a packet with the CE indication.  This additional
    immediate send SHOULD only be done once per normal congestion
@@ -438,10 +442,6 @@ Internet-Draft                                             February 2019
    In order to configure the sending interval of periodic congestion
    information on the egress tunnel endpoint, we utilize the IKEv2
    Configuration Payload (CP) [RFC7296].  Implementations MAY also allow
-   for manual (or default) configuration of this interval; however,
-   implementations of IP-TFS MUST support configuration using the IKEv2
-   exchange described below.
-
 
 
 
@@ -449,6 +449,10 @@ Hopps                    Expires August 9, 2019                 [Page 8]
 
 Internet-Draft                                             February 2019
 
+
+   for manual (or default) configuration of this interval; however,
+   implementations of IP-TFS MUST support configuration using the IKEv2
+   exchange described below.
 
    We utilize a new IKEv2 configuration attribute TFS_INFO_INTERVAL
    (TBD) to configure the sending interval from the egress endpoint of
@@ -493,10 +497,6 @@ Internet-Draft                                             February 2019
      - Data Blocks :: Variable number of bytes that constitute the start
                       or continuation of a previous data block.
 
-4.1.2.  Data Blocks
-
-
-
 
 
 
@@ -505,6 +505,8 @@ Hopps                    Expires August 9, 2019                 [Page 9]
 
 Internet-Draft                                             February 2019
 
+
+4.1.2.  Data Blocks
 
      0                   1                   2                   3
      0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
@@ -552,8 +554,6 @@ Internet-Draft                                             February 2019
     +-----------------------------------------------------------------+
     |  0x0  | Padding ...
     +--------
-
-
 
 
 
