@@ -2,7 +2,7 @@
 # This is a comment.
 #
 
-This document describes a mechanism to provides for robust traffic
+This document describes a mechanism that provides for robust traffic
 flow security by adding traffic flow confidentiality to encrypted IP
 encapsulated traffic. Traffic flow confidentiality is provided by
 obscuring the size and frequency of IP traffic using a constant sized
