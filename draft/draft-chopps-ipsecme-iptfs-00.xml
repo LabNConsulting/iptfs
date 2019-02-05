@@ -23,23 +23,23 @@
     <abstract>
 	<t>
 This document describes a mechanism to provides for robust traffic
-flow security (also referred to as traffic flow confidentiality) for
-IP encapsulated traffic. Traffic flow security is provided by
+flow security by adding traffic flow confidentiality to encrypted IP
+encapsulated traffic. Traffic flow confidentiality is provided by
 obscuring the size and frequency of IP traffic using a constant sized
-and constant send rate encrypted tunnel.
+and constant send rate IPsec tunnel.
 	</t>
 </abstract>
 </front>
 <middle>
 <section title="Introduction" anchor="introduction">
     <t>
-Traffic Analysis <xref target="RFC4301"/> is the act of extracting information about
-data being sent through a network. While one may directly obscure the
-data through the use of encryption <xref target="RFC4303"/>, the traffic pattern
-itself exposes information due to variations in it&apos;s shape and timing
-<xref target="I-D.iab-wire-image"/> and [AppCrypt §8.6]. Hiding the size and
-frequency of traffic is referred to as Traffic Flow Confidentiality
-(TFC) <xref target="RFC4303"/>
+Traffic Analysis <xref target="RFC4301"/> [AppCrypt §10.3] is the act of extracting
+information about data being sent through a network. While one may
+directly obscure the data through the use of encryption <xref target="RFC4303"/>,
+the traffic pattern itself exposes information due to variations in
+it&apos;s shape and timing (<xref target="I-D.iab-wire-image"/> and [AppCrypt §10.3]).
+Hiding the size and frequency of traffic is referred to as Traffic
+Flow Confidentiality (TFC) <xref target="RFC4303"/>
     </t>
     <t>
 <xref target="RFC4303"/> provides for limited TFC by allowing for padding to be
