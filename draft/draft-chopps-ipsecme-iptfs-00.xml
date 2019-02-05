@@ -22,7 +22,7 @@
 	<date/>
     <abstract>
 	<t>
-This document describes a mechanism to provides for robust traffic
+This document describes a mechanism that provides for robust traffic
 flow security by adding traffic flow confidentiality to encrypted IP
 encapsulated traffic. Traffic flow confidentiality is provided by
 obscuring the size and frequency of IP traffic using a constant sized
@@ -667,6 +667,15 @@ then non-congestion controlled mode use should be considered instead.
 </reference>
 </references>
 <references title="Informative References">
+<reference anchor="AppCrypt">
+  <front>
+    <title>Applied Cryptography: Protocols, Algorithms, and Source Code in C</title>
+    <author initials="B" surname="Schneier" fullname="Bruce Schneier">
+      <organization/>
+    </author>
+    <date year="2017"/>
+  </front>
+</reference>
 <reference anchor="RFC0791" target="https://www.rfc-editor.org/info/rfc791">
   <front>
     <title>Internet Protocol</title>

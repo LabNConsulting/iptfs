@@ -1,0 +1,9 @@
+<reference anchor="AppCrypt">
+  <front>
+    <title>Applied Cryptography: Protocols, Algorithms, and Source Code in C</title>
+    <author initials="B" surname="Schneier" fullname="Bruce Schneier">
+      <organization/>
+    </author>
+    <date year="2017"/>
+  </front>
+</reference>
