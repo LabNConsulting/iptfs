@@ -315,6 +315,27 @@ notifications <xref target="RFC7296"/>. These notifications are sent at a config
 interval (which can be configured to 0 to disable the sending of the
 reports).
     </t>
+<section title="ECN Support" anchor="ecn-support">
+    <t>
+In additional to normal packet loss IP-TFS supports use of the ECN
+bits in the encapsulating IP header <xref target="RFC3168"/>. If ECN use is
+enabled and a packet arrives at the egress endpoint with the
+Congestion Experienced (CE) value set, then the receiver records that
+packet as being dropped, although it does not drop it. When the CE
+information is used to calculate the packet drop count the receiver
+also sets the E bit in the congestion information notification data.
+In order to respond quickly to the congestion indication the receiver
+MAY immediately send a congestion information notification to the
+sender upon receiving a packet with the CE indication. This
+additional immediate send SHOULD only be done once per normal
+congestion information sending interval though.
+    </t>
+    <t>
+As noted in <xref target="RFC3168"/> the ECN bits are not protected by IPsec and
+thus may constitute a covert channel. For this reason ECN use should
+not be enabled by default.
+    </t>
+</section>
 </section>
 </section>
 <section title="Configuration" anchor="configuration">
@@ -515,8 +536,9 @@ payload. The following diagram defines the notification payload data.
         </figure>
         <figure>
             <artwork><![CDATA[
-  - ECN ::
-  - Reserved :: set to 0 ignored on receipt.
+  - E :: Packet[s] with Congestion Experienced (CE) ECN bits set were
+         received and used in calculating the DropCount value.
+  - Reserved :: Set to 0 ignored on receipt.
   - DropCount :: The drop count that occurred between AckSeqStart and
                  AckSeqEnd, If the drops exceed the resolution of the
                  counter then set to the max value.

@@ -72,7 +72,8 @@ Table of Contents
        2.2.1.  Non-Congestion Controlled Mode  . . . . . . . . . . .   6
        2.2.2.  Congestion Controlled Mode  . . . . . . . . . . . . .   6
      2.3.  Congestion Information  . . . . . . . . . . . . . . . . .   7
-   3.  Configuration . . . . . . . . . . . . . . . . . . . . . . . .   7
+       2.3.1.  ECN Support . . . . . . . . . . . . . . . . . . . . .   7
+   3.  Configuration . . . . . . . . . . . . . . . . . . . . . . . .   8
      3.1.  Bandwidth . . . . . . . . . . . . . . . . . . . . . . . .   8
      3.2.  Fixed Packet Size . . . . . . . . . . . . . . . . . . . .   8
      3.3.  Congestion Information Configuration. . . . . . . . . . .   8
@@ -80,12 +81,12 @@ Table of Contents
      4.1.  IPSec . . . . . . . . . . . . . . . . . . . . . . . . . .   9
        4.1.1.  Payload Format  . . . . . . . . . . . . . . . . . . .   9
        4.1.2.  Data Blocks . . . . . . . . . . . . . . . . . . . . .   9
-     4.2.  IKEv2 . . . . . . . . . . . . . . . . . . . . . . . . . .  10
-       4.2.1.  IKEv2 Congestion Information Notification Data  . . .  10
-   5.  IANA Considerations . . . . . . . . . . . . . . . . . . . . .  11
+     4.2.  IKEv2 . . . . . . . . . . . . . . . . . . . . . . . . . .  11
+       4.2.1.  IKEv2 Congestion Information Notification Data  . . .  11
+   5.  IANA Considerations . . . . . . . . . . . . . . . . . . . . .  12
    6.  Security Considerations . . . . . . . . . . . . . . . . . . .  12
    7.  References  . . . . . . . . . . . . . . . . . . . . . . . . .  12
-     7.1.  Normative References  . . . . . . . . . . . . . . . . . .  12
+     7.1.  Normative References  . . . . . . . . . . . . . . . . . .  13
      7.2.  Informative References  . . . . . . . . . . . . . . . . .  13
    Author's Address  . . . . . . . . . . . . . . . . . . . . . . . .  14
 
@@ -105,7 +106,6 @@ Table of Contents
    sent is not obscured.  A second limitation is that only a single IP
    packet of data is encapsulated in any encrypted ESP packet which
    wastes a large amount of available bandwidth.
-
 
 
 
@@ -376,16 +376,16 @@ Internet-Draft                                             February 2019
    configured interval (which can be configured to 0 to disable the
    sending of the reports).
 
-3.  Configuration
+2.3.1.  ECN Support
 
-   IP-TFS is meant to be deployable with a minimal amount of
-   configuration.  All IP-TFS specific configuration (i.e., in addition
-   to the underlying IPsec tunnel configuration) should be able to be
-   specified at the tunnel ingress (sending) side alone (i.e., single-
-   ended provisioning).
-
-
-
+   In additional to normal packet loss IP-TFS supports use of the ECN
+   bits in the encapsulating IP header [RFC3168].  If ECN use is enabled
+   and a packet arrives at the egress endpoint with the Congestion
+   Experienced (CE) value set, then the receiver records that packet as
+   being dropped, although it does not drop it.  When the CE information
+   is used to calculate the packet drop count the receiver also sets the
+   E bit in the congestion information notification data.  In order to
+   respond quickly to the congestion indication the receiver MAY
 
 
 
@@ -393,6 +393,23 @@ Hopps                    Expires August 9, 2019                 [Page 7]
 
 Internet-Draft                                             February 2019
 
+
+   immediately send a congestion information notification to the sender
+   upon receiving a packet with the CE indication.  This additional
+   immediate send SHOULD only be done once per normal congestion
+   information sending interval though.
+
+   As noted in [RFC3168] the ECN bits are not protected by IPsec and
+   thus may constitute a covert channel.  For this reason ECN use should
+   not be enabled by default.
+
+3.  Configuration
+
+   IP-TFS is meant to be deployable with a minimal amount of
+   configuration.  All IP-TFS specific configuration (i.e., in addition
+   to the underlying IPsec tunnel configuration) should be able to be
+   specified at the tunnel ingress (sending) side alone (i.e., single-
+   ended provisioning).
 
 3.1.  Bandwidth
 
@@ -425,6 +442,14 @@ Internet-Draft                                             February 2019
    implementations of IP-TFS MUST support configuration using the IKEv2
    exchange described below.
 
+
+
+
+Hopps                    Expires August 9, 2019                 [Page 8]
+
+Internet-Draft                                             February 2019
+
+
    We utilize a new IKEv2 configuration attribute TFS_INFO_INTERVAL
    (TBD) to configure the sending interval from the egress endpoint of
    the tunnel.  This value is configured using a CFG_REQUEST payload and
@@ -440,15 +465,6 @@ Internet-Draft                                             February 2019
    second are used as this could lead to early exhaustion of the Message
    ID field used in the IKEv2 INFORMATIONAL exchange to send the
    congestion information.
-
-
-
-
-
-Hopps                    Expires August 9, 2019                 [Page 8]
-
-Internet-Draft                                             February 2019
-
 
    A sending interval value of 0 disables sending of the congestion
    information.
@@ -479,6 +495,17 @@ Internet-Draft                                             February 2019
 
 4.1.2.  Data Blocks
 
+
+
+
+
+
+
+Hopps                    Expires August 9, 2019                 [Page 9]
+
+Internet-Draft                                             February 2019
+
+
      0                   1                   2                   3
      0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
     +-----------------------------------------------------------------+
@@ -496,15 +523,6 @@ Internet-Draft                                             February 2019
     +------------------------------------------------------------------
     | Rest of inner packet ...
     +
-
-
-
-
-
-Hopps                    Expires August 9, 2019                 [Page 9]
-
-Internet-Draft                                             February 2019
-
 
      - Type :: 0x4 for IPv4 (i.e., first nibble of IPv4 packet).
      - Total Length :: Length of the IPv4 inner packet.
@@ -535,6 +553,15 @@ Internet-Draft                                             February 2019
     |  0x0  | Padding ...
     +--------
 
+
+
+
+
+Hopps                    Expires August 9, 2019                [Page 10]
+
+Internet-Draft                                             February 2019
+
+
      - Type :: 0x0 for pad
      - Padding :: extends to end of the encapsulating packet.
 
@@ -550,18 +577,6 @@ Internet-Draft                                             February 2019
    payload.  The following diagram defines the notification payload
    data.
 
-
-
-
-
-
-
-
-Hopps                    Expires August 9, 2019                [Page 10]
-
-Internet-Draft                                             February 2019
-
-
      0                   1                   2                   3
      0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
     +-----------------------------------------------------------------+
@@ -574,8 +589,9 @@ Internet-Draft                                             February 2019
     |                          AckSeqEnd                              |
     +-----------------------------------------------------------------+
 
-     - ECN ::
-     - Reserved :: set to 0 ignored on receipt.
+     - E :: Packet[s] with Congestion Experienced (CE) ECN bits set were
+            received and used in calculating the DropCount value.
+     - Reserved :: Set to 0 ignored on receipt.
      - DropCount :: The drop count that occurred between AckSeqStart and
                     AckSeqEnd, If the drops exceed the resolution of the
                     counter then set to the max value.
@@ -589,6 +605,18 @@ Internet-Draft                                             February 2019
                     duplicates and drop counts of this information.
                     Implementations should deal with wrapping of this
                     timer value.
+
+
+
+
+
+
+
+
+Hopps                    Expires August 9, 2019                [Page 11]
+
+Internet-Draft                                             February 2019
+
 
 5.  IANA Considerations
 
@@ -608,15 +636,6 @@ Internet-Draft                                             February 2019
      Description: The sending rate of congestion information from egress
                   tunnel endpoint.
      Reference: This document
-
-
-
-
-
-Hopps                    Expires August 9, 2019                [Page 11]
-
-Internet-Draft                                             February 2019
-
 
    Additionally this document requests a notify message status type
    TFS_CONGEST_INFO (TBD) be allocated by IANA from "IKEv2 Notify
@@ -643,6 +662,18 @@ Internet-Draft                                             February 2019
 
 7.  References
 
+
+
+
+
+
+
+
+Hopps                    Expires August 9, 2019                [Page 12]
+
+Internet-Draft                                             February 2019
+
+
 7.1.  Normative References
 
    [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
@@ -662,17 +693,6 @@ Internet-Draft                                             February 2019
    [RFC8174]  Leiba, B., "Ambiguity of Uppercase vs Lowercase in RFC
               2119 Key Words", BCP 14, RFC 8174, DOI 10.17487/RFC8174,
               May 2017, <https://www.rfc-editor.org/info/rfc8174>.
-
-
-
-
-
-
-
-Hopps                    Expires August 9, 2019                [Page 12]
-
-Internet-Draft                                             February 2019
-
 
 7.2.  Informative References
 
@@ -703,6 +723,13 @@ Internet-Draft                                             February 2019
               RFC 2914, DOI 10.17487/RFC2914, September 2000,
               <https://www.rfc-editor.org/info/rfc2914>.
 
+
+
+Hopps                    Expires August 9, 2019                [Page 13]
+
+Internet-Draft                                             February 2019
+
+
    [RFC3168]  Ramakrishnan, K., Floyd, S., and D. Black, "The Addition
               of Explicit Congestion Notification (ECN) to IP",
               RFC 3168, DOI 10.17487/RFC3168, September 2001,
@@ -721,15 +748,6 @@ Internet-Draft                                             February 2019
               BCP 208, RFC 8084, DOI 10.17487/RFC8084, March 2017,
               <https://www.rfc-editor.org/info/rfc8084>.
 
-
-
-
-
-Hopps                    Expires August 9, 2019                [Page 13]
-
-Internet-Draft                                             February 2019
-
-
    [RFC8200]  Deering, S. and R. Hinden, "Internet Protocol, Version 6
               (IPv6) Specification", STD 86, RFC 8200,
               DOI 10.17487/RFC8200, July 2017,
@@ -746,24 +764,6 @@ Author's Address
    LabN Consulting, L.L.C.
 
    Email: chopps@chopps.org
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
