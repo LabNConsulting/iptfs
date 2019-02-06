@@ -365,15 +365,15 @@ information.
 
 #+end_example
 
-  - V :: Version, must be set to zero and dropped if set to 1.
-  - Reserved :: Set to 0 ignored on receipt.
-  - BlockOffset :: This is the number of bytes following this header
-                   before the next IP/IPv6 data block. It can also
-                   point past the end of the containing packet in
-                   which case the containing packet is entirely
-                   composed of the continuation of the previous data.
-  - Data Blocks :: Variable number of bytes that constitute the start
-                   or continuation of a previous data block.
+- V :: Version, must be set to zero and dropped if set to 1.
+- Reserved :: Set to 0 ignored on receipt.
+- BlockOffset :: This is the number of bytes following this header
+                 before the next IP/IPv6 data block. It can also
+                 point past the end of the containing packet in which
+                 case the containing packet is entirely composed of
+                 the continuation of the previous data.
+- Data Blocks :: Variable number of bytes that constitute the start
+                 or continuation of a previous data block.
 
 *** Data Blocks
 
@@ -387,7 +387,7 @@ information.
 
 #+end_example
 
-    - Type :: 0x0 for pad, 0x4 for IPv4, 0x6 for IPv6.
+- Type :: 0x0 for pad, 0x4 for IPv4, 0x6 for IPv6.
 
 **** IPv4 Data Block
 
@@ -403,8 +403,8 @@ information.
 
 #+end_example
 
-  - Type :: 0x4 for IPv4 (i.e., first nibble of IPv4 packet).
-  - Total Length :: Length of the IPv4 inner packet.
+- Type :: 0x4 for IPv4 (i.e., first nibble of IPv4 packet).
+- Total Length :: Length of the IPv4 inner packet.
 
 
 **** IPv6 Data Block
@@ -421,13 +421,13 @@ information.
 
 #+end_example
 
-  - Type :: 0x6 for for IPv6 (i.e., first nibble of IPv6 packet).
-  - Total Length :: Length of the IPv6 inner packet. unspecified
-                    data. For IPv4 and IPv6 the length field must at
-                    least be present. It is fine and expected that
-                    the packet data may span multiple containing
-                    packets. Subsequent packets will have their
-                    offset set to point past this IP data.
+- Type :: 0x6 for for IPv6 (i.e., first nibble of IPv6 packet).
+- Total Length :: Length of the IPv6 inner packet. unspecified data.
+                  For IPv4 and IPv6 the length field must at least be
+                  present. It is fine and expected that the packet
+                  data may span multiple containing packets.
+                  Subsequent packets will have their offset set to
+                  point past this IP data.
 
 
 **** Pad Data Block
@@ -442,8 +442,8 @@ information.
 
 #+end_example
 
-  - Type :: 0x0 for pad
-  - Padding :: extends to end of the encapsulating packet.
+- Type :: 0x0 for pad
+- Padding :: extends to end of the encapsulating packet.
 
 
 ** IKEv2
@@ -472,22 +472,21 @@ payload. The following diagram defines the notification payload data.
 
 #+end_example
 
-  - E :: Packet[s] with Congestion Experienced (CE) ECN bits set were
-         received and used in calculating the DropCount value.
-  - Reserved :: Set to 0 ignored on receipt.
-  - DropCount :: The drop count that occurred between AckSeqStart and
-                 AckSeqEnd, If the drops exceed the resolution of the
-                 counter then set to the max value.
-  - AckSeqStart :: The first ESP sequence number of the packet range
-                   that this information relates to.
-  - AckSeqEnd :: The last ESP sequence number of the packet range
+- E :: Packet[s] with Congestion Experienced (CE) ECN bits set were
+       received and used in calculating the DropCount value.
+- Reserved :: Set to 0 ignored on receipt.
+- DropCount :: The drop count that occurred between AckSeqStart and
+               AckSeqEnd, If the drops exceed the resolution of the
+               counter then set to the max value.
+- AckSeqStart :: The first ESP sequence number of the packet range
                  that this information relates to.
-  - Timestamp :: The lower 32 bits of a running monotonic millisecond
-                 timer of when this notification data was
-                 created/sent. This value is used to determine
-                 duplicates and drop counts of this information.
-                 Implementations should deal with wrapping of this
-                 timer value.
+- AckSeqEnd :: The last ESP sequence number of the packet range that
+               this information relates to.
+- Timestamp :: The lower 32 bits of a running monotonic millisecond
+               timer of when this notification data was created/sent.
+               This value is used to determine duplicates and drop
+               counts of this information. Implementations should
+               deal with wrapping of this timer value.
 
 * IANA Considerations
 
@@ -545,6 +544,8 @@ then non-congestion controlled mode use should be considered instead.
     category std;
     references references.xml;
     title "IP Traffic Flow Security";
+    submissionType IETF;
+    consensus true;
     contributor "author:Christian E. Hopps:LabN Consulting, L.L.C.:chopps@chopps.org";
 }}
 

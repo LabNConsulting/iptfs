@@ -57,7 +57,7 @@ output ?= ${output_base}-${next_ver}
 
 .PHONY: latest submit clean validate
 
-submit: ${output}.txt
+submit: ${output}.txt ${output}.html
 
 html: ${output}.html
 
@@ -100,12 +100,15 @@ ${output}.xml: ${draft} ${references_xml} ${trees} ${load} ${yang}
 ${output}.txt: ${output}.xml
 	${XML2RFC} $< -o $@ --text
 
+${output}.html: ${output}.xml
+	${XML2RFC} $< -o $@ --html
+
 %.tree: %.yang
 	${PYANG_PYTHON} -f tree --tree-line-length 68 $< > $@
 
-${output}.html: ${draft} ${references_xml} ${trees} ${load} ${yang}
-	@echo "Generating $@ ..."
-	${OXTRADOC} -m html -n "${output}" $< > $@
+#${output}.html: ${draft} ${references_xml} ${trees} ${load} ${yang}
+#	@echo "Generating $@ ..."
+#	${OXTRADOC} -m html -n "${output}" $< > $@
 
 new-tag: ${output}.txt
 	@echo Tagging with ${output}...

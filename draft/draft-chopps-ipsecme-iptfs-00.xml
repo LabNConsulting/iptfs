@@ -1,6 +1,5 @@
 <?xml version="1.0"?>
 <?xml-stylesheet type="text/xsl" href="rfc2629.xslt"?>
-<!DOCTYPE rfc SYSTEM 'rfc2629.dtd'>
 <?rfc toc="yes"?>
 <?rfc compact="no"?>
 <?rfc subcompact="no"?>
@@ -9,7 +8,7 @@
 <?rfc iprnotified="no"?>
 <?rfc strict="yes"?>
 <rfc ipr="trust200902"   category="std"
-    docName="draft-chopps-ipsecme-iptfs-00" >
+    docName="draft-chopps-ipsecme-iptfs-00" submissionType="IETF" consensus="true" version="3" >
     <front>
     <title abbrev="">IP Traffic Flow Security</title>
 
@@ -421,19 +420,25 @@ information.
  +---------------
             ]]></artwork>
         </figure>
-        <figure>
-            <artwork><![CDATA[
-  - V :: Version, must be set to zero and dropped if set to 1.
-  - Reserved :: Set to 0 ignored on receipt.
-  - BlockOffset :: This is the number of bytes following this header
-                   before the next IP/IPv6 data block. It can also
-                   point past the end of the containing packet in
-                   which case the containing packet is entirely
-                   composed of the continuation of the previous data.
-  - Data Blocks :: Variable number of bytes that constitute the start
-                   or continuation of a previous data block.
-            ]]></artwork>
-        </figure>
+ <dl>
+<dt>V</dt>
+<dd>Version, must be set to zero and dropped if set to 1.
+ </dd>
+<dt>Reserved</dt>
+<dd>Set to 0 ignored on receipt.
+ </dd>
+<dt>BlockOffset</dt>
+<dd>This is the number of bytes following this header
+before the next IP/IPv6 data block. It can also
+point past the end of the containing packet in which
+case the containing packet is entirely composed of
+the continuation of the previous data.
+ </dd>
+<dt>Data Blocks</dt>
+<dd>Variable number of bytes that constitute the start
+or continuation of a previous data block.
+ </dd>
+ </dl>
 </section>
 <section title="Data Blocks" anchor="data-blocks-2">
         <figure>
@@ -445,11 +450,11 @@ information.
  +--------
             ]]></artwork>
         </figure>
-        <figure>
-            <artwork><![CDATA[
-    - Type :: 0x0 for pad, 0x4 for IPv4, 0x6 for IPv6.
-            ]]></artwork>
-        </figure>
+ <dl>
+<dt>Type</dt>
+<dd>0x0 for pad, 0x4 for IPv4, 0x6 for IPv6.
+ </dd>
+ </dl>
 <section title="IPv4 Data Block" anchor="ipv4-data-block">
         <figure>
             <artwork><![CDATA[
@@ -462,12 +467,14 @@ information.
  +
             ]]></artwork>
         </figure>
-        <figure>
-            <artwork><![CDATA[
-  - Type :: 0x4 for IPv4 (i.e., first nibble of IPv4 packet).
-  - Total Length :: Length of the IPv4 inner packet.
-            ]]></artwork>
-        </figure>
+ <dl>
+<dt>Type</dt>
+<dd>0x4 for IPv4 (i.e., first nibble of IPv4 packet).
+ </dd>
+<dt>Total Length</dt>
+<dd>Length of the IPv4 inner packet.
+ </dd>
+ </dl>
 </section>
 <section title="IPv6 Data Block" anchor="ipv6-data-block">
         <figure>
@@ -481,17 +488,19 @@ information.
  +--------------------------------
             ]]></artwork>
         </figure>
-        <figure>
-            <artwork><![CDATA[
-  - Type :: 0x6 for for IPv6 (i.e., first nibble of IPv6 packet).
-  - Total Length :: Length of the IPv6 inner packet. unspecified
-                    data. For IPv4 and IPv6 the length field must at
-                    least be present. It is fine and expected that
-                    the packet data may span multiple containing
-                    packets. Subsequent packets will have their
-                    offset set to point past this IP data.
-            ]]></artwork>
-        </figure>
+ <dl>
+<dt>Type</dt>
+<dd>0x6 for for IPv6 (i.e., first nibble of IPv6 packet).
+ </dd>
+<dt>Total Length</dt>
+<dd>Length of the IPv6 inner packet. unspecified data.
+For IPv4 and IPv6 the length field must at least be
+present. It is fine and expected that the packet
+data may span multiple containing packets.
+Subsequent packets will have their offset set to
+point past this IP data.
+ </dd>
+ </dl>
 </section>
 <section title="Pad Data Block" anchor="pad-data-block">
         <figure>
@@ -503,12 +512,14 @@ information.
  +--------
             ]]></artwork>
         </figure>
-        <figure>
-            <artwork><![CDATA[
-  - Type :: 0x0 for pad
-  - Padding :: extends to end of the encapsulating packet.
-            ]]></artwork>
-        </figure>
+ <dl>
+<dt>Type</dt>
+<dd>0x0 for pad
+ </dd>
+<dt>Padding</dt>
+<dd>extends to end of the encapsulating packet.
+ </dd>
+ </dl>
 </section>
 </section>
 </section>
@@ -537,26 +548,35 @@ payload. The following diagram defines the notification payload data.
  +-----------------------------------------------------------------+
             ]]></artwork>
         </figure>
-        <figure>
-            <artwork><![CDATA[
-  - E :: Packet[s] with Congestion Experienced (CE) ECN bits set were
-         received and used in calculating the DropCount value.
-  - Reserved :: Set to 0 ignored on receipt.
-  - DropCount :: The drop count that occurred between AckSeqStart and
-                 AckSeqEnd, If the drops exceed the resolution of the
-                 counter then set to the max value.
-  - AckSeqStart :: The first ESP sequence number of the packet range
-                   that this information relates to.
-  - AckSeqEnd :: The last ESP sequence number of the packet range
-                 that this information relates to.
-  - Timestamp :: The lower 32 bits of a running monotonic millisecond
-                 timer of when this notification data was
-                 created/sent. This value is used to determine
-                 duplicates and drop counts of this information.
-                 Implementations should deal with wrapping of this
-                 timer value.
-            ]]></artwork>
-        </figure>
+ <dl>
+<dt>E</dt>
+<dd>Packet[s] with Congestion Experienced (CE) ECN bits set were
+received and used in calculating the DropCount value.
+ </dd>
+<dt>Reserved</dt>
+<dd>Set to 0 ignored on receipt.
+ </dd>
+<dt>DropCount</dt>
+<dd>The drop count that occurred between AckSeqStart and
+AckSeqEnd, If the drops exceed the resolution of the
+counter then set to the max value.
+ </dd>
+<dt>AckSeqStart</dt>
+<dd>The first ESP sequence number of the packet range
+that this information relates to.
+ </dd>
+<dt>AckSeqEnd</dt>
+<dd>The last ESP sequence number of the packet range that
+this information relates to.
+ </dd>
+<dt>Timestamp</dt>
+<dd>The lower 32 bits of a running monotonic millisecond
+timer of when this notification data was created/sent.
+This value is used to determine duplicates and drop
+counts of this information. Implementations should
+deal with wrapping of this timer value.
+ </dd>
+ </dl>
 </section>
 </section>
 </section>

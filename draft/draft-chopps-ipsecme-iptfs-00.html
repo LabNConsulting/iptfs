@@ -1,0 +1,2005 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="scripts" content="Common,Latin">
+<title>IP Traffic Flow Security</title>
+<meta name="author" content="Christian E. Hopps">
+<meta name="description" content="
+       
+This document describes a mechanism that provides for robust traffic
+flow security by adding traffic flow confidentiality to encrypted IP
+encapsulated traffic. Traffic flow confidentiality is provided by
+obscuring the size and frequency of IP traffic using a constant sized
+and constant send rate IPsec tunnel.
+       
+    ">
+<meta name="generator" content="xml2rfc 2.17.2">
+<link rel="alternate" type="application/rfc+xml" href="draft-chopps-ipsecme-iptfs-00.xml">
+<link rel="license" href="#copyright">
+<style type="text/css">/* fonts */
+@import url('https://fonts.googleapis.com/css?family=Noto+Sans'); /* Sans-serif */
+@import url('https://fonts.googleapis.com/css?family=Noto+Serif'); /* Serif (print) */
+@import url('https://fonts.googleapis.com/css?family=Roboto+Mono'); /* Monospace */
+
+@viewport {
+  zoom: 1.0;
+  width: extend-to-zoom;
+}
+@-ms-viewport {
+  width: extend-to-zoom;
+  zoom: 1.0;
+}
+/* general and mobile first */
+html {
+}
+body {
+  max-width: 90%;
+  margin: 1.5em auto;
+  color: #222;
+  background-color: #fff;
+  font-size: 14px;
+  font-family: 'Noto Sans', Arial, Helvetica, sans-serif;
+  line-height: 1.6;
+  scroll-behavior: smooth;
+}
+.ears {
+  display: none;
+}
+
+/* headings */
+#title, h1, h2, h3, h4, h5, h6 {
+  margin: 1em 0 0.5em;
+  font-weight: bold;
+  line-height: 1.3;
+}
+#title {
+  clear: both;
+  border-bottom: 1px solid #ddd;
+  margin: 0 0 0.5em 0;
+  padding: 1em 0 0.5em;
+}
+.author {
+  padding-bottom: 4px;
+}
+h1 {
+  font-size: 26px;
+  margin: 1em 0;
+}
+h2 {
+  font-size: 22px;
+  margin-top: -20px;  /* provide offset for in-page anchors */
+  padding-top: 33px;
+}
+h3 {
+  font-size: 18px;
+  margin-top: -36px;  /* provide offset for in-page anchors */
+  padding-top: 42px;
+}
+h4 {
+  font-size: 16px;
+  margin-top: -36px;  /* provide offset for in-page anchors */
+  padding-top: 42px;
+}
+h5, h6 {
+  font-size: 14px;
+}
+#n-copyright-notice {
+  border-bottom: 1px solid #ddd;
+  padding-bottom: 1em;
+  margin-bottom: 1em;
+}
+/* general structure */
+p {
+  padding: 0;
+  margin: 0 0 1em 0;
+  text-align: left;
+}
+div, span {
+  position: relative;
+}
+div {
+  margin: 0;
+}
+.alignRight.art-text {
+  background-color: #f9f9f9;
+  border: 1px solid #eee;
+  border-radius: 3px;
+  padding: 1em 1em 0;
+  margin-bottom: 1.5em;
+}
+.alignRight.art-text pre {
+  padding: 0;
+}
+.alignRight {
+  margin: 1em 0;
+}
+.alignRight > *:first-child {
+  border: none;
+  margin: 0;
+  float: right;
+  clear: both;
+}
+.alignRight > *:nth-child(2) {
+  clear: both;
+  display: block;
+  border: none;
+}
+svg {
+  display: block;
+}
+.alignCenter.art-text {
+  background-color: #f9f9f9;
+  border: 1px solid #eee;
+  border-radius: 3px;
+  padding: 1em 1em 0;
+  margin-bottom: 1.5em;
+}
+.alignCenter.art-text pre {
+  padding: 0;
+}
+.alignCenter {
+  margin: 1em 0;
+}
+.alignCenter > *:first-child {
+  border: none;
+  /* this isn't optimal, but it's an existence proof.  PrinceXML doesn't
+     support flexbox yet.
+  */
+  display: table;
+  margin: 0 auto;
+}
+
+/* lists */
+ol, ul {
+  padding: 0;
+  margin: 0 0 1em 2em;
+}
+ol ol, ul ul, ol ul, ul ol {
+  margin-left: 1em;
+}
+li {
+  margin: 0 0 0.25em 0;
+}
+.ulCompact li {
+  margin: 0;
+}
+ul.empty, .ulEmpty {
+  list-style-type: none;
+}
+ul.empty li, .ulEmpty li {
+  margin-top: 0.5em;
+}
+ul.compact, .ulCompact,
+ol.compact, .olCompact {
+  line-height: 100%;
+  margin: 0 0 0 2em;
+}
+
+/* definition lists */
+dl {
+}
+dl > dt {
+  float: left;
+  margin-right: 1em;
+}
+dl > dd {
+  margin-bottom: .8em;
+  min-height: 1.3em;
+}
+dl.compact > dd, dlCompact > dd {
+  margin-bottom: 0em;
+}
+dl > dd > dl {
+  margin-top: 0.5em;
+  margin-bottom: 0em;
+}
+
+/* links */
+a {
+  text-decoration: none;
+}
+a[href] {
+  color: #3E8EDE;
+}
+a[href]:hover {
+  background-color: #f2f2f2;
+}
+figcaption a[href],
+a[href].selfRef {
+  color: #222;
+}
+/* XXX probably not this:
+a.selfRef:hover {
+  background-color: transparent;
+  cursor: default;
+} */
+
+/* Figures */
+tt, code, pre, code {
+  background-color: #f9f9f9;
+  font-family: 'Roboto Mono', monospace;
+}
+pre {
+  border: 1px solid #eee;
+  margin: 0;
+  padding: 1em;
+}
+img {
+  max-width: 100%;
+}
+figure {
+  margin: 0;
+}
+figure blockquote {
+  margin: 0.8em 0.4em 0.4em;
+}
+figcaption {
+  font-style: italic;
+  margin: 0 0 1em 0;
+}
+@media screen {
+  pre {
+    overflow-x: auto;
+    max-width: 100%;
+    max-width: calc(100% - 22px);
+  }
+}
+
+/* aside, blockquote */
+aside, blockquote {
+  margin-left: 0;
+  padding: 1.2em 2em;
+}
+blockquote {
+  background-color: #f9f9f9;
+  border: 1px solid #ddd;
+  border-radius: 3px;
+  margin: 1em 0;
+}
+cite {
+  display: block;
+  text-align: right;
+  font-style: italic;
+}
+
+/* tables */
+table {
+  width: 100%;
+  margin: 0 0 1em;
+  border-collapse: collapse;
+  border: 1px solid #eee;
+}
+th, td {
+  text-align: left;
+  vertical-align: top;
+  padding: 0.5em 0.75em;
+}
+th {
+  text-align: left;
+  background-color: #e9e9e9;
+}
+tr:nth-child(2n+1) > td {
+  background-color: #f5f5f5;
+}
+table caption {
+  font-style: italic;
+  margin: 0;
+  padding: 0;
+  text-align: left;
+}
+table p {
+  /* XXX to avoid bottom margin on table row signifiers. If paragraphs should
+     be allowed within tables more generally, it would be far better to select on a class. */
+  margin: 0;
+}
+
+/* pilcrow */
+a.pilcrow {
+  color: #777;
+  text-decoration: none;
+  visibility: hidden;
+  user-select: none;
+  -ms-user-select: none;
+  -o-user-select:none;
+  -moz-user-select: none;
+  -khtml-user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+@media screen {
+  aside:hover > a.pilcrow,
+  p:hover > a.pilcrow,
+  blockquote:hover > a.pilcrow,
+  div:hover > a.pilcrow,
+  li:hover > a.pilcrow,
+  pre:hover > a.pilcrow {
+    visibility: visible;
+  }
+  a.pilcrow:hover {
+    background-color: transparent;
+  }
+}
+
+/* misc */
+hr {
+  border: 0;
+  border-top: 1px solid #eee;
+}
+.bcp14 {
+  font-variant: small-caps;
+}
+
+.role {
+  font-variant: all-small-caps;
+}
+
+/* info block */
+#identifiers {
+  margin: 0;
+  font-size: 0.9em;
+}
+#identifiers dt {
+  width: 3em;
+  clear: left;
+}
+#identifiers dd {
+  float: left;
+  margin-bottom: 0;
+}
+#identifiers .authors .author {
+  display: inline-block;
+  margin-right: 1.5em;
+}
+#identifiers .authors .org {
+  font-style: italic;
+}
+
+/* The prepared/rendered info at the very bottom of the page */
+.docInfo {
+  color: #999;
+  font-size: 0.9em;
+  font-style: italic;
+  margin-top: 2em;
+}
+.docInfo .prepared {
+  float: left;
+}
+.docInfo .prepared {
+  float: right;
+}
+
+/* table of contents */
+#toc  {
+  padding: 0.75em 0 2em 0;
+  margin-bottom: 1em;
+}
+nav.toc ul {
+  margin: 0 0.5em 0 0;
+  padding: 0;
+  list-style: none;
+}
+nav.toc li {
+  line-height: 1.3em;
+  margin: 0.75em 0;
+  padding-left: 1.2em;
+  text-indent: -1.2em;
+}
+/* references */
+.references dt {
+  text-align: right;
+  font-weight: bold;
+  min-width: 7em;
+}
+.references dd {
+  margin-left: 8em;
+  overflow: auto;
+}
+
+.refInstance {
+  margin-bottom: 1.25em;
+}
+
+.references .ascii {
+  margin-bottom: 0.25em;
+}
+
+/* index */
+.index ul {
+  margin: 0 0 0 1em;
+  padding: 0;
+  list-style: none;
+}
+.index ul ul {
+  margin: 0;
+}
+.index li {
+  margin: 0;
+  text-indent: -2em;
+  padding-left: 2em;
+  padding-bottom: 5px;
+}
+.indexIndex {
+  margin: 0.5em 0 1em;
+}
+.index a {
+  font-weight: 700;
+}
+/* make the index two-column on all but the smallest screens */
+@media (min-width: 600px) {
+  .index ul {
+    -moz-column-count: 2;
+    -moz-column-gap: 20px;
+  }
+  .index ul ul {
+    -moz-column-count: 1;
+    -moz-column-gap: 0;
+  }
+}
+
+/* authors */
+address.vcard {
+  font-style: normal;
+  margin: 1em 0;
+}
+
+address.vcard .nameRole {
+  font-weight: 700;
+  margin-left: 0;
+}
+address.vcard .label {
+  font-family: "Noto Sans",Arial,Helvetica,sans-serif;
+  margin: 0.5em 0;
+}
+address.vcard .type {
+  display: none;
+}
+.alternative-contact {
+  margin: 1.5em 0 1em;
+}
+hr.addr {
+  border-top: 1px dashed;
+  margin: 0;
+  color: #ddd;
+  max-width: calc(100% - 16px);
+}
+
+/* temporary notes */
+.rfcEditorRemove::before {
+  position: absolute;
+  top: 0.2em;
+  right: 0.2em;
+  padding: 0.2em;
+  content: "The RFC Editor will remove this note";
+  color: #b76427;
+  background-color: rgba(249, 232, 105, 0.3);
+}
+.rfcEditorRemove {
+  position: relative;
+  padding-top: 1.8em;
+  background-color: rgba(249, 232, 105, 0.3);
+  border-radius: 3px;
+}
+.cref {
+  background-color: rgba(249, 232, 105, 0.3);
+  padding: 2px 4px;
+}
+.crefSource {
+  font-style: italic;
+}
+/* alternative layout for smaller screens */
+@media screen and (max-width: 1023px) {
+  body {
+    padding-top: 2em;
+  }
+  #title {
+    padding: 1em 0;
+  }
+  h1 {
+    font-size: 24px;
+  }
+  h2 {
+    font-size: 20px;
+    margin-top: -18px;  /* provide offset for in-page anchors */
+    padding-top: 38px;
+  }
+  #identifiers dd {
+    max-width: 60%;
+  }
+  #toc {
+    position: fixed;
+    z-index: 2;
+    top: 0;
+    right: 0;
+    padding: 0;
+    margin: 0;
+    background-color: inherit;
+    border-bottom: 1px solid #ccc;
+  }
+  #toc h2 {
+    margin: -1px 0 0 0;
+    padding: 4px 0 4px 6px;
+    padding-right: 1em;
+    min-width: 190px;
+    font-size: 1.1em;
+    text-align: right;
+    background-color: #444;
+    color: white;
+    cursor: pointer;
+  }
+  #toc h2::before { /* css hamburger */
+    float: right;
+    position: relative;
+    width: 1em;
+    height: 1px;
+    left: -164px;
+    margin: 6px 0 0 0;
+    background: white none repeat scroll 0 0;
+    box-shadow: 0 4px 0 0 white, 0 8px 0 0 white;
+    content: "";
+  }
+  #toc nav {
+    display: none;
+    padding: 0.5em 1em 1em;
+    overflow: auto;
+    height: calc(100vh - 48px);
+    border-left: 1px solid #ddd;
+  }
+}
+
+/* alternative layout for wide screens */
+@media screen and (min-width: 1024px) {
+  body {
+    max-width: 724px;
+    margin: 42px auto;
+    padding-left: 1.5em;
+    padding-right: 29em;
+  }
+  #toc {
+    position: fixed;
+    top: 42px;
+    right: 42px;
+    width: 25%;
+    margin: 0;
+    padding: 0 1em;
+    z-index: 1;
+  }
+  #toc h2 {
+    border-top: none;
+    border-bottom: 1px solid #ddd;
+    font-size: 1em;
+    font-weight: normal;
+    margin: 0;
+    padding: 0.25em 1em 1em 0;
+  }
+  #toc nav {
+    display: block;
+    height: calc(90vh - 84px);
+    bottom: 0;
+    padding: 0.5em 0 0;
+    overflow: auto;
+  }
+  img { /* future proofing */
+    max-width: 100%;
+    height: auto;
+  }
+}
+
+/* pagination */
+@media print {
+  body {
+
+    width: 100%;
+  }
+  p {
+    orphans: 3;
+    widows: 3;
+  }
+  #n-copyright-notice {
+    border-bottom: none;
+  }
+  #toc, #n-introduction {
+    page-break-before: always;
+  }
+  #toc {
+    border-top: none;
+    padding-top: 0;
+  }
+  figure, pre {
+    page-break-inside: avoid;
+  }
+  figure {
+    overflow: scroll;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    page-break-after: avoid;
+  }
+  h2+*, h3+*, h4+*, h5+*, h6+* {
+    page-break-before: avoid;
+  }
+  pre {
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    font-size: 10pt;
+  }
+  table {
+    border: 1px solid #ddd;
+  }
+  td {
+    border-top: 1px solid #ddd;
+  }
+}
+
+.ears thead .left {
+  string-set: ears-top-left content();
+}
+
+.ears thead .center {
+  string-set: ears-top-center content();
+}
+
+.ears thead .right {
+  string-set: ears-top-right content();
+}
+
+.ears tfoot .left {
+  string-set: ears-bottom-left content();
+}
+
+.ears tfoot .center {
+  string-set: ears-bottom-center content();
+}
+
+.ears tfoot .right {
+  string-set: ears-bottom-right content();
+}
+
+@page :first {
+  padding-top: 0;
+  @top-left {
+    content: normal;
+    border: none;
+  }
+  @top-center {
+    content: normal;
+    border: none;
+  }
+  @top-right {
+    content: normal;
+    border: none;
+  }
+}
+
+@page {
+  size: A4;
+  margin-bottom: 45mm;
+  padding-top: 20px;
+  @top-left {
+    content: 'Internet-Draft';
+    vertical-align: bottom;
+    border-bottom: solid 1px #ccc;
+  }
+  @top-left {
+    content: string(ears-top-left);
+    vertical-align: bottom;
+    border-bottom: solid 1px #ccc;
+  }
+  @top-center {
+    content: string(ears-top-center);
+    vertical-align: bottom;
+    border-bottom: solid 1px #ccc;
+  }
+  @top-right {
+    content: string(ears-top-right);
+    vertical-align: bottom;
+    border-bottom: solid 1px #ccc;
+  }
+  @bottom-left {
+    content: string(ears-bottom-left);
+    vertical-align: top;
+    border-top: solid 1px #ccc;
+  }
+  @bottom-center {
+    content: string(ears-bottom-center);
+    vertical-align: top;
+    border-top: solid 1px #ccc;
+  }
+  @bottom-right {
+      content: '[Page ' counter(page) ']';
+      vertical-align: top;
+      border-top: solid 1px #ccc;
+  }
+}
+
+/* Changes introduced to fix issues found during implementation */
+
+/* Separate body from document info even without intervening H1 */
+section {
+  clear: both;
+}
+
+
+/* Top align author divs, to avoid names without organization dropping level with org names */
+.author {
+  vertical-align: top;
+}
+
+/* Leave room in document info to show Internet-Draft on one line */
+#identifiers dt {
+  width: 8em;
+}
+
+/* Don't waste quite as much whitespace between label and value in doc info */
+#identifiers dd {
+  margin-left: 1em;
+}
+
+/* Give floating toc a background color (needed when it's a div inside section */
+#toc {
+  background-color: white;
+}
+
+/* Make the collapsed ToC header render white on gray also when it's a link */
+@media screen and (max-width: 1023px) {
+  #toc h2 a,
+  #toc h2 a:link,
+  #toc h2 a:focus,
+  #toc h2 a:hover,
+  #toc a.toplink,
+  #toc a.toplink:hover {
+    color: white;
+    background-color: #444;
+    text-decoration: none;
+  }
+}
+
+/* Give the bottom of the ToC some whitespace */
+@media screen and (min-width: 1024px) {
+  #toc {
+    padding: 0 0 1em 1em;
+  }
+}
+
+/* Style section numbers with more space between number and title */
+.section-number {
+  padding-right: 0.5em;
+}
+
+/* prevent monospace from becoming overly large */
+tt, code, pre, code {
+  font-size: 95%;
+}
+
+/* Fix the height/width aspect for ascii art*/
+.art-text pre {
+  line-height: 1.12;
+}
+
+/* Add styling for a link in the ToC that points to the top of the document */
+a.toplink {
+  float: right;
+  margin-right: 0.5em;
+}
+
+/* Fix the dl styling to match the RFC 7992 attributes */
+dl > dt,
+dl.dlParallel > dt {
+  float: left;
+  margin-right: 1em;
+}
+dl.dlNewline > dt {
+  float: none;
+}
+
+/* Provide styling for table cell text alignment */
+table td.text-left,
+table th.text-left {
+  text-align: left;
+}
+table td.text-center,
+table th.text-center {
+  text-align: center;
+}
+table td.text-right,
+table th.text-right {
+  text-align: right;
+}
+
+/* Make the alternative author contact informatio look less like just another
+   author, and group it closer with the primary author contact information */
+.alternative-contact {
+  margin: 0.5em 0 0.25em 0;
+}
+address .non-ascii {
+  margin: 0 0 0 2em;
+}
+
+/* With it being possible to set tables with alignment
+  left, center, and right, { width: 100%; } does not make sense */
+table {
+  width: auto;
+}
+
+/* Avoid reference text that sits in a block with very wide left margin,
+   because of a long floating dt label.*/
+.references dd {
+  overflow: visible;
+}
+
+/* Control caption placement */
+caption {
+  caption-side: bottom;
+}
+
+/* Limit the width of the author address vcard, so names in right-to-left
+   script don't end up on the other side of the page. */
+
+address.vcard {
+  max-width: 20em;
+  margin-right: auto;
+}
+
+/* For address alignment dependent on LTR or RTL scripts */
+address div.left {
+  text-align: left;
+}
+address div.right {
+  text-align: right;
+}
+
+/* Provide table alignment support.  We can't use the alignX classes above
+   since they do unwanted things with caption and other styling. */
+table.right {
+ margin-left: auto;
+ margin-right: 0;
+}
+table.center {
+ margin-left: auto;
+ margin-right: auto;
+}
+table.left {
+ margin-left: 0;
+ margin-right: auto;
+}
+
+/* Give the table caption label the same styling as the figcaption */
+caption a[href] {
+  color: #222;
+}
+
+@media print {
+  .toplink {
+    display: none;
+  }
+
+  /* avoid overwriting the top border line with the ToC header */
+  #toc {
+    padding-top: 1px;
+  }
+
+  /* Avoid page breaks inside dl and author address entries */
+  dd {
+    page-break-before: avoid;
+  }
+  .vcard {
+    page-break-inside: avoid;
+  }
+
+}
+/* Avoid wrapping of URLs in references */
+.references a {
+  white-space: nowrap;
+}
+</style>
+<link rel="stylesheet" href="rfc-local.css" type="text/css">
+</head>
+<body>
+<table class="ears">
+<thead><tr>
+<td class="left">Internet-Draft</td>
+<td class="center">IP Traffic Flow Security</td>
+<td class="right">February 2019</td>
+</tr></thead>
+<tfoot><tr>
+<td class="left">Hopps</td>
+<td class="center">Expires 10 August 2019</td>
+<td class="right">[Page]</td>
+</tr></tfoot>
+</table>
+<div class="document-information">
+<dl id="identifiers">
+<dt class="label-published">Published:</dt>
+<dd class="published">
+<time datetime="2019-02-06" class="published">6 February 2019</time>
+    </dd>
+<dt class="label-intended-status">Intended Status:</dt>
+<dd class="intended-status">Standards Track</dd>
+<dt class="label-expires">Expires:</dt>
+<dd class="expires"><time datetime="2019-08-10">10 August 2019</time></dd>
+<dt class="label-authors">Author:</dt>
+<dd class="authors">
+<div class="author">
+      <div class="author-name">C. Hopps</div>
+<div class="org">LabN Consulting, L.L.C.</div>
+</div>
+</dd>
+</dl>
+</div>
+<h1 id="title">IP Traffic Flow Security</h1>
+<section id="section-abstract">
+      <h2 id="abstract"><a href="#abstract" class="selfRef">Abstract</a></h2>
+<p id="section-abstract-1">
+This document describes a mechanism that provides for robust traffic
+flow security by adding traffic flow confidentiality to encrypted IP
+encapsulated traffic. Traffic flow confidentiality is provided by
+obscuring the size and frequency of IP traffic using a constant sized
+and constant send rate IPsec tunnel.
+      <a href="#section-abstract-1" class="pilcrow">¶</a></p>
+</section>
+<div id="status-of-memo">
+<section id="section-boilerplate.1">
+        <h2 id="name-status-of-this-memo">
+<a href="#name-status-of-this-memo" class="section-name selfRef">Status of This Memo</a>
+        </h2>
+<p id="section-boilerplate.1-1">
+        This Internet-Draft is submitted in full conformance with the
+        provisions of BCP 78 and BCP 79.
+        <a href="#section-boilerplate.1-1" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.1-2">
+        Internet-Drafts are working documents of the Internet Engineering Task
+        Force (IETF). Note that other groups may also distribute working
+        documents as Internet-Drafts. The list of current Internet-Drafts is
+        at <span><a href="https://datatracker.ietf.org/drafts/current/">https://datatracker.ietf.org/drafts/current/</a></span>.
+        <a href="#section-boilerplate.1-2" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.1-3">
+        Internet-Drafts are draft documents valid for a maximum of six months
+        and may be updated, replaced, or obsoleted by other documents at any
+        time. It is inappropriate to use Internet-Drafts as reference
+        material or to cite them other than as "work in progress."
+        <a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.1-4">
+        This Internet-Draft will expire on 10 August 2019.
+        <a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="copyright">
+<section id="section-boilerplate.2">
+        <h2 id="name-copyright-notice">
+<a href="#name-copyright-notice" class="section-name selfRef">Copyright Notice</a>
+        </h2>
+<p id="section-boilerplate.2-1">
+            Copyright (c) 2019 IETF Trust and the persons identified as the
+            document authors. All rights reserved.
+        <a href="#section-boilerplate.2-1" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.2-2">
+            This document is subject to BCP 78 and the IETF Trust's Legal
+            Provisions Relating to IETF Documents
+            (<span><a href="https://trustee.ietf.org/license-info">https://trustee.ietf.org/license-info</a></span>) in effect on the date of
+            publication of this document. Please review these documents
+            carefully, as they describe your rights and restrictions with
+            respect to this document. Code Components extracted from this
+            document must include Simplified BSD License text as described in
+            Section 4.e of the Trust Legal Provisions and are provided without
+            warranty as described in the Simplified BSD License.
+        <a href="#section-boilerplate.2-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="toc">
+<section id="section-boilerplate.3">
+        <a href="#" onclick="scroll(0,0)" class="toplink">▲</a><h2 id="name-table-of-contents">
+<a href="#name-table-of-contents" class="section-name selfRef">Table of Contents</a>
+        </h2>
+<nav class="toc"><ul class="toc ulEmpty">
+<li class="toc ulEmpty" id="section-boilerplate.3-1.1">
+            <p id="section-boilerplate.3-1.1.1"><a href="#section-1" class="xref">1</a>.  <a href="#name-introduction" class="xref">Introduction</a><a href="#section-boilerplate.3-1.1.1" class="pilcrow">¶</a></p>
+<ul class="toc ulEmpty">
+<li class="toc ulEmpty" id="section-boilerplate.3-1.1.2.1">
+                <p id="section-boilerplate.3-1.1.2.1.1"><a href="#section-1.1" class="xref">1.1</a>.  <a href="#name-terminology-concepts" class="xref">Terminology &amp; Concepts</a><a href="#section-boilerplate.3-1.1.2.1.1" class="pilcrow">¶</a></p>
+</li>
+            </ul>
+</li>
+          <li class="toc ulEmpty" id="section-boilerplate.3-1.2">
+            <p id="section-boilerplate.3-1.2.1"><a href="#section-2" class="xref">2</a>.  <a href="#name-the-ip-tfs-tunnel" class="xref">The IP-TFS Tunnel.</a><a href="#section-boilerplate.3-1.2.1" class="pilcrow">¶</a></p>
+<ul class="toc ulEmpty">
+<li class="toc ulEmpty" id="section-boilerplate.3-1.2.2.1">
+                <p id="section-boilerplate.3-1.2.2.1.1"><a href="#section-2.1" class="xref">2.1</a>.  <a href="#name-tunnel-content" class="xref">Tunnel Content</a><a href="#section-boilerplate.3-1.2.2.1.1" class="pilcrow">¶</a></p>
+<ul class="toc ulEmpty">
+<li class="toc ulEmpty" id="section-boilerplate.3-1.2.2.1.2.1">
+                    <p id="section-boilerplate.3-1.2.2.1.2.1.1"><a href="#section-2.1.1" class="xref">2.1.1</a>.  <a href="#name-ipsec-payload-format" class="xref">IPsec Payload Format</a><a href="#section-boilerplate.3-1.2.2.1.2.1.1" class="pilcrow">¶</a></p>
+</li>
+                  <li class="toc ulEmpty" id="section-boilerplate.3-1.2.2.1.2.2">
+                    <p id="section-boilerplate.3-1.2.2.1.2.2.1"><a href="#section-2.1.2" class="xref">2.1.2</a>.  <a href="#name-data-blocks" class="xref">Data-Blocks</a><a href="#section-boilerplate.3-1.2.2.1.2.2.1" class="pilcrow">¶</a></p>
+</li>
+                  <li class="toc ulEmpty" id="section-boilerplate.3-1.2.2.1.2.3">
+                    <p id="section-boilerplate.3-1.2.2.1.2.3.1"><a href="#section-2.1.3" class="xref">2.1.3</a>.  <a href="#name-example-of-an-encapsulated-" class="xref">Example of an encapsulated IP packet flow.</a><a href="#section-boilerplate.3-1.2.2.1.2.3.1" class="pilcrow">¶</a></p>
+</li>
+                  <li class="toc ulEmpty" id="section-boilerplate.3-1.2.2.1.2.4">
+                    <p id="section-boilerplate.3-1.2.2.1.2.4.1"><a href="#section-2.1.4" class="xref">2.1.4</a>.  <a href="#name-ip-header-value-mapping" class="xref">IP Header Value Mapping</a><a href="#section-boilerplate.3-1.2.2.1.2.4.1" class="pilcrow">¶</a></p>
+</li>
+                </ul>
+</li>
+              <li class="toc ulEmpty" id="section-boilerplate.3-1.2.2.2">
+                <p id="section-boilerplate.3-1.2.2.2.1"><a href="#section-2.2" class="xref">2.2</a>.  <a href="#name-modes-of-operation" class="xref">Modes of operation</a><a href="#section-boilerplate.3-1.2.2.2.1" class="pilcrow">¶</a></p>
+<ul class="toc ulEmpty">
+<li class="toc ulEmpty" id="section-boilerplate.3-1.2.2.2.2.1">
+                    <p id="section-boilerplate.3-1.2.2.2.2.1.1"><a href="#section-2.2.1" class="xref">2.2.1</a>.  <a href="#name-non-congestion-controlled-m" class="xref">Non-Congestion Controlled Mode</a><a href="#section-boilerplate.3-1.2.2.2.2.1.1" class="pilcrow">¶</a></p>
+</li>
+                  <li class="toc ulEmpty" id="section-boilerplate.3-1.2.2.2.2.2">
+                    <p id="section-boilerplate.3-1.2.2.2.2.2.1"><a href="#section-2.2.2" class="xref">2.2.2</a>.  <a href="#name-congestion-controlled-mode" class="xref">Congestion Controlled Mode</a><a href="#section-boilerplate.3-1.2.2.2.2.2.1" class="pilcrow">¶</a></p>
+</li>
+                </ul>
+</li>
+              <li class="toc ulEmpty" id="section-boilerplate.3-1.2.2.3">
+                <p id="section-boilerplate.3-1.2.2.3.1"><a href="#section-2.3" class="xref">2.3</a>.  <a href="#name-congestion-information" class="xref">Congestion Information</a><a href="#section-boilerplate.3-1.2.2.3.1" class="pilcrow">¶</a></p>
+<ul class="toc ulEmpty">
+<li class="toc ulEmpty" id="section-boilerplate.3-1.2.2.3.2.1">
+                    <p id="section-boilerplate.3-1.2.2.3.2.1.1"><a href="#section-2.3.1" class="xref">2.3.1</a>.  <a href="#name-ecn-support" class="xref">ECN Support</a><a href="#section-boilerplate.3-1.2.2.3.2.1.1" class="pilcrow">¶</a></p>
+</li>
+                </ul>
+</li>
+            </ul>
+</li>
+          <li class="toc ulEmpty" id="section-boilerplate.3-1.3">
+            <p id="section-boilerplate.3-1.3.1"><a href="#section-3" class="xref">3</a>.  <a href="#name-configuration" class="xref">Configuration</a><a href="#section-boilerplate.3-1.3.1" class="pilcrow">¶</a></p>
+<ul class="toc ulEmpty">
+<li class="toc ulEmpty" id="section-boilerplate.3-1.3.2.1">
+                <p id="section-boilerplate.3-1.3.2.1.1"><a href="#section-3.1" class="xref">3.1</a>.  <a href="#name-bandwidth" class="xref">Bandwidth</a><a href="#section-boilerplate.3-1.3.2.1.1" class="pilcrow">¶</a></p>
+</li>
+              <li class="toc ulEmpty" id="section-boilerplate.3-1.3.2.2">
+                <p id="section-boilerplate.3-1.3.2.2.1"><a href="#section-3.2" class="xref">3.2</a>.  <a href="#name-fixed-packet-size" class="xref">Fixed Packet Size</a><a href="#section-boilerplate.3-1.3.2.2.1" class="pilcrow">¶</a></p>
+</li>
+              <li class="toc ulEmpty" id="section-boilerplate.3-1.3.2.3">
+                <p id="section-boilerplate.3-1.3.2.3.1"><a href="#section-3.3" class="xref">3.3</a>.  <a href="#name-congestion-information-conf" class="xref">Congestion Information Configuration.</a><a href="#section-boilerplate.3-1.3.2.3.1" class="pilcrow">¶</a></p>
+</li>
+            </ul>
+</li>
+          <li class="toc ulEmpty" id="section-boilerplate.3-1.4">
+            <p id="section-boilerplate.3-1.4.1"><a href="#section-4" class="xref">4</a>.  <a href="#name-packet-and-data-formats" class="xref">Packet and Data Formats</a><a href="#section-boilerplate.3-1.4.1" class="pilcrow">¶</a></p>
+<ul class="toc ulEmpty">
+<li class="toc ulEmpty" id="section-boilerplate.3-1.4.2.1">
+                <p id="section-boilerplate.3-1.4.2.1.1"><a href="#section-4.1" class="xref">4.1</a>.  <a href="#name-ipsec" class="xref">IPSec</a><a href="#section-boilerplate.3-1.4.2.1.1" class="pilcrow">¶</a></p>
+<ul class="toc ulEmpty">
+<li class="toc ulEmpty" id="section-boilerplate.3-1.4.2.1.2.1">
+                    <p id="section-boilerplate.3-1.4.2.1.2.1.1"><a href="#section-4.1.1" class="xref">4.1.1</a>.  <a href="#name-payload-format" class="xref">Payload Format</a><a href="#section-boilerplate.3-1.4.2.1.2.1.1" class="pilcrow">¶</a></p>
+</li>
+                  <li class="toc ulEmpty" id="section-boilerplate.3-1.4.2.1.2.2">
+                    <p id="section-boilerplate.3-1.4.2.1.2.2.1"><a href="#section-4.1.2" class="xref">4.1.2</a>.  <a href="#name-data-blocks-2" class="xref">Data Blocks</a><a href="#section-boilerplate.3-1.4.2.1.2.2.1" class="pilcrow">¶</a></p>
+</li>
+                </ul>
+</li>
+              <li class="toc ulEmpty" id="section-boilerplate.3-1.4.2.2">
+                <p id="section-boilerplate.3-1.4.2.2.1"><a href="#section-4.2" class="xref">4.2</a>.  <a href="#name-ikev2" class="xref">IKEv2</a><a href="#section-boilerplate.3-1.4.2.2.1" class="pilcrow">¶</a></p>
+<ul class="toc ulEmpty">
+<li class="toc ulEmpty" id="section-boilerplate.3-1.4.2.2.2.1">
+                    <p id="section-boilerplate.3-1.4.2.2.2.1.1"><a href="#section-4.2.1" class="xref">4.2.1</a>.  <a href="#name-ikev2-congestion-informatio" class="xref">IKEv2 Congestion Information Notification Data</a><a href="#section-boilerplate.3-1.4.2.2.2.1.1" class="pilcrow">¶</a></p>
+</li>
+                </ul>
+</li>
+            </ul>
+</li>
+          <li class="toc ulEmpty" id="section-boilerplate.3-1.5">
+            <p id="section-boilerplate.3-1.5.1"><a href="#section-5" class="xref">5</a>.  <a href="#name-iana-considerations" class="xref">IANA Considerations</a><a href="#section-boilerplate.3-1.5.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="toc ulEmpty" id="section-boilerplate.3-1.6">
+            <p id="section-boilerplate.3-1.6.1"><a href="#section-6" class="xref">6</a>.  <a href="#name-security-considerations" class="xref">Security Considerations</a><a href="#section-boilerplate.3-1.6.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="toc ulEmpty" id="section-boilerplate.3-1.7">
+            <p id="section-boilerplate.3-1.7.1"><a href="#section-7.1" class="xref">7.1</a>.  <a href="#name-normative-references" class="xref">Normative References</a><a href="#section-boilerplate.3-1.7.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="toc ulEmpty" id="section-boilerplate.3-1.8">
+            <p id="section-boilerplate.3-1.8.1"><a href="#section-7.2" class="xref">7.2</a>.  <a href="#name-informative-references" class="xref">Informative References</a><a href="#section-boilerplate.3-1.8.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="toc ulEmpty" id="section-boilerplate.3-1.9">
+            <p id="section-boilerplate.3-1.9.1"><a href="#section-appendix.a" class="xref"></a>  <a href="#name-authors-address" class="xref">Author's Address</a><a href="#section-boilerplate.3-1.9.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+</nav>
+</section>
+</div>
+<div id="introduction">
+<section id="section-1">
+      <h2 id="name-introduction">
+<a href="#section-1" class="section-number selfRef">1. </a><a href="#name-introduction" class="section-name selfRef">Introduction</a>
+      </h2>
+<p id="section-1-1">
+Traffic Analysis <span>[<a href="#RFC4301" class="xref">RFC4301</a>] [AppCrypt S.10.3] is the act of extracting
+information about data being sent through a network. While one may
+directly obscure the data through the use of encryption </span><span>[<a href="#RFC4303" class="xref">RFC4303</a>],
+the traffic pattern itself exposes information due to variations in
+it's shape and timing (</span><span>[<a href="#I-D.iab-wire-image" class="xref">I-D.iab-wire-image</a>] and [AppCrypt S.10.3]).
+Hiding the size and frequency of traffic is referred to as Traffic
+Flow Confidentiality (TFC) </span><span>[<a href="#RFC4303" class="xref">RFC4303</a>]
+      </span><a href="#section-1-1" class="pilcrow">¶</a></p>
+<p id="section-1-2"><span>[<a href="#RFC4303" class="xref">RFC4303</a>] provides for limited TFC by allowing padding to be added to
+the encrypted IP packets and allowing for sending all-pad packets
+(protocol 59). This method has a few limitations. One limitation is
+that to obscure the frequency of the data being sent all-pad packets
+may need to be sent. Sending all-pad packets introduces latency and
+reduces bandwidth. Another limitation is that only a single IP
+packet of data is encapsulated in any encrypted ESP packet (along
+with padding to obscure the packet size) which also will increase
+latency and reduce the available bandwidth.
+      </span><a href="#section-1-2" class="pilcrow">¶</a></p>
+<p id="section-1-3">
+The IP-TFS solution provides for full TFC without the aforementioned
+timing and bandwidth limitations. To do this we use a constant send
+rate IPsec <span>[<a href="#RFC4303" class="xref">RFC4303</a>] tunnel with fixed-sized encapsulating packets.
+These fixed-sized packets are sent at a constant rate and contain
+partial, full or multiple IP packets to maximize the bandwidth and
+minimize the latency of the tunnel.
+      </span><a href="#section-1-3" class="pilcrow">¶</a></p>
+<p id="section-1-4">
+Additionally, IP-TFS provides for dealing with network congestion.
+This is important for when the IP-TFS user is not in full control of
+the domain through which the IP-TFS tunnel path flows <span>[<a href="#RFC2914" class="xref">RFC2914</a>].
+      </span><a href="#section-1-4" class="pilcrow">¶</a></p>
+<div id="terminology--concepts">
+<section id="section-1.1">
+        <h3 id="name-terminology-concepts">
+<a href="#section-1.1" class="section-number selfRef">1.1. </a><a href="#name-terminology-concepts" class="section-name selfRef">Terminology &amp; Concepts</a>
+        </h3>
+<p id="section-1.1-1">
+The keywords "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
+"SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and
+"OPTIONAL" in this document are to be interpreted as described in BCP
+14, <span>[<a href="#RFC2119" class="xref">RFC2119</a>] </span><span>[<a href="#RFC8174" class="xref">RFC8174</a>] when, and only when, they appear in all
+capitals, as shown here..
+        </span><a href="#section-1.1-1" class="pilcrow">¶</a></p>
+<p id="section-1.1-2">
+This document assumes familiarity with IP security concepts described
+in <span>[<a href="#RFC4301" class="xref">RFC4301</a>].
+        </span><a href="#section-1.1-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="the-ip-tfs-tunnel">
+<section id="section-2">
+      <h2 id="name-the-ip-tfs-tunnel">
+<a href="#section-2" class="section-number selfRef">2. </a><a href="#name-the-ip-tfs-tunnel" class="section-name selfRef">The IP-TFS Tunnel.</a>
+      </h2>
+<p id="section-2-1">
+As mentioned in <a href="#introduction" class="xref">Section 1</a> IP-TFS utilizes an IPsec <span>[<a href="#RFC4303" class="xref">RFC4303</a>]
+tunnel as it's transport. To provide for full TFC we send fixed sized
+encapsulating packets at a constant rate on the tunnel.
+      </span><a href="#section-2-1" class="pilcrow">¶</a></p>
+<p id="section-2-2">
+The primary input to the tunnel algorithm is the requested bandwidth
+of the tunnel. From this we must determine the size and rate of the
+fixed sized packets we will send on the tunnel.
+      <a href="#section-2-2" class="pilcrow">¶</a></p>
+<p id="section-2-3">
+The fixed-packet-size may either be specified manually or can be
+determined optimally through the use of Path MTU discovery <span>[<a href="#RFC1191" class="xref">RFC1191</a>]
+and </span><span>[<a href="#RFC8201" class="xref">RFC8201</a>].
+      </span><a href="#section-2-3" class="pilcrow">¶</a></p>
+<p id="section-2-4">
+Given the encapsulating packet size and the requested tunnel
+bandwidth we determine the correct packet send rate. The packet send
+rate is the requested bandwidth divided by the payload size of the
+fixed-packet-size encapsulating packet.
+      <a href="#section-2-4" class="pilcrow">¶</a></p>
+<p id="section-2-5">
+The egress of the IP-TFS tunnel SHOULD NOT impose any restrictions on
+tunnel packet arrival rate. Packet send rate is entirely the function
+of the ingress (sending) side of the IP-TFS tunnel. Indeed the
+ingress (sending) side of the IP-TFS tunnel MUST be allowed to vary
+the rate at which it sends encapsulating packets, including sending
+them faster or slower than the requested rate.
+      <a href="#section-2-5" class="pilcrow">¶</a></p>
+<div id="tunnel-content">
+<section id="section-2.1">
+        <h3 id="name-tunnel-content">
+<a href="#section-2.1" class="section-number selfRef">2.1. </a><a href="#name-tunnel-content" class="section-name selfRef">Tunnel Content</a>
+        </h3>
+<p id="section-2.1-1">
+As previously mentioned, one issue with the TFC padding solution in
+<span>[<a href="#RFC4303" class="xref">RFC4303</a>] is the large amount of wasted bandwidth as only one IP
+packet can be sent per encapsulating packet. In order to maximize
+bandwidth IP-TFS breaks this one-to-one association.
+        </span><a href="#section-2.1-1" class="pilcrow">¶</a></p>
+<p id="section-2.1-2">
+With IP-TFS we fragment as well as aggregate the inner IP traffic
+flow into the encapsulating IP tunnel packets. We only pad the tunnel
+packets if there is no data available to be sent at the time of
+tunnel packet transmission or an unusable amount of space remains.
+        <a href="#section-2.1-2" class="pilcrow">¶</a></p>
+<p id="section-2.1-3">
+In order to do this we create a new payload data type identified with
+a new IP protocol number IPTFS_PROTOCOL (TBD). A payload of
+IPTFS_PROTOCOL type is comprised of a 32 bit header followed by
+either a partial, a full or multiple partial or full data-blocks.
+        <a href="#section-2.1-3" class="pilcrow">¶</a></p>
+<div id="ipsec-payload-format">
+<section id="section-2.1.1">
+          <h4 id="name-ipsec-payload-format">
+<a href="#section-2.1.1" class="section-number selfRef">2.1.1. </a><a href="#name-ipsec-payload-format" class="section-name selfRef">IPsec Payload Format</a>
+          </h4>
+<figure id="figure-1">
+            <div class="artwork art-text alignLeft" id="section-2.1.1-1.1">
+<pre>
+  0                   1                   2                   3
+  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
+ +-----------------------------------------------------------------+
+ |V|          Reserved           |          BlockOffset            |
+ +-----------------------------------------------------------------+
+ |       Data Blocks ...
+ +---------------
+            </pre>
+</div>
+<figcaption><a href="#figure-1">Figure 1</a></figcaption></figure>
+<p id="section-2.1.1-2">
+The BlockOffset value is either zero or some offset into or past the
+end of the encapsulating packet. If the value is zero it means that a
+new data-block immediately follows the header. Conversely if the
+value is non-zero it points at the start of the next data block. It
+can be the case that the BlockOffset points past the end of the
+encapsulating packet. This simply means that the next data-block
+occurs in a subsequent encapsulating packet. When the BlockOffset is
+non-zero the data immediately following the header belongs to the
+previous data-block that is still being re-assembled.
+          <a href="#section-2.1.1-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="data-blocks">
+<section id="section-2.1.2">
+          <h4 id="name-data-blocks">
+<a href="#section-2.1.2" class="section-number selfRef">2.1.2. </a><a href="#name-data-blocks" class="section-name selfRef">Data-Blocks</a>
+          </h4>
+<p id="section-2.1.2-1">
+A data-block is defined by a 4-bit type code followed by the data
+block data. The types values have been carefully chosen to coincide
+with the IPv4/IPv6 version field values so that no per-data-block
+type overhead is required to encapsulate an IP packet. Likewise, the
+length of the data block is extracted from the encapsulated packet's
+length field.
+          <a href="#section-2.1.2-1" class="pilcrow">¶</a></p>
+<figure id="figure-2">
+            <div class="artwork art-text alignLeft" id="section-2.1.2-2.1">
+<pre>
+  0                   1                   2                   3
+  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
+ +-----------------------------------------------------------------+
+ | Type  | rest of IPv4, IPv6 or pad.
+ +--------
+            </pre>
+</div>
+<figcaption><a href="#figure-2">Figure 2</a></figcaption></figure>
+</section>
+</div>
+<div id="example-of-an-encapsulated-ip-packet-flow">
+<section id="section-2.1.3">
+          <h4 id="name-example-of-an-encapsulated-">
+<a href="#section-2.1.3" class="section-number selfRef">2.1.3. </a><a href="#name-example-of-an-encapsulated-" class="section-name selfRef">Example of an encapsulated IP packet flow.</a>
+          </h4>
+<p id="section-2.1.3-1">
+Below we show an example inner IP packet flow within the
+encapsulating tunnel packet stream. Notice how encapsulated IP
+packets can start and end anywhere, and more than one or less than 1
+may occur in a single encapsulating packet.
+          <a href="#section-2.1.3-1" class="pilcrow">¶</a></p>
+<figure id="figure-3">
+            <div class="artwork art-text alignLeft" id="section-2.1.3-2.1">
+<pre>
+  Offset: 0        Offset: 100    Offset: 2900    Offset: 1400
+ [ ESP1  (1500) ][ ESP2  (1500) ][ ESP3  (1500) ][ ESP4  (1500) ]
+ [--800--][--800--][60][-240-][--4000----------------------][pad]
+            </pre>
+</div>
+<figcaption><a href="#figure-3">Figure 3</a></figcaption></figure>
+<p id="section-2.1.3-3">
+The encapsulated IP packet flow (lengths include IP header and
+payload) is as follows: an 800 byte packet, an 800 byte packet, a 60
+byte packet, a 240 byte packet, a 4000 byte packet.
+          <a href="#section-2.1.3-3" class="pilcrow">¶</a></p>
+<p id="section-2.1.3-4">
+The BlockOffset values in the 4 IP-TFS payload headers for this
+packet flow would thus be: 0, 100, 2900, 1400 respectively. The first
+encapsulating packet ESP1 has a zero BlockOffset which points at the
+IP data block immediately following the IP-TFS header. The following
+packet ESP2s BlockOffset points inward 100 bytes to the start of the
+60 byte data block. The third encapsulating packet ESP3 contains the
+middle portion of the 4000 byte data block so the offset points past
+its end and into the forth encapsulating packet. The fourth packet
+ESP4s offset is 1400 pointing at the padding which follows the
+completion of the continued 4000 byte packet.
+          <a href="#section-2.1.3-4" class="pilcrow">¶</a></p>
+<p id="section-2.1.3-5">
+Having the BlockOffset always point at the next available data block
+allows for quick recovery with minimal inner packet loss in the
+presence of outer encapsulating packet loss.
+          <a href="#section-2.1.3-5" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="ip-header-value-mapping">
+<section id="section-2.1.4">
+          <h4 id="name-ip-header-value-mapping">
+<a href="#section-2.1.4" class="section-number selfRef">2.1.4. </a><a href="#name-ip-header-value-mapping" class="section-name selfRef">IP Header Value Mapping</a>
+          </h4>
+<p id="section-2.1.4-1"><span>[<a href="#RFC4301" class="xref">RFC4301</a>] provides some direction on when and how to map various
+values from an inner IP header to the outer encapsulating header,
+namely the Don't-Fragment (DF) bit (</span><span>[<a href="#RFC0791" class="xref">RFC0791</a>] and </span><span>[<a href="#RFC8200" class="xref">RFC8200</a>]), the
+Differentiated Services (DS) field </span><span>[<a href="#RFC2474" class="xref">RFC2474</a>] and the Explicit
+Congestion Notification (ECN) field </span><span>[<a href="#RFC3168" class="xref">RFC3168</a>]. Unlike </span><span>[<a href="#RFC4301" class="xref">RFC4301</a>] with
+IP-TFS we may and often will be encapsulating more than 1 IP packet
+per ESP packet. To deal with this we further restrict these mappings.
+In particular we never map the inner DF bit as it is unrelated to the
+IP-TFS tunnel functionality; we never directly fragment the inner
+packets and the inner packets will not affect the fragmentation of
+the outer encapsulation packets. Likewise, the ECN value need not be
+mapped as any congestion related to the constant send rate IP-TFS
+tunnel is unrelated (by design!) to the inner traffic flow. Finally,
+by default the DS field should not be copied although an
+implementation may choose to allow for configuration to override this
+behavior. An implementation SHOULD also allow the DS value to be set
+by configuration.
+          </span><a href="#section-2.1.4-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="modes-of-operation">
+<section id="section-2.2">
+        <h3 id="name-modes-of-operation">
+<a href="#section-2.2" class="section-number selfRef">2.2. </a><a href="#name-modes-of-operation" class="section-name selfRef">Modes of operation</a>
+        </h3>
+<p id="section-2.2-1">
+Just as with normal IPsec tunnels IP-TFS tunnels are unidirectional.
+Bidirectional functionality is achieved by setting up 2 tunnels, one
+in either direction.
+        <a href="#section-2.2-1" class="pilcrow">¶</a></p>
+<p id="section-2.2-2">
+An IP-TFS tunnel can operate in 2 modes, a non-congestion controlled
+mode and congestion controlled mode.
+        <a href="#section-2.2-2" class="pilcrow">¶</a></p>
+<div id="non-congestion-controlled-mode">
+<section id="section-2.2.1">
+          <h4 id="name-non-congestion-controlled-m">
+<a href="#section-2.2.1" class="section-number selfRef">2.2.1. </a><a href="#name-non-congestion-controlled-m" class="section-name selfRef">Non-Congestion Controlled Mode</a>
+          </h4>
+<p id="section-2.2.1-1">
+In the non-congestion controlled mode IP-TFS sends fixed-sized
+packets at a constant rate. The packet send rate is constant and is
+not automatically adjusted regardless of any network congestion
+(i.e., packet loss).
+          <a href="#section-2.2.1-1" class="pilcrow">¶</a></p>
+<p id="section-2.2.1-2">
+For similar reasons as given in <span>[<a href="#RFC7510" class="xref">RFC7510</a>] the non-congestion
+controlled mode should only be used where the user has full
+administrative control over the path the tunnel will take. This is
+required so the user can guarantee the bandwidth and also be sure as
+to not be negatively affecting network congestion </span><span>[<a href="#RFC2914" class="xref">RFC2914</a>]. In this
+case packet loss should be signaled to the administrator so that any
+failures due to a lack of bandwidth can be corrected.
+          </span><a href="#section-2.2.1-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="congestion-controlled-mode">
+<section id="section-2.2.2">
+          <h4 id="name-congestion-controlled-mode">
+<a href="#section-2.2.2" class="section-number selfRef">2.2.2. </a><a href="#name-congestion-controlled-mode" class="section-name selfRef">Congestion Controlled Mode</a>
+          </h4>
+<p id="section-2.2.2-1">
+With the congestion controlled mode, IP-TFS adapts to network
+congestion by lowering the packet send rate to accommodate the
+congestion. If congestion were handled in the network on a byte level
+we might consider lowering the IPsec (encapsulation) packet size to
+adapt; however, as congestion is normally handled in the network by
+dropping packets we instead choose to lower the frequency we send our
+fixed sized packets. This choice also minimizes transport overhead.
+          <a href="#section-2.2.2-1" class="pilcrow">¶</a></p>
+<p id="section-2.2.2-2">
+The output of a congestion control algorithm SHOULD adjust the
+frequency that we send our packets until the congestion is
+accommodated. We do not standardize the congestion control algorithm,
+although the algorithm SHOULD conform to guidelines in <span>[<a href="#RFC2914" class="xref">RFC2914</a>].
+          </span><a href="#section-2.2.2-2" class="pilcrow">¶</a></p>
+<p id="section-2.2.2-3">
+When an implementation is choosing a congestion control algorithm it
+is worth noting that IP-TFS is not providing for reliable delivery of
+IP traffic and so per packet ACKs are not required, and are not
+provided.
+          <a href="#section-2.2.2-3" class="pilcrow">¶</a></p>
+<p id="section-2.2.2-4">
+It's perhaps important to note that the adjustable rate of sending
+over the congestion controlled IP-TFS tunnel is being controlled by
+the network congestion. As long as the encapsulated traffic flow
+shape and timing are not directly affecting the network congestion,
+the variations in the tunnel rate will not break the traffic flow
+confidentiality.
+          <a href="#section-2.2.2-4" class="pilcrow">¶</a></p>
+<div id="circuit-breakers">
+<section id="section-2.2.2.1">
+            <h5 id="name-circuit-breakers">
+<a href="#section-2.2.2.1" class="section-number selfRef">2.2.2.1. </a><a href="#name-circuit-breakers" class="section-name selfRef">Circuit Breakers</a>
+            </h5>
+<p id="section-2.2.2.1-1">
+In additional to congestion control, implementations may wish to
+define and implement circuit breakers <span>[<a href="#RFC8084" class="xref">RFC8084</a>] as a recovery method
+of last resort. Enabling circuit breakers is also a reason a user may
+wish to enable congestion information reports even when using the
+non-congestion controlled mode of operation. The definition of
+circuit breakers are outside the scope of this document.
+            </span><a href="#section-2.2.2.1-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+</section>
+</div>
+<div id="congestion-information">
+<section id="section-2.3">
+        <h3 id="name-congestion-information">
+<a href="#section-2.3" class="section-number selfRef">2.3. </a><a href="#name-congestion-information" class="section-name selfRef">Congestion Information</a>
+        </h3>
+<p id="section-2.3-1">
+In order to support the congestion control mode, we send regular
+packet drop reports from the receiver (egress tunnel endpoint) to the
+sender. These reports indicate the number of packet drops during a
+sequence of packets. The sequence or range of packets is identified
+using the start and end ESP sequence numbers of the packet range.
+        <a href="#section-2.3-1" class="pilcrow">¶</a></p>
+<p id="section-2.3-2">
+These congestion information reports can also be sent when in the
+non-congestion controlled mode to allow for reporting from the
+sending device or to implement Circuit Breakers <span>[<a href="#RFC8084" class="xref">RFC8084</a>].
+        </span><a href="#section-2.3-2" class="pilcrow">¶</a></p>
+<p id="section-2.3-3">
+The congestion information is sent using an IKEv2 INFORMATION
+notifications <span>[<a href="#RFC7296" class="xref">RFC7296</a>]. These notifications are sent at a configured
+interval (which can be configured to 0 to disable the sending of the
+reports).
+        </span><a href="#section-2.3-3" class="pilcrow">¶</a></p>
+<div id="ecn-support">
+<section id="section-2.3.1">
+          <h4 id="name-ecn-support">
+<a href="#section-2.3.1" class="section-number selfRef">2.3.1. </a><a href="#name-ecn-support" class="section-name selfRef">ECN Support</a>
+          </h4>
+<p id="section-2.3.1-1">
+In additional to normal packet loss IP-TFS supports use of the ECN
+bits in the encapsulating IP header <span>[<a href="#RFC3168" class="xref">RFC3168</a>]. If ECN use is
+enabled and a packet arrives at the egress endpoint with the
+Congestion Experienced (CE) value set, then the receiver records that
+packet as being dropped, although it does not drop it. When the CE
+information is used to calculate the packet drop count the receiver
+also sets the E bit in the congestion information notification data.
+In order to respond quickly to the congestion indication the receiver
+MAY immediately send a congestion information notification to the
+sender upon receiving a packet with the CE indication. This
+additional immediate send SHOULD only be done once per normal
+congestion information sending interval though.
+          </span><a href="#section-2.3.1-1" class="pilcrow">¶</a></p>
+<p id="section-2.3.1-2">
+As noted in <span>[<a href="#RFC3168" class="xref">RFC3168</a>] the ECN bits are not protected by IPsec and
+thus may constitute a covert channel. For this reason ECN use should
+not be enabled by default.
+          </span><a href="#section-2.3.1-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+</section>
+</div>
+<div id="configuration">
+<section id="section-3">
+      <h2 id="name-configuration">
+<a href="#section-3" class="section-number selfRef">3. </a><a href="#name-configuration" class="section-name selfRef">Configuration</a>
+      </h2>
+<p id="section-3-1">
+IP-TFS is meant to be deployable with a minimal amount of
+configuration. All IP-TFS specific configuration (i.e., in addition
+to the underlying IPsec tunnel configuration) should be able to be
+specified at the tunnel ingress (sending) side alone (i.e.,
+single-ended provisioning).
+      <a href="#section-3-1" class="pilcrow">¶</a></p>
+<div id="bandwidth">
+<section id="section-3.1">
+        <h3 id="name-bandwidth">
+<a href="#section-3.1" class="section-number selfRef">3.1. </a><a href="#name-bandwidth" class="section-name selfRef">Bandwidth</a>
+        </h3>
+<p id="section-3.1-1">
+Bandwidth is a local configuration option. For non-congestion
+controlled mode the only configuration required is the requested
+bandwidth. For congestion controlled mode one can manually configure
+the bandwidth or one could default to the maximum bandwidth allowed
+in which case no bandwidth configuration is required. No standardized
+configuration method is required.
+        <a href="#section-3.1-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="fixed-packet-size">
+<section id="section-3.2">
+        <h3 id="name-fixed-packet-size">
+<a href="#section-3.2" class="section-number selfRef">3.2. </a><a href="#name-fixed-packet-size" class="section-name selfRef">Fixed Packet Size</a>
+        </h3>
+<p id="section-3.2-1">
+The fixed packet size to be used for the tunnel encapsulation packets
+can be configured manually or can be automatically determined using
+Path MTU discovery (see <span>[<a href="#RFC1191" class="xref">RFC1191</a>] and </span><span>[<a href="#RFC8201" class="xref">RFC8201</a>]). No standardized
+configuration method is required.
+        </span><a href="#section-3.2-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="congestion-information-configuration">
+<section id="section-3.3">
+        <h3 id="name-congestion-information-conf">
+<a href="#section-3.3" class="section-number selfRef">3.3. </a><a href="#name-congestion-information-conf" class="section-name selfRef">Congestion Information Configuration.</a>
+        </h3>
+<p id="section-3.3-1">
+If congestion control mode is to be used, or if the user wishes to
+receive congestion information on the sender for circuit breaking or
+other operational notifications in the non-congestion controlled
+mode, IP-TFS will need to configure the egress tunnel endpoint to
+send congestion information periodically.
+        <a href="#section-3.3-1" class="pilcrow">¶</a></p>
+<p id="section-3.3-2">
+In order to configure the sending interval of periodic congestion
+information on the egress tunnel endpoint, we utilize the IKEv2
+Configuration Payload (CP) <span>[<a href="#RFC7296" class="xref">RFC7296</a>]. Implementations MAY also allow
+for manual (or default) configuration of this interval; however,
+implementations of IP-TFS MUST support configuration using the IKEv2
+exchange described below.
+        </span><a href="#section-3.3-2" class="pilcrow">¶</a></p>
+<p id="section-3.3-3">
+We utilize a new IKEv2 configuration attribute TFS_INFO_INTERVAL
+(TBD) to configure the sending interval from the egress endpoint of
+the tunnel. This value is configured using a CFG_REQUEST payload and
+is acknowledge by the receiver using a CFG_REPLY payload. This
+configuration exchange SHOULD be sent during the IKEv2 configuration
+exchanges occurring as the tunnel is first brought up. The sending
+interval value may also be changed at any time afterwards using a
+similar CFG_REQUEST/CFG_REPLY payload inside an IKEv2 INFORMATIONAL
+exchange.
+        <a href="#section-3.3-3" class="pilcrow">¶</a></p>
+<p id="section-3.3-4">
+The sending interval value is given in milliseconds and is 16 bits
+wide; however, it is not recommended that values below 1/10th of a
+second are used as this could lead to early exhaustion of the Message
+ID field used in the IKEv2 INFORMATIONAL exchange to send the
+congestion information.
+        <a href="#section-3.3-4" class="pilcrow">¶</a></p>
+<p id="section-3.3-5">
+A sending interval value of 0 disables sending of the congestion
+information.
+        <a href="#section-3.3-5" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="packet-and-data-formats">
+<section id="section-4">
+      <h2 id="name-packet-and-data-formats">
+<a href="#section-4" class="section-number selfRef">4. </a><a href="#name-packet-and-data-formats" class="section-name selfRef">Packet and Data Formats</a>
+      </h2>
+<div id="ipsec">
+<section id="section-4.1">
+        <h3 id="name-ipsec">
+<a href="#section-4.1" class="section-number selfRef">4.1. </a><a href="#name-ipsec" class="section-name selfRef">IPSec</a>
+        </h3>
+<div id="payload-format">
+<section id="section-4.1.1">
+          <h4 id="name-payload-format">
+<a href="#section-4.1.1" class="section-number selfRef">4.1.1. </a><a href="#name-payload-format" class="section-name selfRef">Payload Format</a>
+          </h4>
+<figure id="figure-4">
+            <div class="artwork art-text alignLeft" id="section-4.1.1-1.1">
+<pre>
+  0                   1                   2                   3
+  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
+ +-----------------------------------------------------------------+
+ |V|          Reserved           |          BlockOffset            |
+ +-----------------------------------------------------------------+
+ |       Data Blocks ...
+ +---------------
+            </pre>
+</div>
+<figcaption><a href="#figure-4">Figure 4</a></figcaption></figure>
+<dl class="dlParallel" id="section-4.1.1-2">
+            <dt id="section-4.1.1-2.1">V</dt>
+            <dd id="section-4.1.1-2.2">Version, must be set to zero and dropped if set to 1.
+ </dd>
+            <dt id="section-4.1.1-2.3">Reserved</dt>
+            <dd id="section-4.1.1-2.4">Set to 0 ignored on receipt.
+ </dd>
+            <dt id="section-4.1.1-2.5">BlockOffset</dt>
+            <dd id="section-4.1.1-2.6">This is the number of bytes following this header
+before the next IP/IPv6 data block. It can also
+point past the end of the containing packet in which
+case the containing packet is entirely composed of
+the continuation of the previous data.
+ </dd>
+            <dt id="section-4.1.1-2.7">Data Blocks</dt>
+            <dd id="section-4.1.1-2.8">Variable number of bytes that constitute the start
+or continuation of a previous data block.
+ </dd>
+          </dl>
+</section>
+</div>
+<div id="data-blocks-2">
+<section id="section-4.1.2">
+          <h4 id="name-data-blocks-2">
+<a href="#section-4.1.2" class="section-number selfRef">4.1.2. </a><a href="#name-data-blocks-2" class="section-name selfRef">Data Blocks</a>
+          </h4>
+<figure id="figure-5">
+            <div class="artwork art-text alignLeft" id="section-4.1.2-1.1">
+<pre>
+  0                   1                   2                   3
+  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
+ +-----------------------------------------------------------------+
+ | Type  | IPv4, IPv6 or pad.
+ +--------
+            </pre>
+</div>
+<figcaption><a href="#figure-5">Figure 5</a></figcaption></figure>
+<dl class="dlParallel" id="section-4.1.2-2">
+            <dt id="section-4.1.2-2.1">Type</dt>
+            <dd id="section-4.1.2-2.2">0x0 for pad, 0x4 for IPv4, 0x6 for IPv6.
+ </dd>
+          </dl>
+<div id="ipv4-data-block">
+<section id="section-4.1.2.1">
+            <h5 id="name-ipv4-data-block">
+<a href="#section-4.1.2.1" class="section-number selfRef">4.1.2.1. </a><a href="#name-ipv4-data-block" class="section-name selfRef">IPv4 Data Block</a>
+            </h5>
+<figure id="figure-6">
+              <div class="artwork art-text alignLeft" id="section-4.1.2.1-1.1">
+<pre>
+  0                   1                   2                   3
+  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
+ +-----------------------------------------------------------------+
+ |  0x4  |  IHL  | Type Of Service |         Total Length          |
+ +------------------------------------------------------------------
+ | Rest of inner packet ...
+ +
+            </pre>
+</div>
+<figcaption><a href="#figure-6">Figure 6</a></figcaption></figure>
+<dl class="dlParallel" id="section-4.1.2.1-2">
+              <dt id="section-4.1.2.1-2.1">Type</dt>
+              <dd id="section-4.1.2.1-2.2">0x4 for IPv4 (i.e., first nibble of IPv4 packet).
+ </dd>
+              <dt id="section-4.1.2.1-2.3">Total Length</dt>
+              <dd id="section-4.1.2.1-2.4">Length of the IPv4 inner packet.
+ </dd>
+            </dl>
+</section>
+</div>
+<div id="ipv6-data-block">
+<section id="section-4.1.2.2">
+            <h5 id="name-ipv6-data-block">
+<a href="#section-4.1.2.2" class="section-number selfRef">4.1.2.2. </a><a href="#name-ipv6-data-block" class="section-name selfRef">IPv6 Data Block</a>
+            </h5>
+<figure id="figure-7">
+              <div class="artwork art-text alignLeft" id="section-4.1.2.2-1.1">
+<pre>
+  0                   1                   2                   3
+  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
+ +-----------------------------------------------------------------+
+ |  0x6  | Traffic Class |              Flow Label                 |
+ +------------------------------------------------------------------
+ |          Total Length         | Rest of inner packet ...
+ +--------------------------------
+            </pre>
+</div>
+<figcaption><a href="#figure-7">Figure 7</a></figcaption></figure>
+<dl class="dlParallel" id="section-4.1.2.2-2">
+              <dt id="section-4.1.2.2-2.1">Type</dt>
+              <dd id="section-4.1.2.2-2.2">0x6 for for IPv6 (i.e., first nibble of IPv6 packet).
+ </dd>
+              <dt id="section-4.1.2.2-2.3">Total Length</dt>
+              <dd id="section-4.1.2.2-2.4">Length of the IPv6 inner packet. unspecified data.
+For IPv4 and IPv6 the length field must at least be
+present. It is fine and expected that the packet
+data may span multiple containing packets.
+Subsequent packets will have their offset set to
+point past this IP data.
+ </dd>
+            </dl>
+</section>
+</div>
+<div id="pad-data-block">
+<section id="section-4.1.2.3">
+            <h5 id="name-pad-data-block">
+<a href="#section-4.1.2.3" class="section-number selfRef">4.1.2.3. </a><a href="#name-pad-data-block" class="section-name selfRef">Pad Data Block</a>
+            </h5>
+<figure id="figure-8">
+              <div class="artwork art-text alignLeft" id="section-4.1.2.3-1.1">
+<pre>
+  0                   1                   2                   3
+  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
+ +-----------------------------------------------------------------+
+ |  0x0  | Padding ...
+ +--------
+            </pre>
+</div>
+<figcaption><a href="#figure-8">Figure 8</a></figcaption></figure>
+<dl class="dlParallel" id="section-4.1.2.3-2">
+              <dt id="section-4.1.2.3-2.1">Type</dt>
+              <dd id="section-4.1.2.3-2.2">0x0 for pad
+ </dd>
+              <dt id="section-4.1.2.3-2.3">Padding</dt>
+              <dd id="section-4.1.2.3-2.4">extends to end of the encapsulating packet.
+ </dd>
+            </dl>
+</section>
+</div>
+</section>
+</div>
+</section>
+</div>
+<div id="ikev2">
+<section id="section-4.2">
+        <h3 id="name-ikev2">
+<a href="#section-4.2" class="section-number selfRef">4.2. </a><a href="#name-ikev2" class="section-name selfRef">IKEv2</a>
+        </h3>
+<div id="ikev2-congestion-information-notification-data">
+<section id="section-4.2.1">
+          <h4 id="name-ikev2-congestion-informatio">
+<a href="#section-4.2.1" class="section-number selfRef">4.2.1. </a><a href="#name-ikev2-congestion-informatio" class="section-name selfRef">IKEv2 Congestion Information Notification Data</a>
+          </h4>
+<p id="section-4.2.1-1">
+We utilize a send only (i.e., no response expected) IKEv2
+INFORMATIONAL exchange (37) to transmit the congestion information
+using a notification payload of type TFS_CONGEST_INFO (TBD). The The
+Response bit should be set to 0. As no response is expected the only
+payload should be the congestion information in the notification
+payload. The following diagram defines the notification payload data.
+          <a href="#section-4.2.1-1" class="pilcrow">¶</a></p>
+<figure id="figure-9">
+            <div class="artwork art-text alignLeft" id="section-4.2.1-2.1">
+<pre>
+  0                   1                   2                   3
+  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
+ +-----------------------------------------------------------------+
+ |E|  Reserved   |                  DropCount                      |
+ +-----------------------------------------------------------------+
+ |                          Timestamp                              |
+ +-----------------------------------------------------------------+
+ |                          AckSeqStart                            |
+ +-----------------------------------------------------------------+
+ |                          AckSeqEnd                              |
+ +-----------------------------------------------------------------+
+            </pre>
+</div>
+<figcaption><a href="#figure-9">Figure 9</a></figcaption></figure>
+<dl class="dlParallel" id="section-4.2.1-3">
+            <dt id="section-4.2.1-3.1">E</dt>
+            <dd id="section-4.2.1-3.2">Packet[s] with Congestion Experienced (CE) ECN bits set were
+received and used in calculating the DropCount value.
+ </dd>
+            <dt id="section-4.2.1-3.3">Reserved</dt>
+            <dd id="section-4.2.1-3.4">Set to 0 ignored on receipt.
+ </dd>
+            <dt id="section-4.2.1-3.5">DropCount</dt>
+            <dd id="section-4.2.1-3.6">The drop count that occurred between AckSeqStart and
+AckSeqEnd, If the drops exceed the resolution of the
+counter then set to the max value.
+ </dd>
+            <dt id="section-4.2.1-3.7">AckSeqStart</dt>
+            <dd id="section-4.2.1-3.8">The first ESP sequence number of the packet range
+that this information relates to.
+ </dd>
+            <dt id="section-4.2.1-3.9">AckSeqEnd</dt>
+            <dd id="section-4.2.1-3.10">The last ESP sequence number of the packet range that
+this information relates to.
+ </dd>
+            <dt id="section-4.2.1-3.11">Timestamp</dt>
+            <dd id="section-4.2.1-3.12">The lower 32 bits of a running monotonic millisecond
+timer of when this notification data was created/sent.
+This value is used to determine duplicates and drop
+counts of this information. Implementations should
+deal with wrapping of this timer value.
+ </dd>
+          </dl>
+</section>
+</div>
+</section>
+</div>
+</section>
+</div>
+<div id="iana-considerations">
+<section id="section-5">
+      <h2 id="name-iana-considerations">
+<a href="#section-5" class="section-number selfRef">5. </a><a href="#name-iana-considerations" class="section-name selfRef">IANA Considerations</a>
+      </h2>
+<p id="section-5-1">
+This document requests a protocol number IPTFS_PROTOCOL be allocated
+by IANA from "Assigned Internet Protocol Numbers" registry for
+identifying the IP-TFS ESP payload format.
+      <a href="#section-5-1" class="pilcrow">¶</a></p>
+<figure id="figure-10">
+        <div class="artwork art-text alignLeft" id="section-5-2.1">
+<pre>
+  Type: TBD
+  Description: IP-TFS ESP payload format.
+  Reference: This document
+            </pre>
+</div>
+<figcaption><a href="#figure-10">Figure 10</a></figcaption></figure>
+<p id="section-5-3">
+Additionally this document requests an attribute value
+TFS_INFO_INTERVAL (TBD) be allocated by IANA from "IKEv2
+Configuration Payload Attribute Types" registry.
+      <a href="#section-5-3" class="pilcrow">¶</a></p>
+<figure id="figure-11">
+        <div class="artwork art-text alignLeft" id="section-5-4.1">
+<pre>
+  Type: TBD
+  Description: The sending rate of congestion information from egress
+               tunnel endpoint.
+  Reference: This document
+            </pre>
+</div>
+<figcaption><a href="#figure-11">Figure 11</a></figcaption></figure>
+<p id="section-5-5">
+Additionally this document requests a notify message status type
+TFS_CONGEST_INFO (TBD) be allocated by IANA from "IKEv2 Notify
+Message Types - Status Types" registry.
+      <a href="#section-5-5" class="pilcrow">¶</a></p>
+<figure id="figure-12">
+        <div class="artwork art-text alignLeft" id="section-5-6.1">
+<pre>
+  Type: TBD
+  Description: The sending rate of congestion information from egress
+               tunnel endpoint.
+  Reference: This document
+            </pre>
+</div>
+<figcaption><a href="#figure-12">Figure 12</a></figcaption></figure>
+</section>
+</div>
+<div id="security-considerations">
+<section id="section-6">
+      <h2 id="name-security-considerations">
+<a href="#section-6" class="section-number selfRef">6. </a><a href="#name-security-considerations" class="section-name selfRef">Security Considerations</a>
+      </h2>
+<p id="section-6-1">
+This document describes a mechanism to add Traffic Flow
+Confidentiality to IP traffic. Use of this mechanism is expected to
+increase the security of the traffic being transported. Other than
+the additional security afforded by using this mechanism, IP-TFS
+utilizes the security protocols <span>[<a href="#RFC4303" class="xref">RFC4303</a>] and </span><span>[<a href="#RFC7296" class="xref">RFC7296</a>] and so their
+security considerations apply to IP-TFS as well.
+      </span><a href="#section-6-1" class="pilcrow">¶</a></p>
+<p id="section-6-2">
+As noted previously in <a href="#congestion-controlled-mode" class="xref">Section 2.2.2</a>, for TFC to be
+fully maintained the encapsulated traffic flow should not be
+affecting network congestion in a predictable way, and if it would be
+then non-congestion controlled mode use should be considered instead.
+      <a href="#section-6-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<section id="section-7.1">
+      <h3 id="name-normative-references">
+<a href="#section-7.1" class="section-number selfRef">7.1. </a><a href="#name-normative-references" class="section-name selfRef">Normative References</a>
+      </h3>
+<dl class="references">
+<dt id="RFC2119">[RFC2119]</dt>
+      <dd>
+<span class="refAuthor">Bradner, S.</span>, <span class="refTitle">"Key words for use in RFCs to Indicate Requirement Levels"</span>, <span class="seriesInfo">BCP 14</span>, <span class="seriesInfo">RFC 2119</span>, <span class="seriesInfo">DOI 10.17487/RFC2119</span>, <time datetime="1997-03">March 1997</time>
+          <span>, &lt;<a href="https://www.rfc-editor.org/info/rfc2119">https://www.rfc-editor.org/info/rfc2119</a>&gt;</span>. </dd>
+<dt id="RFC4303">[RFC4303]</dt>
+      <dd>
+<span class="refAuthor">Kent, S.</span>, <span class="refTitle">"IP Encapsulating Security Payload (ESP)"</span>, <span class="seriesInfo">RFC 4303</span>, <span class="seriesInfo">DOI 10.17487/RFC4303</span>, <time datetime="2005-12">December 2005</time>
+          <span>, &lt;<a href="https://www.rfc-editor.org/info/rfc4303">https://www.rfc-editor.org/info/rfc4303</a>&gt;</span>. </dd>
+<dt id="RFC7296">[RFC7296]</dt>
+      <dd>
+<span class="refAuthor">Kaufman, C.</span><span class="refAuthor">, Hoffman, P.</span><span class="refAuthor">, Nir, Y.</span><span class="refAuthor">, Eronen, P.</span><span class="refAuthor">, and T. Kivinen</span>, <span class="refTitle">"Internet Key Exchange Protocol Version 2 (IKEv2)"</span>, <span class="seriesInfo">STD 79</span>, <span class="seriesInfo">RFC 7296</span>, <span class="seriesInfo">DOI 10.17487/RFC7296</span>, <time datetime="2014-10">October 2014</time>
+          <span>, &lt;<a href="https://www.rfc-editor.org/info/rfc7296">https://www.rfc-editor.org/info/rfc7296</a>&gt;</span>. </dd>
+<dt id="RFC8174">[RFC8174]</dt>
+    <dd>
+<span class="refAuthor">Leiba, B.</span>, <span class="refTitle">"Ambiguity of Uppercase vs Lowercase in RFC 2119 Key Words"</span>, <span class="seriesInfo">BCP 14</span>, <span class="seriesInfo">RFC 8174</span>, <span class="seriesInfo">DOI 10.17487/RFC8174</span>, <time datetime="2017-05">May 2017</time>
+          <span>, &lt;<a href="https://www.rfc-editor.org/info/rfc8174">https://www.rfc-editor.org/info/rfc8174</a>&gt;</span>. </dd>
+</dl>
+</section>
+<section id="section-7.2">
+      <h3 id="name-informative-references">
+<a href="#section-7.2" class="section-number selfRef">7.2. </a><a href="#name-informative-references" class="section-name selfRef">Informative References</a>
+      </h3>
+<dl class="references">
+<dt id="AppCrypt">[AppCrypt]</dt>
+      <dd>
+<span class="refAuthor">Schneier, B.</span>, <span class="refTitle">"Applied Cryptography: Protocols, Algorithms, and Source Code in C"</span>, <time datetime="2017">2017</time>. </dd>
+<dt id="I-D.iab-wire-image">[I-D.iab-wire-image]</dt>
+      <dd>
+<span class="refAuthor">Trammell, B.</span><span class="refAuthor"> and M. Kuehlewind</span>, <span class="refTitle">"The Wire Image of a Network Protocol"</span>, <span class="seriesInfo">Internet-Draft draft-iab-wire-image-01</span>, <time datetime="2018-11-05">5 November 2018</time>
+          <span>, &lt;<a href="https://www.ietf.org/archive/id/draft-iab-wire-image-01">https://www.ietf.org/archive/id/draft-iab-wire-image-01</a>&gt;</span>. </dd>
+<dt id="RFC0791">[RFC0791]</dt>
+      <dd>
+<span class="refAuthor">Postel, J.</span>, <span class="refTitle">"Internet Protocol"</span>, <span class="seriesInfo">STD 5</span>, <span class="seriesInfo">RFC 791</span>, <span class="seriesInfo">DOI 10.17487/RFC0791</span>, <time datetime="1981-09">September 1981</time>
+        <span>, &lt;<a href="https://www.rfc-editor.org/info/rfc791">https://www.rfc-editor.org/info/rfc791</a>&gt;</span>. </dd>
+<dt id="RFC1191">[RFC1191]</dt>
+      <dd>
+<span class="refAuthor">Mogul, J.C.</span><span class="refAuthor"> and S.E. Deering</span>, <span class="refTitle">"Path MTU discovery"</span>, <span class="seriesInfo">RFC 1191</span>, <span class="seriesInfo">DOI 10.17487/RFC1191</span>, <time datetime="1990-11">November 1990</time>
+          <span>, &lt;<a href="https://www.rfc-editor.org/info/rfc1191">https://www.rfc-editor.org/info/rfc1191</a>&gt;</span>. </dd>
+<dt id="RFC2474">[RFC2474]</dt>
+      <dd>
+<span class="refAuthor">Nichols, K.</span><span class="refAuthor">, Blake, S.</span><span class="refAuthor">, Baker, F.</span><span class="refAuthor">, and D. Black</span>, <span class="refTitle">"Definition of the Differentiated Services Field (DS Field) in the IPv4 and IPv6 Headers"</span>, <span class="seriesInfo">RFC 2474</span>, <span class="seriesInfo">DOI 10.17487/RFC2474</span>, <time datetime="1998-12">December 1998</time>
+          <span>, &lt;<a href="https://www.rfc-editor.org/info/rfc2474">https://www.rfc-editor.org/info/rfc2474</a>&gt;</span>. </dd>
+<dt id="RFC2914">[RFC2914]</dt>
+      <dd>
+<span class="refAuthor">Floyd, S.</span>, <span class="refTitle">"Congestion Control Principles"</span>, <span class="seriesInfo">BCP 41</span>, <span class="seriesInfo">RFC 2914</span>, <span class="seriesInfo">DOI 10.17487/RFC2914</span>, <time datetime="2000-09">September 2000</time>
+          <span>, &lt;<a href="https://www.rfc-editor.org/info/rfc2914">https://www.rfc-editor.org/info/rfc2914</a>&gt;</span>. </dd>
+<dt id="RFC3168">[RFC3168]</dt>
+      <dd>
+<span class="refAuthor">Ramakrishnan, K.</span><span class="refAuthor">, Floyd, S.</span><span class="refAuthor">, and D. Black</span>, <span class="refTitle">"The Addition of Explicit Congestion Notification (ECN) to IP"</span>, <span class="seriesInfo">RFC 3168</span>, <span class="seriesInfo">DOI 10.17487/RFC3168</span>, <time datetime="2001-09">September 2001</time>
+          <span>, &lt;<a href="https://www.rfc-editor.org/info/rfc3168">https://www.rfc-editor.org/info/rfc3168</a>&gt;</span>. </dd>
+<dt id="RFC4301">[RFC4301]</dt>
+      <dd>
+<span class="refAuthor">Kent, S.</span><span class="refAuthor"> and K. Seo</span>, <span class="refTitle">"Security Architecture for the Internet Protocol"</span>, <span class="seriesInfo">RFC 4301</span>, <span class="seriesInfo">DOI 10.17487/RFC4301</span>, <time datetime="2005-12">December 2005</time>
+          <span>, &lt;<a href="https://www.rfc-editor.org/info/rfc4301">https://www.rfc-editor.org/info/rfc4301</a>&gt;</span>. </dd>
+<dt id="RFC7510">[RFC7510]</dt>
+      <dd>
+<span class="refAuthor">Xu, X.</span><span class="refAuthor">, Sheth, N.</span><span class="refAuthor">, Yong, L.</span><span class="refAuthor">, Callon, R.</span><span class="refAuthor">, and D. Black</span>, <span class="refTitle">"Encapsulating MPLS in UDP"</span>, <span class="seriesInfo">RFC 7510</span>, <span class="seriesInfo">DOI 10.17487/RFC7510</span>, <time datetime="2015-04">April 2015</time>
+          <span>, &lt;<a href="https://www.rfc-editor.org/info/rfc7510">https://www.rfc-editor.org/info/rfc7510</a>&gt;</span>. </dd>
+<dt id="RFC8084">[RFC8084]</dt>
+      <dd>
+<span class="refAuthor">Fairhurst, G.</span>, <span class="refTitle">"Network Transport Circuit Breakers"</span>, <span class="seriesInfo">BCP 208</span>, <span class="seriesInfo">RFC 8084</span>, <span class="seriesInfo">DOI 10.17487/RFC8084</span>, <time datetime="2017-03">March 2017</time>
+          <span>, &lt;<a href="https://www.rfc-editor.org/info/rfc8084">https://www.rfc-editor.org/info/rfc8084</a>&gt;</span>. </dd>
+<dt id="RFC8200">[RFC8200]</dt>
+      <dd>
+<span class="refAuthor">Deering, S.</span><span class="refAuthor"> and R. Hinden</span>, <span class="refTitle">"Internet Protocol, Version 6 (IPv6) Specification"</span>, <span class="seriesInfo">STD 86</span>, <span class="seriesInfo">RFC 8200</span>, <span class="seriesInfo">DOI 10.17487/RFC8200</span>, <time datetime="2017-07">July 2017</time>
+          <span>, &lt;<a href="https://www.rfc-editor.org/info/rfc8200">https://www.rfc-editor.org/info/rfc8200</a>&gt;</span>. </dd>
+<dt id="RFC8201">[RFC8201]</dt>
+    <dd>
+<span class="refAuthor">McCann, J.</span><span class="refAuthor">, Deering, S.</span><span class="refAuthor">, Mogul, J.</span><span class="refAuthor">, and R. Hinden, Ed.</span>, <span class="refTitle">"Path MTU Discovery for IP version 6"</span>, <span class="seriesInfo">STD 87</span>, <span class="seriesInfo">RFC 8201</span>, <span class="seriesInfo">DOI 10.17487/RFC8201</span>, <time datetime="2017-07">July 2017</time>
+          <span>, &lt;<a href="https://www.rfc-editor.org/info/rfc8201">https://www.rfc-editor.org/info/rfc8201</a>&gt;</span>. </dd>
+</dl>
+</section>
+<div id="authors-addresses">
+<section id="section-appendix.a">
+      <h2 id="name-authors-address">
+<a href="#name-authors-address" class="section-name selfRef">Author's Address</a>
+      </h2>
+<address class="vcard">
+        <div dir="auto" class="left"><span class="fn nameRole">Christian E. Hopps</span></div>
+<div dir="auto" class="left"><span class="org">LabN Consulting, L.L.C.</span></div>
+<div class="email">
+<span>Email:</span>
+<a href="mailto:chopps@chopps.org" class="email">chopps@chopps.org</a>
+</div>
+</address>
+</section>
+</div>
+<script>var toc = document.getElementById("toc");
+var tocToggle = toc.querySelector("h2");
+var tocNav = toc.querySelector("nav");
+
+// mobile menu toggle
+tocToggle.onclick = function(event) {
+    if (window.innerWidth < 1024) {
+ var tocNavDisplay = tocNav.currentStyle ? tocNav.currentStyle.display : getComputedStyle(tocNav, null).display;
+ if (tocNavDisplay == "none") {
+     tocNav.style.display = "block";
+ } else {
+     tocNav.style.display = "none";
+ }
+    }
+}
+
+// toc anchor scroll to anchor
+tocNav.addEventListener("click", function (event) {
+    event.preventDefault();
+    if (event.target.nodeName == 'A') {
+ if (window.innerWidth < 1024) {
+     tocNav.style.display = "none";
+ }
+ var href = event.target.getAttribute("href");
+ var anchorId = href.substr(1);
+ var anchor =  document.getElementById(anchorId);
+ anchor.scrollIntoView(true);
+ window.history.pushState("","",href);
+    }
+});
+
+// switch toc mode when window resized
+window.onresize = function () {
+    if (window.innerWidth < 1024) {
+ tocNav.style.display = "none";
+    } else {
+ tocNav.style.display = "block";
+    }
+}
+</script>
+</body>
+</html>
