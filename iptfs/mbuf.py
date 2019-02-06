@@ -85,7 +85,6 @@ class MQueue:
             # if self.full():
             #     self.push_cv.notify()
             self.push_cv.notify()
-
             return self.mbufs.pop()
 
     def trypop(self):
@@ -96,7 +95,6 @@ class MQueue:
             # If we were full then notify there will be push space.
             if self.full():
                 self.push_cv.notify()
-
             return self.mbufs.pop()
 
     def push(self, m, reset=False):
@@ -118,7 +116,6 @@ class MQueue:
             # if self.empty():
             #     self.pop_cv.notify()
             self.pop_cv.notify()
-
             self.mbufs.append(m)
 
 
@@ -128,11 +125,11 @@ class MIOVBuf:
         self.iov = []
         self.mlen = 0
 
-    def addmbuf(self, m, start, n):
+    def addmbuf(self, m, start):
         m.addref()
         self.mbufs.append(m)
-        self.iov.append(start[:n])
-        self.mlen += n
+        self.iov.append(start)
+        self.mlen += len(start)
 
     def reset(self, freeq):
         for m in self.mbufs:
