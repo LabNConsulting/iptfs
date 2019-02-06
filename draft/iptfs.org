@@ -1,6 +1,4 @@
 # -*- fill-column: 69 -*-
-# This is a comment.
-#
 
 This document describes a mechanism that provides for robust traffic
 flow security by adding traffic flow confidentiality to encrypted IP
