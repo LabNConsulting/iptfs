@@ -699,8 +699,8 @@ def thread_catch(func, name, *args):
 
 
 def tunnel_ingress(riffd: io.RawIOBase, s: socket.socket, send_lock: threading.Lock, rate: int):
-    freeq = MQueue("TFS Ingress FREEQ", MAXQSZ, MAXBUF, HDRSPACE, DEBUG)
-    outq = MQueue("TFS Ingress OUTQ", MAXQSZ, 0, 0, DEBUG)
+    freeq = MQueue("TFS Ingress FREEQ", MAXQSZ, MAXBUF, HDRSPACE, False, DEBUG)
+    outq = MQueue("TFS Ingress OUTQ", MAXQSZ, 0, 0, False, DEBUG)
 
     threads = [
         thread_catch(read_intf_packets, "IFREAD", riffd, freeq, outq),
@@ -716,8 +716,8 @@ def tunnel_ingress(riffd: io.RawIOBase, s: socket.socket, send_lock: threading.L
 
 def tunnel_egress(s: socket.socket, send_lock: threading.Lock, wiffd: io.RawIOBase, ack_rate: float,
                   congest_rate: int):
-    freeq = MQueue("TFS Egress FREEQ", MAXQSZ, MAXBUF, HDRSPACE, DEBUG)
-    outq = MQueue("TFS Egress OUTQ", MAXQSZ, 0, 0, DEBUG)
+    freeq = MQueue("TFS Egress FREEQ", MAXQSZ, MAXBUF, HDRSPACE, False, DEBUG)
+    outq = MQueue("TFS Egress OUTQ", MAXQSZ, 0, 0, False, DEBUG)
 
     #send_ack_periodic = PeriodicSignal("ACK Signal", ack_rate)
 
