@@ -1110,18 +1110,17 @@ it's shape and timing (</span><span>[<a href="#I-D.iab-wire-image" class="xref">
 Hiding the size and frequency of traffic is referred to as Traffic
 Flow Confidentiality (TFC) </span><span>[<a href="#RFC4303" class="xref">RFC4303</a>]
       </span><a href="#section-1-1" class="pilcrow">¶</a></p>
-<p id="section-1-2"><span>[<a href="#RFC4303" class="xref">RFC4303</a>] provides for limited TFC by allowing padding to be added to
-the encrypted IP packets and allowing for sending all-pad packets
-(protocol 59). This method has the major limitation that it
-can significantly under-utilize the available bandwidth.
+<p id="section-1-2"><span>[<a href="#RFC4303" class="xref">RFC4303</a>] provides for TFC by allowing padding to be added to the
+encrypted IP packets and allowing for sending all-pad packets
+(protocol 59). This method has the major limitation that it can
+significantly under-utilize the available bandwidth.
       </span><a href="#section-1-2" class="pilcrow">¶</a></p>
 <p id="section-1-3">
 The IP-TFS solution provides for full TFC without the aforementioned
-timing and bandwidth limitations. To do this we use a constant send
-rate IPsec <span>[<a href="#RFC4303" class="xref">RFC4303</a>] tunnel with fixed-sized encapsulating packets.
-These fixed-sized packets are sent at a constant rate and contain
-partial, full or multiple IP packets to maximize the bandwidth and
-minimize the latency of the tunnel.
+bandwidth limitation. To do this we use a constant send rate IPsec
+<span>[<a href="#RFC4303" class="xref">RFC4303</a>] tunnel with fixed-sized encapsulating packets; however,
+these fixed-sized packets can contain partial, full or multiple IP
+packets to maximize the bandwidth of the tunnel.
       </span><a href="#section-1-3" class="pilcrow">¶</a></p>
 <p id="section-1-4">
 Additionally, IP-TFS provides for dealing with network congestion.
