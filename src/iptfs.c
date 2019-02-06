@@ -151,6 +151,18 @@ write_intf_pkts(int fd, struct miovq *outq, struct miovq *freeq)
 /* 	} */
 /* } */
 
+static ssize_t __inline__ getiplen(struct miov *m, struct mbuf *tbuf)
+{
+	switch (m->iov[0].iov_base[0] & 0xF0) {
+	case 0x4:
+		return get16(tbuf->start[2 - MBUF_LEN(m)]);
+	case 0x6:
+		return get16(tbuf->start[4 - MBUF_LEN(m)]);
+	default:
+		assert(0);
+	}
+}
+
 /*
  * add_to_inner_packet adds data from an outer packet mbuf to an inner one
  */
@@ -204,21 +216,29 @@ add_to_inner_packet(struct mbuf *tbuf, bool new, struct miov *m,
 		tlen -= offset;
 
 		uint8_t vnib = start[0] & 0xF0;
-		uint16_t iplen;
-		if (vnib == 0x40) /* IPv4 */
-			iplen = get16(&start[2]);
-		else if (vnib == 0x60) /* IPv6 */
-			iplen = get16(&start[4]);
-		else { /* Pad or wrong. */
-			// DBG("PAD: add_to_inner_packet: new %d v %d len %d\n",
-			//    new, vnib, tlen);
+		uint16_t iplen = 0;
+		if (vnib == 0x40) { /* IPv4 */
+			if (tlen >= 4)
+				iplen = get16(&start[2]);
+		} else if (vnib == 0x60) { /* IPv6 */
+			if (tlen >= 6)
+				iplen = get16(&start[4]);
+		} else if (vnib == 0x0) {
+			DBG("PAD: new %d len %d\n", new, tlen);
 			tbuf->start = tbuf->end;
+			return m;
+		}
+		if (iplen == 0) {
+			DBG("STARTSHORT: new %d v %d len %d\n", new, vnib,
+			    tlen);
+			miov_addmbuf(m, tbuf, start, tlen);
+			tbuf->start += tlen;
+			assert(MBUF_LEN(tbuf) == 0);
 			return m;
 		}
 		DBG("START: add_to_inner_packet: new %d off %d iplen %d\n", new,
 		    offset, iplen);
 
-		/* We can always reconstruct this too */
 		m->left = iplen;
 
 		/* FALLTHROUGH*/
@@ -230,9 +250,14 @@ add_to_inner_packet(struct mbuf *tbuf, bool new, struct miov *m,
 		if (new)
 			DBG("got_outer: seq %d tlen %ld\n", seq, ltlen);
 
+		/* Initial mbuf wasn't large enough to include length */
+		if (m->left <= 0)
+			m->left = getiplen(m, tbuf);
+
 		if (m->left > tlen) {
 			// XXX Code Copy A
-			DBG("MORE: off>tlen: new %d off %d mleft %ld tlen %d\n",
+			DBG("MORE: off>tlen: new %d off %d mleft %ld "
+			    "tlen %d\n",
 			    new, offset, m->left, tlen);
 
 			miov_addmbuf(m, tbuf, start, tlen);
@@ -264,6 +289,11 @@ add_to_inner_packet(struct mbuf *tbuf, bool new, struct miov *m,
 		/* This is us logging here what we didn't in in get outer */
 		if (new)
 			DBG("got_outer: seq %d tlen %ld\n", seq, ltlen);
+
+		/* Initial mbuf wasn't large enough to include length */
+		if (m->left <= 0)
+			m->left = getiplen(m, tbuf);
+
 		DBG("CONTINUED: new %d off for next %d mleft %ld tlen %d\n",
 		    new, offset, m->left, tlen);
 		tlen = offset;

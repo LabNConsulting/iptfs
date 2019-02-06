@@ -117,6 +117,15 @@ def write_intf_packets(fd: io.RawIOBase, outq: MIOVQ, freeq: MIOVQ):
 #         freeq.push(m, True)
 
 
+def getiplen(m: MIOVBuf, tmbuf: MBuf):
+    vnib = m.iov[0][0] & 0xF0
+    if vnib == 0x4:
+        return get16(tmbuf.start[2 - m.len])
+    elif vnib == 0x6:
+        return get16(tmbuf.start[4 - m.len])
+    assert (False)
+
+
 def add_to_inner_packet(tmbuf: MBuf, new: bool, m: MIOVBuf, iovfreeq: MIOVQ, outq: MIOVQ, seq: int):
     logtmlen = tmbuf.len()
     assert (logtmlen > 0)
@@ -150,15 +159,14 @@ def add_to_inner_packet(tmbuf: MBuf, new: bool, m: MIOVBuf, iovfreeq: MIOVQ, out
         # -----------------------
         if offset >= tmlen:
             # next data block is past the end of this packet.
+            # This should only be the case if when we lose an encap packet.
             tmbuf.start = tmbuf.end
             return m
 
         # skip past the existing packet we don't know about.
         start = tmbuf.start = tmbuf.start[offset:]
         assert (tmbuf.len() == tmlen - offset)
-        tmlen = tmbuf.len()
-        # tmlen -= offset
-        # assert (tmlen <= m.after())
+        tmlen -= offset
 
         # This is logging we moved from get_outer_tunnel_packet so we can skip
         # the empties
@@ -178,19 +186,23 @@ def add_to_inner_packet(tmbuf: MBuf, new: bool, m: MIOVBuf, iovfreeq: MIOVQ, out
             iplen = get16(start[2:4])
         elif vnibble == 0x60 and tmlen >= 6:
             iplen = get16(start[4:6])
-        else:
+        elif vnibble == 0x0:
+            # Pad
             if (DEBUG and new):
                 logger.debug("mlen==0 Got outer packet seq: %d tmbuf.len: %d", seq, logtmlen)
-            # XXX NO REASON TO NOT SUPPORT THIS!
-            if vnibble in (0x40, 0x60):
-                logger.error("for now too short datablock %d", tmlen)
             tmbuf.start = tmbuf.end
+            return m
+        else:
+            # we have Ipv4 or IPv6 but not enough to determine how long it is.
+            if DEBUG:
+                logger.debug("STARTSHORT: (new: %d), offset %d", new, offset)
+            m.addmbuf(tmbuf, start[:tmlen])
+            tmbuf.start = tmbuf.start[tmlen:]
+            assert tmbuf.start == tmbuf.end
             return m
 
         if DEBUG:
             logger.debug("START: (new: %d), offset %d iplen %d", new, offset, iplen)
-
-        # We can always reconstruct this too
         m.left = iplen
         # Fall through
     elif offset > tmlen:
@@ -202,6 +214,9 @@ def add_to_inner_packet(tmbuf: MBuf, new: bool, m: MIOVBuf, iovfreeq: MIOVQ, out
         # the empties
         if DEBUG and new:
             logger.debug("off>tmlen Got outer packet seq: %d tmbuf.len: %d", seq, logtmlen)
+
+        if m.left <= 0:
+            m.left = getiplen(m, tmbuf)
 
         # We are continuing to fill an existing inner packet, and this entire buffer is for it.
         if m.left > tmlen:
@@ -240,6 +255,9 @@ def add_to_inner_packet(tmbuf: MBuf, new: bool, m: MIOVBuf, iovfreeq: MIOVQ, out
 
         if DEBUG:
             logger.debug("CONTINUED: new: %d mlen: %d, off (nextin): %d", new, m.len(), offset)
+
+        if m.left <= 0:
+            m.left = getiplen(m, tmbuf)
 
         # skip past the existing packet we don't know about.
         tmlen = offset
