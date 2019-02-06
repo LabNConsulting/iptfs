@@ -119,17 +119,12 @@ def tunnel_get_recv_mbuf(freeq: MQueue):
 def add_to_inner_packet(tmbuf: MBuf, new: bool, m: MBuf, freeq: MQueue, outq: MQueue, seq: int):  # pylint: disable=R0911,R0912,R0913,R0915
 
     logtmlen = tmbuf.len()
-    if logtmlen <= 0:
-        logger.error("ERRORX1: logtmlen %d new %d ", logtmlen, new)
     assert (logtmlen > 0)
 
-    if not new:
-        recurse = True
-        offset = 0
-    else:
-        recurse = False
+    offset = 0
+    if new:
         if logtmlen < 8:
-            logger.error("ERRORX2: tmlen < 8 %d recurse %d ", logtmlen, recurse)
+            logger.error("ERRORX2: tmlen < 8 %d new %d ", logtmlen, new)
             assert False
 
         offset = get16(tmbuf.start[6:8])
@@ -148,7 +143,7 @@ def add_to_inner_packet(tmbuf: MBuf, new: bool, m: MBuf, freeq: MQueue, outq: MQ
         m = tunnel_get_recv_mbuf(freeq)
 
     if m.len() == 0:
-        if (DEBUG and recurse):  # or TRACE:
+        if (DEBUG and not new):  # or TRACE:
             logger.debug("add_to_inner_packet(recures) mbuf len == 0, offset %d", offset)
 
         # -----------------
@@ -170,14 +165,14 @@ def add_to_inner_packet(tmbuf: MBuf, new: bool, m: MBuf, freeq: MQueue, outq: MQ
 
         # Check to see if the rest is padding.
         if tmlen < 6:
-            if (DEBUG and recurse):  # or TRACE:
-                logger.debug("add_to_inner_packet(recurse) mbuf len == 0, tmlen < 6")
+            if (DEBUG and not new):  # or TRACE:
+                logger.debug("add_to_inner_packet(!new) mbuf len == 0, tmlen < 6")
             tmbuf.start = tmbuf.end
             return m
 
         if (start[0] & 0xF0) not in (0x40, 0x60):
-            if (DEBUG and recurse):  # or TRACE:
-                logger.debug("add_to_inner_packet(recurse) mbuf len == 0, padding (verbyte %d)",
+            if (DEBUG and not new):  # or TRACE:
+                logger.debug("add_to_inner_packet(!new) mbuf len == 0, padding (verbyte %d)",
                              start[0])
             tmbuf.start = tmbuf.end
             return m
@@ -200,9 +195,8 @@ def add_to_inner_packet(tmbuf: MBuf, new: bool, m: MBuf, freeq: MQueue, outq: MQ
             return m
 
         if DEBUG:
-            logger.debug(
-                "START: add_to_inner_packet(recurse: %d) mbuf len == 0, offset %d iplen %d",
-                recurse, offset, iplen)
+            logger.debug("START: add_to_inner_packet(new: %d) mbuf len == 0, offset %d iplen %d",
+                         new, offset, iplen)
 
         m.left = iplen
 
@@ -220,8 +214,8 @@ def add_to_inner_packet(tmbuf: MBuf, new: bool, m: MBuf, freeq: MQueue, outq: MQ
         # We are continuing to fill an existing inner packet, and this entire buffer is for it.
         if m.left > tmlen:
             if DEBUG:
-                logger.debug("MORELEFT: recurse: %d offset>tmlen, offset %d m.left %d tmlen %d",
-                             recurse, offset, m.left, tmlen)
+                logger.debug("MORELEFT: new: %d offset>tmlen, offset %d m.left %d tmlen %d", new,
+                             offset, m.left, tmlen)
             # XXX Remove copy
             m.end[:tmlen] = start[:tmlen]
             m.end = m.end[tmlen:]
@@ -231,8 +225,8 @@ def add_to_inner_packet(tmbuf: MBuf, new: bool, m: MBuf, freeq: MQueue, outq: MQ
             return m
 
         if DEBUG:
-            logger.debug("COMPLETE: (recurse: %d) offset>tmlen, offset: %d m.left %d tmlen %d",
-                         recurse, offset, m.left, tmlen)
+            logger.debug("COMPLETE: (new: %d) offset>tmlen, offset: %d m.left %d tmlen %d", new,
+                         offset, m.left, tmlen)
 
         # XXX remove copy
         m.end[:m.left] = start[:m.left]
@@ -261,8 +255,8 @@ def add_to_inner_packet(tmbuf: MBuf, new: bool, m: MBuf, freeq: MQueue, outq: MQ
 
         if DEBUG:
             logger.debug(
-                "CONTINUED: add_to_inner_packet(recurse: %d) mbuf len == %d, offset (for next) %d",
-                recurse, m.len(), offset)
+                "CONTINUED: add_to_inner_packet(new: %d) mbuf len == %d, offset (for next) %d", new,
+                m.len(), offset)
 
         # skip past the existing packet we don't know about.
         tmlen = offset
@@ -271,8 +265,8 @@ def add_to_inner_packet(tmbuf: MBuf, new: bool, m: MBuf, freeq: MQueue, outq: MQ
     if m.left > tmlen:
         # This can't be true for case 3.
         if DEBUG:
-            logger.debug("MORELEFT: add_to_inner_packet(recurse: %d) offset: %d m.left %d tmlen %d",
-                         recurse, offset, m.left, tmlen)
+            logger.debug("MORELEFT: add_to_inner_packet(new: %d) offset: %d m.left %d tmlen %d",
+                         new, offset, m.left, tmlen)
         # XXX remove copy
         m.end[:tmlen] = start[:tmlen]
         m.end = m.end[tmlen:]
@@ -283,8 +277,8 @@ def add_to_inner_packet(tmbuf: MBuf, new: bool, m: MBuf, freeq: MQueue, outq: MQ
 
     # We have enough to finish this inner packet.
     if DEBUG:
-        logger.debug("COMPLET: add_to_inner_packet(recurse: %d) offset %d m.left %d tmlen %d",
-                     recurse, offset, m.left, tmlen)
+        logger.debug("COMPLET: add_to_inner_packet(new: %d) offset %d m.left %d tmlen %d", new,
+                     offset, m.left, tmlen)
     # XXX remove copy
     m.end[:m.left] = start[:m.left]
     m.end = m.end[m.left:]
@@ -294,7 +288,7 @@ def add_to_inner_packet(tmbuf: MBuf, new: bool, m: MBuf, freeq: MQueue, outq: MQ
 
     tmlen = tmbuf.len()
     if tmlen < 0:
-        logger.error("ERROR: tmlen < 0: %d recurse %d ", tmlen, recurse)
+        logger.error("ERROR: tmlen < 0: %d new %d ", tmlen, new)
     assert (tmlen >= 0)
 
     if tmlen == 0:
@@ -302,7 +296,7 @@ def add_to_inner_packet(tmbuf: MBuf, new: bool, m: MBuf, freeq: MQueue, outq: MQ
 
     # Recurse!
     if DEBUG:
-        logger.debug("recurse: recursed %d", recurse)
+        logger.debug("recursing: new %d", new)
     return add_to_inner_packet(tmbuf, False, None, freeq, outq, seq)
 
 
