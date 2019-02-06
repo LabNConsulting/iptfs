@@ -43,8 +43,8 @@ Flow Confidentiality (TFC) <xref target="RFC4303"/>
     <t>
 <xref target="RFC4303"/> provides for limited TFC by allowing padding to be added to
 the encrypted IP packets and allowing for sending all-pad packets
-(protocol 59). This method has the major limitation that it limits
-the available bandwidth.
+(protocol 59). This method has the major limitation that it
+can significantly under-utilize the available bandwidth.
     </t>
     <t>
 The IP-TFS solution provides for full TFC without the aforementioned

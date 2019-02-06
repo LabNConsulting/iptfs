@@ -94,8 +94,8 @@ Table of Contents
 
    [RFC4303] provides for limited TFC by allowing padding to be added to
    the encrypted IP packets and allowing for sending all-pad packets
-   (protocol 59).  This method has the major limitation that it limits
-   the available bandwidth.
+   (protocol 59).  This method has the major limitation that it can
+   significantly under-utilize the available bandwidth.
 
    The IP-TFS solution provides for full TFC without the aforementioned
    timing and bandwidth limitations.  To do this we use a constant send
