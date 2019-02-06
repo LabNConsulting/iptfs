@@ -80,7 +80,7 @@ bandwidth IP-TFS breaks this one-to-one association.
 With IP-TFS we fragment as well as aggregate the inner IP traffic
 flow into the encapsulating IP tunnel packets. We only pad the tunnel
 packets if there is no data available to be sent at the time of
-tunnel packet transmission or an unusable amount of space remains.
+tunnel packet transmission.
 
 In order to do this we create a new payload data type identified with
 a new IP protocol number IPTFS_PROTOCOL (TBD). A payload of
