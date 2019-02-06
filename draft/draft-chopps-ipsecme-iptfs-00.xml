@@ -43,13 +43,8 @@ Flow Confidentiality (TFC) <xref target="RFC4303"/>
     <t>
 <xref target="RFC4303"/> provides for limited TFC by allowing padding to be added to
 the encrypted IP packets and allowing for sending all-pad packets
-(protocol 59). This method has a few limitations. One limitation is
-that to obscure the frequency of the data being sent all-pad packets
-may need to be sent. Sending all-pad packets introduces latency and
-reduces bandwidth. Another limitation is that only a single IP
-packet of data is encapsulated in any encrypted ESP packet (along
-with padding to obscure the packet size) which also will increase
-latency and reduce the available bandwidth.
+(protocol 59). This method has the major limitation that it limits
+the available bandwidth.
     </t>
     <t>
 The IP-TFS solution provides for full TFC without the aforementioned
@@ -127,11 +122,9 @@ a new IP protocol number IPTFS_PROTOCOL (TBD). A payload of
 IPTFS_PROTOCOL type is comprised of a 32 bit header followed by
 either a partial, a full or multiple partial or full data-blocks.
     </t>
-<section title="IPsec Payload Format" anchor="ipsec-payload-format">
+<section title="IPsec Payload" anchor="ipsec-payload">
         <figure>
             <artwork><![CDATA[
-  0                   1                   2                   3
-  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
  +-----------------------------------------------------------------+
  |V|          Reserved           |          BlockOffset            |
  +-----------------------------------------------------------------+
@@ -162,8 +155,6 @@ length field.
     </t>
         <figure>
             <artwork><![CDATA[
-  0                   1                   2                   3
-  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
  +-----------------------------------------------------------------+
  | Type  | rest of IPv4, IPv6 or pad.
  +--------
@@ -186,20 +177,20 @@ may occur in a single encapsulating packet.
         </figure>
     <t>
 The encapsulated IP packet flow (lengths include IP header and
-payload) is as follows: an 800 byte packet, an 800 byte packet, a 60
-byte packet, a 240 byte packet, a 4000 byte packet.
+payload) is as follows: an 800 octet packet, an 800 octet packet, a 60
+octet packet, a 240 octet packet, a 4000 octet packet.
     </t>
     <t>
 The BlockOffset values in the 4 IP-TFS payload headers for this
 packet flow would thus be: 0, 100, 2900, 1400 respectively. The first
 encapsulating packet ESP1 has a zero BlockOffset which points at the
 IP data block immediately following the IP-TFS header. The following
-packet ESP2s BlockOffset points inward 100 bytes to the start of the
-60 byte data block. The third encapsulating packet ESP3 contains the
-middle portion of the 4000 byte data block so the offset points past
+packet ESP2s BlockOffset points inward 100 octets to the start of the
+60 octet data block. The third encapsulating packet ESP3 contains the
+middle portion of the 4000 octet data block so the offset points past
 its end and into the forth encapsulating packet. The fourth packet
 ESP4s offset is 1400 pointing at the padding which follows the
-completion of the continued 4000 byte packet.
+completion of the continued 4000 octet packet.
     </t>
     <t>
 Having the BlockOffset always point at the next available data block
@@ -260,7 +251,7 @@ failures due to a lack of bandwidth can be corrected.
     <t>
 With the congestion controlled mode, IP-TFS adapts to network
 congestion by lowering the packet send rate to accommodate the
-congestion. If congestion were handled in the network on a byte level
+congestion. If congestion were handled in the network on a octet level
 we might consider lowering the IPsec (encapsulation) packet size to
 adapt; however, as congestion is normally handled in the network by
 dropping packets we instead choose to lower the frequency we send our
@@ -416,26 +407,29 @@ information.
  +-----------------------------------------------------------------+
  |V|          Reserved           |          BlockOffset            |
  +-----------------------------------------------------------------+
- |       Data Blocks ...
+ |       DataBlocks ...
  +---------------
             ]]></artwork>
         </figure>
  <dl>
 <dt>V</dt>
-<dd>Version, must be set to zero and dropped if set to 1.
+<dd>A 1 bit version field that MUST be set to zero. If received as
+one the packet MUST be dropped.
  </dd>
 <dt>Reserved</dt>
-<dd>Set to 0 ignored on receipt.
+<dd>A 15 bit field set to 0 and ignored on receipt.
  </dd>
 <dt>BlockOffset</dt>
-<dd>This is the number of bytes following this header
-before the next IP/IPv6 data block. It can also
-point past the end of the containing packet in which
-case the containing packet is entirely composed of
-the continuation of the previous data.
+<dd>A 16 bit unsigned integer counting the number of
+octets following this 32 bit header before the next
+data block. It can also point past the end of the
+containing packet in which case the data entirely
+belongs to the previous data block. If the offset
+extends into subsequent packets the subsequent 32
+bit IP-TFS headers are not counted by this value.
  </dd>
-<dt>Data Blocks</dt>
-<dd>Variable number of bytes that constitute the start
+<dt>DataBlocks</dt>
+<dd>Variable number of octets that constitute the start
 or continuation of a previous data block.
  </dd>
  </dl>
@@ -452,7 +446,9 @@ or continuation of a previous data block.
         </figure>
  <dl>
 <dt>Type</dt>
-<dd>0x0 for pad, 0x4 for IPv4, 0x6 for IPv6.
+<dd>A 4 bit field where 0x0 identifies a pad data block, 0x4
+indicates an IPv4 data block, and 0x6 indicates an IPv6
+data block.
  </dd>
  </dl>
 <section title="IPv4 Data Block" anchor="ipv4-data-block">
@@ -461,18 +457,25 @@ or continuation of a previous data block.
   0                   1                   2                   3
   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
  +-----------------------------------------------------------------+
- |  0x4  |  IHL  | Type Of Service |         Total Length          |
+ |  0x4  |  IHL  |  TypeOfService  |         TotalLength           |
  +------------------------------------------------------------------
- | Rest of inner packet ...
+ | Rest of the inner packet ...
  +
             ]]></artwork>
         </figure>
+    <t>
+These values are the actual values within the encapsulated IPv4
+header. In other words, the start of this data block is the start of
+the encapsulated IP packet.
+    </t>
  <dl>
 <dt>Type</dt>
-<dd>0x4 for IPv4 (i.e., first nibble of IPv4 packet).
+<dd>A 4 bit value of 0x4 indicating IPv4 (i.e., first nibble of
+the IPv4 packet).
  </dd>
-<dt>Total Length</dt>
-<dd>Length of the IPv4 inner packet.
+<dt>TotalLength</dt>
+<dd>The 16 bit unsigned integer length field of the IPv4
+inner packet.
  </dd>
  </dl>
 </section>
@@ -482,23 +485,25 @@ or continuation of a previous data block.
   0                   1                   2                   3
   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
  +-----------------------------------------------------------------+
- |  0x6  | Traffic Class |              Flow Label                 |
+ |  0x6  | TrafficClass  |               FlowLabel                 |
  +------------------------------------------------------------------
- |          Total Length         | Rest of inner packet ...
+ |          TotalLength          | Rest of the inner packet ...
  +--------------------------------
             ]]></artwork>
         </figure>
+    <t>
+These values are the actual values within the encapsulated IPv6
+header. In other words, the start of this data block is the start of
+the encapsulated IP packet.
+    </t>
  <dl>
 <dt>Type</dt>
-<dd>0x6 for for IPv6 (i.e., first nibble of IPv6 packet).
+<dd>A 4 bit value of 0x6 indicating IPv6 (i.e., first nibble of
+the IPv6 packet).
  </dd>
-<dt>Total Length</dt>
-<dd>Length of the IPv6 inner packet. unspecified data.
-For IPv4 and IPv6 the length field must at least be
-present. It is fine and expected that the packet
-data may span multiple containing packets.
-Subsequent packets will have their offset set to
-point past this IP data.
+<dt>TotalLength</dt>
+<dd>The 16 bit unsigned integer length field of the
+inner IPv6 inner packet.
  </dd>
  </dl>
 </section>
@@ -514,7 +519,7 @@ point past this IP data.
         </figure>
  <dl>
 <dt>Type</dt>
-<dd>0x0 for pad
+<dd>A 4 bit value of 0x0 indicating a padding data block.
  </dd>
 <dt>Padding</dt>
 <dd>extends to end of the encapsulating packet.
