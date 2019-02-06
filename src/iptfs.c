@@ -193,11 +193,12 @@ add_to_inner_packet(struct mbuf *tbuf, bool new, struct miov *m,
 		 * Start new inner packet
 		 */
 
-		if (offset > tlen) {
+		if (offset >= tlen) {
 			/* next data block is past the end of this packet. */
 			tbuf->start = tbuf->end;
 			return m;
 		}
+
 		/* Skip past unknown leading packet part */
 		start = tbuf->start = tbuf->start + offset;
 		tlen -= offset;
@@ -216,8 +217,10 @@ add_to_inner_packet(struct mbuf *tbuf, bool new, struct miov *m,
 		}
 		DBG("START: add_to_inner_packet: new %d off %d iplen %d\n", new,
 		    offset, iplen);
-		/* XXX we can always reconstruct this too */
+
+		/* We can always reconstruct this too */
 		m->left = iplen;
+
 		/* FALLTHROUGH*/
 		if (MBUF_LEN(tbuf) != tlen)
 			errx(1, "XXX7 MBUF_LEN(tbuf) %d tlen %d",
@@ -228,7 +231,7 @@ add_to_inner_packet(struct mbuf *tbuf, bool new, struct miov *m,
 			DBG("got_outer: seq %d tlen %ld\n", seq, ltlen);
 
 		if (m->left > tlen) {
-			// XXX copy A
+			// XXX Code Copy A
 			DBG("MORE: off>tlen: new %d off %d mleft %ld tlen %d\n",
 			    new, offset, m->left, tlen);
 
