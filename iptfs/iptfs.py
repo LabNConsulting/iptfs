@@ -8,13 +8,14 @@ import binascii
 
 import logging
 import io
+import os
 import socket
 import sys
 import threading
 import time
 import traceback
 from . import DEBUG
-from .mbuf import MBuf, MQueue
+from .mbuf import MBuf, MIOVBuf, MIOVQ, MQueue
 from .util import monotonic_ns, Limit, Periodic  # , PeriodicSignal
 from . import util
 

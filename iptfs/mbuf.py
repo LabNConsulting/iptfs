@@ -11,26 +11,32 @@ logger = logging.getLogger(__file__)
 
 
 class MBuf:
-    def __init__(self, size, hdrspace):
+    def __init__(self, size, hdrspace, refcnt=False):
         self.space = memoryview(bytearray(size))
         self.reset(hdrspace)
         self.end = self.start = self.space[hdrspace:]
         self.seq = self.flags = 0
-        self.refcnt = 0
+        self.reflock = None
+        if refcnt:
+            self.reflock = threading.Lock()
+            self.refcnt = 0
 
     def reset(self, hdrspace):
         self.end = self.start = self.space[hdrspace:]
         self.flags = self.seq = 0
 
     def addref(self):
-        # XXX lock?
-        self.refcnt += 1
+        with self.reflock:
+            self.refcnt += 1
+            return self.refcnt
 
     def deref(self, freeq):
-        # XXX lock?
-        self.refcnt -= 1
-        if self.refcnt == 0:
-            freeq.push(self, True)
+        with self.reflock:
+            self.refcnt -= 1
+            if self.refcnt != 0:
+                return False
+        freeq.push(self, True)
+        return True
 
     def after(self):
         return self.end.nbytes
