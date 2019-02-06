@@ -46,7 +46,7 @@ class MBuf:
 
 
 class MQueue:
-    def __init__(self, name, count, maxbuf, hdrspace, debug):  # pylint: disable=R0913
+    def __init__(self, name, count, maxbuf, hdrspace, refcnt, debug):  # pylint: disable=R0913
         """MQueue is a queue for MBUfs.
 
         If maxbuf is non-0 then the queue will allocate and push count empty
@@ -66,7 +66,7 @@ class MQueue:
         self.mbufs = []
         if self.manage:
             for _ in range(0, count):
-                self.mbufs.append(MBuf(maxbuf, hdrspace))
+                self.mbufs.append(MBuf(maxbuf, hdrspace, refcnt))
 
     def empty(self):
         return len(self.mbufs) == 0
