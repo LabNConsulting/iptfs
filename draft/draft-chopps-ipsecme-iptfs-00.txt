@@ -13,8 +13,8 @@ Expires: 11 August 2019
 
 Abstract
 
-   This document describes a mechanism that provides for robust traffic
-   flow security by adding traffic flow confidentiality to encrypted IP
+   This document describes a mechanism that improves IPsec traffic flow
+   security by adding traffic flow confidentiality to encrypted IP
    encapsulated traffic.  Traffic flow confidentiality is provided by
    obscuring the size and frequency of IP traffic using a constant sized
    and constant send rate IPsec tunnel.
@@ -54,15 +54,15 @@ Table of Contents
 
    1.  Introduction
        1.1.  Terminology & Concepts
-   2.  The IP-TFS Tunnel.
+   2.  The IP-TFS Tunnel
        2.1.  Tunnel Content
              2.1.1.  IPSec/ESP Payload
              2.1.2.  Data-Blocks
-             2.1.3.  No Implicit Padding.
+             2.1.3.  No Implicit Padding
              2.1.4.  IP Header Value Mapping
-       2.2.  Exclusive SA Use.
-       2.3.  Initiation of TFS mode.
-       2.4.  Example of an encapsulated IP packet flow.
+       2.2.  Exclusive SA Use
+       2.3.  Initiation of TFS mode
+       2.4.  Example of an encapsulated IP packet flow
        2.5.  Modes of operation
              2.5.1.  Non-Congestion Controlled Mode
              2.5.2.  Congestion Controlled Mode
@@ -71,13 +71,15 @@ Table of Contents
    4.  Configuration
        4.1.  Bandwidth
        4.2.  Fixed Packet Size
-       4.3.  Congestion Information Configuration.
+       4.3.  Congestion Information Configuration
    5.  Packet and Data Formats
        5.1.  IPSec
              5.1.1.  Payload Format
              5.1.2.  Data Blocks
        5.2.  IKEv2
-             5.2.1.  IKEv2 Congestion Information Notification
+             5.2.1.  IKEv2 Congestion Information Configuration
+                     Attribute
+             5.2.2.  IKEv2 Congestion Information Notification
                      Data
    6.  IANA Considerations
    7.  Security Considerations
@@ -106,9 +108,9 @@ Table of Contents
    these fixed-sized packets can contain partial, full or multiple IP
    packets to maximize the bandwidth of the tunnel.
 
-   Additionally, IP-TFS provides for dealing with network congestion.
-   This is important for when the IP-TFS user is not in full control of
-   the domain through which the IP-TFS tunnel path flows [RFC2914].
+   Additionally, IP-TFS provides for dealing with network congestion
+   [RFC2914].  This is important for when the IP-TFS user is not in full
+   control of the domain through which the IP-TFS tunnel path flows.
 
 1.1.  Terminology & Concepts
 
@@ -121,7 +123,7 @@ Table of Contents
    This document assumes familiarity with IP security concepts described
    in [RFC4301].
 
-2.  The IP-TFS Tunnel.
+2.  The IP-TFS Tunnel
 
    As mentioned in Section 1 IP-TFS utilizes an IPsec [RFC4303] tunnel
    as it's transport.  To provide for full TFC we send fixed sized
@@ -193,6 +195,8 @@ Table of Contents
    the data immediately following the header belongs to the previous
    data-block that is still being re-assembled.
 
+   The V (version) bit is included for future compatibility.
+
 2.1.2.  Data-Blocks
 
     +-----------------------------------------------------------------+
@@ -208,7 +212,7 @@ Table of Contents
    length of the data block is extracted from the encapsulated IPv4 or
    IPv6 packet's length field.
 
-2.1.3.  No Implicit Padding.
+2.1.3.  No Implicit Padding
 
    It's worth noting that there is no need for implicit pads at the end
    of an encapsulating packet.  Even when the start of a data block
@@ -239,7 +243,7 @@ Table of Contents
    override this behavior.  An implementation SHOULD also allow the DS
    value to be set by configuration.
 
-2.2.  Exclusive SA Use.
+2.2.  Exclusive SA Use
 
    It is not the intention of this specification to allow for mixed use
    of an IPsec SA.  In other words, an SA that is created for IP-TFS is
@@ -251,7 +255,7 @@ Table of Contents
    deemed worthwhile.  Other IPsec uses can configure and use their own
    SAs.
 
-2.3.  Initiation of TFS mode.
+2.3.  Initiation of TFS mode
 
    While normally a user will configure their IPsec tunnel to operate in
    IP-TFS mode to start, we also allow IP-TFS mode to be enabled post-SA
@@ -260,7 +264,7 @@ Table of Contents
    receipt of the first ESP payload with the IPTFS_PROTOCOL indicated as
    the payload type.
 
-2.4.  Example of an encapsulated IP packet flow.
+2.4.  Example of an encapsulated IP packet flow
 
    Below we show an example inner IP packet flow within the
    encapsulating tunnel packet stream.  Notice how encapsulated IP
@@ -313,8 +317,9 @@ Table of Contents
    administrative control over the path the tunnel will take.  This is
    required so the user can guarantee the bandwidth and also be sure as
    to not be negatively affecting network congestion [RFC2914].  In this
-   case packet loss should be signaled to the administrator so that any
-   failures due to a lack of bandwidth can be corrected.
+   case packet loss should be reported to the administrator (e.g., via
+   syslog, YANG notification, SNMP traps, etc) so that any failures due
+   to a lack of bandwidth can be corrected.
 
 2.5.2.  Congestion Controlled Mode
 
@@ -347,7 +352,7 @@ Table of Contents
 
 2.5.2.1.  Circuit Breakers
 
-   In additional to congestion control, implementations may wish to
+   In additional to congestion control, implementations may choose to
    define and implement circuit breakers [RFC8084] as a recovery method
    of last resort.  Enabling circuit breakers is also a reason a user
    may wish to enable congestion information reports even when using the
@@ -388,8 +393,8 @@ Table of Contents
    sending interval though.
 
    As noted in [RFC3168] the ECN bits are not protected by IPsec and
-   thus may constitute a covert channel.  For this reason ECN use should
-   not be enabled by default.
+   thus may constitute a covert channel.  For this reason ECN use SHOULD
+   NOT be enabled by default.
 
 4.  Configuration
 
@@ -402,11 +407,11 @@ Table of Contents
 4.1.  Bandwidth
 
    Bandwidth is a local configuration option.  For non-congestion
-   controlled mode the only configuration required is the requested
-   bandwidth.  For congestion controlled mode one can manually configure
-   the bandwidth or one could default to the maximum bandwidth allowed
-   in which case no bandwidth configuration is required.  No
-   standardized configuration method is required.
+   controlled mode the bandwidth SHOULD be configured.  For congestion
+   controlled mode one can configure the bandwidth or have no
+   configuration and let congestion control discover the maximum
+   bandwidth available.  No standardized configuration method is
+   required.
 
 4.2.  Fixed Packet Size
 
@@ -415,7 +420,7 @@ Table of Contents
    Path MTU discovery (see [RFC1191] and [RFC8201]).  No standardized
    configuration method is required.
 
-4.3.  Congestion Information Configuration.
+4.3.  Congestion Information Configuration
 
    If congestion control mode is to be used, or if the user wishes to
    receive congestion information on the sender for circuit breaking or
@@ -436,9 +441,12 @@ Table of Contents
    is acknowledge by the receiver using a CFG_REPLY payload.  This
    configuration exchange SHOULD be sent during the IKEv2 configuration
    exchanges occurring as the tunnel is first brought up.  The sending
-   interval value may also be changed at any time afterwards using a
+   interval value MAY also be changed at any time afterwards using a
    similar CFG_REQUEST/CFG_REPLY payload inside an IKEv2 INFORMATIONAL
    exchange.
+
+   In the absence of a congestion information configuration exchange the
+   sending interval is up to the receiving device configuration.
 
    The sending interval value is given in milliseconds and is 16 bits
    wide; however, it is not recommended that values below 1/10th of a
@@ -555,7 +563,32 @@ Table of Contents
 
 5.2.  IKEv2
 
-5.2.1.  IKEv2 Congestion Information Notification Data
+5.2.1.  IKEv2 Congestion Information Configuration Attribute
+
+   The following defines the configuration attribute structure used in
+   the IKEv2 [RFC7296] configuration exchange to set the congestion
+   information report sending interval.
+
+     0                   1                   2                   3
+     0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
+    +-----------------------------------------------------------------+
+    |R|       Attribute Type        |             Length              |
+    +-----------------------------------------------------------------+
+    |                            Interval                             |
+    +-----------------------------------------------------------------+
+
+                                  Figure 9
+
+   R               1 bit set to 0.
+
+   Attribute Type  15 bit value set to TFS_INFO_INTERVAL (TBD).
+
+   Length          2 octet length set to 2.
+
+   SendInterval    A 2 octet unsigned integer.  The sending interval in
+                   milliseconds.
+
+5.2.2.  IKEv2 Congestion Information Notification Data
 
    We utilize a send only (i.e., no response expected) IKEv2
    INFORMATIONAL exchange (37) to transmit the congestion information
@@ -577,29 +610,33 @@ Table of Contents
     |                          AckSeqEnd                              |
     +-----------------------------------------------------------------+
 
-                                  Figure 9
+                                 Figure 10
 
-   E            Packet[s] with Congestion Experienced (CE) ECN bits set
-                were received and used in calculating the DropCount
-                value.
+   E            A 1 bit value that if set indicates that packet[s] with
+                Congestion Experienced (CE) ECN bits set were received
+                and used in calculating the DropCount value.
 
-   Reserved     Set to 0 ignored on receipt.
+   Reserved     A 7 bit field set to 0 ignored on receipt.
 
-   DropCount    The drop count that occurred between AckSeqStart and
-                AckSeqEnd, If the drops exceed the resolution of the
-                counter then set to the max value.
+   DropCount    A 24 bit unsigned integer count of the drops that
+                occurred between AckSeqStart and AckSeqEnd.  If the
+                drops exceed the resolution of the counter then set to
+                the maximum value (i.e., 0xFFFFFF).
 
-   AckSeqStart  The first ESP sequence number of the packet range that
-                this information relates to.
+   AckSeqStart  A 32 bit unsigned integer containing the first ESP
+                sequence number (as defined in [RFC4303]) of the packet
+                range that this information relates to.
 
-   AckSeqEnd    The last ESP sequence number of the packet range that
-                this information relates to.
+   AckSeqEnd    A 32 bit unsigned integer containing the last ESP
+                sequence number (as defined in [RFC4303]) of the packet
+                range that this information relates to.
 
-   Timestamp    The lower 32 bits of a running monotonic millisecond
-                timer of when this notification data was created/sent.
-                This value is used to determine duplicates and drop
-                counts of this information.  Implementations should deal
-                with wrapping of this timer value.
+   Timestamp    A 32 bit unsigned integer containing the lower 32 bits
+                of a running monotonic millisecond timer of when this
+                notification data was created/sent.  This value is used
+                to determine duplicates and drop counts of this
+                information.  Implementations should deal with wrapping
+                of this timer value.
 
 6.  IANA Considerations
 
@@ -611,7 +648,7 @@ Table of Contents
      Description: IP-TFS ESP payload format.
      Reference: This document
 
-                                 Figure 10
+                                 Figure 11
 
    Additionally this document requests an attribute value
    TFS_INFO_INTERVAL (TBD) be allocated by IANA from "IKEv2
@@ -622,7 +659,7 @@ Table of Contents
                   tunnel endpoint.
      Reference: This document
 
-                                 Figure 11
+                                 Figure 12
 
    Additionally this document requests a notify message status type
    TFS_CONGEST_INFO (TBD) be allocated by IANA from "IKEv2 Notify
@@ -633,7 +670,7 @@ Table of Contents
                   tunnel endpoint.
      Reference: This document
 
-                                 Figure 12
+                                 Figure 13
 
 7.  Security Considerations
 

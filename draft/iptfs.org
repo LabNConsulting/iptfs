@@ -1,7 +1,9 @@
-# -*- fill-column: 69 -*-
+#fill-column: 69 -*-
 #+TITLE: IP Traffic Flow Security
 #+AUTHOR: Christian E. Hopps
-#+STARTUP: content entitiespretty
+#+EMAIL: chopps@chopps.org
+
+#+STARTUP: align entitiespretty hidestars inlineimages latexpreview noindent showall
 # Do: title, table-of-contents ::fixed-width-sections |tables
 # Do: ^sup/sub with curly -special-strings *emphasis
 # Don't: \n:preserve-linebreaks ':use-smart-quotes
@@ -10,12 +12,13 @@
 # :PROPERTIES:
 # :ipr: trust200902
 # :category: std
-# :submissionType: IETF
+# :submissionType: IETFF
 # :consensus: true
+# :EXPORT_COMPANY: LabN Consulting
 # :END:
 
 #+begin_abstract
-This document describes a mechanism that provides for robust traffic
+This document describes a mechanism that improves IPsec traffic
 flow security by adding traffic flow confidentiality to encrypted IP
 encapsulated traffic. Traffic flow confidentiality is provided by
 obscuring the size and frequency of IP traffic using a constant sized
@@ -43,9 +46,9 @@ bandwidth limitation. To do this we use a constant send rate IPsec
 these fixed-sized packets can contain partial, full or multiple IP
 packets to maximize the bandwidth of the tunnel.
 
-Additionally, IP-TFS provides for dealing with network congestion.
-This is important for when the IP-TFS user is not in full control of
-the domain through which the IP-TFS tunnel path flows ^RFC2914^.
+Additionally, IP-TFS provides for dealing with network congestion
+^RFC2914^. This is important for when the IP-TFS user is not in full
+control of the domain through which the IP-TFS tunnel path flows.
 
 ** Terminology & Concepts
 
@@ -58,7 +61,7 @@ capitals, as shown here..
 This document assumes familiarity with IP security concepts described
 in ^RFC4301^.
 
-* The IP-TFS Tunnel.
+* The IP-TFS Tunnel
 
 As mentioned in ^introduction^ IP-TFS utilizes an IPsec ^RFC4303^
 tunnel as it's transport. To provide for full TFC we send fixed sized
@@ -76,6 +79,8 @@ Given the encapsulating packet size and the requested tunnel
 bandwidth we determine the correct packet send rate. The packet send
 rate is the requested bandwidth divided by the payload size of the
 fixed-packet-size encapsulating packet.
+
+# Consider moving conformance language out of more infromative text.
 
 The egress of the IP-TFS tunnel SHOULD NOT impose any restrictions on
 tunnel packet size or arrival rate. Packet size and send rate is
@@ -132,6 +137,8 @@ subsequent encapsulating packet. When the BlockOffset is non-zero the
 data immediately following the header belongs to the previous
 data-block that is still being re-assembled.
 
+The V (version) bit is included for future compatibility.
+
 *** Data-Blocks
 
 #+begin_example
@@ -149,7 +156,7 @@ type overhead is required to encapsulate an IP packet. Likewise, the
 length of the data block is extracted from the encapsulated IPv4 or
 IPv6 packet's length field.
 
-*** No Implicit Padding.
+*** No Implicit Padding
 
 It's worth noting that there is no need for implicit pads at the end
 of an encapsulating packet. Even when the start of a data block
@@ -180,7 +187,7 @@ implementation may choose to allow for configuration to override this
 behavior. An implementation SHOULD also allow the DS value to be set
 by configuration.
 
-** Exclusive SA Use.
+** Exclusive SA Use
 
 It is not the intention of this specification to allow for mixed use
 of an IPsec SA. In other words, an SA that is created for IP-TFS is
@@ -192,7 +199,7 @@ skips in the IP-TFS payload stream, the added complexity is not
 deemed worthwhile. Other IPsec uses can configure and use their own
 SAs.
 
-** Initiation of TFS mode.
+** Initiation of TFS mode
 
 While normally a user will configure their IPsec tunnel to operate in
 IP-TFS mode to start, we also allow IP-TFS mode to be enabled post-SA
@@ -201,12 +208,15 @@ late enabled mode the receiver would switch to IP-TFS mode on receipt
 of the first ESP payload with the IPTFS_PROTOCOL indicated as the
 payload type.
 
-** Example of an encapsulated IP packet flow.
+** Example of an encapsulated IP packet flow
 
 Below we show an example inner IP packet flow within the
 encapsulating tunnel packet stream. Notice how encapsulated IP
 packets can start and end anywhere, and more than one or less than 1
 may occur in a single encapsulating packet.
+
+# XXX Consider doing a timing diagram showing random paced input going
+# into fixed rate output, maybe Y axis
 
 #+begin_example
 
@@ -215,6 +225,7 @@ may occur in a single encapsulating packet.
  [--800--][--800--][60][-240-][--4000----------------------][pad]
 
 #+end_example
+
 
 The encapsulated IP packet flow (lengths include IP header and
 payload) is as follows: an 800 octet packet, an 800 octet packet, a 60
@@ -256,7 +267,8 @@ controlled mode should only be used where the user has full
 administrative control over the path the tunnel will take. This is
 required so the user can guarantee the bandwidth and also be sure as
 to not be negatively affecting network congestion ^RFC2914^. In this
-case packet loss should be signaled to the administrator so that any
+case packet loss should be reported to the administrator (e.g.,
+via syslog, YANG notification, SNMP traps, etc) so that any
 failures due to a lack of bandwidth can be corrected.
 
 *** Congestion Controlled Mode
@@ -288,7 +300,7 @@ confidentiality.
 
 **** Circuit Breakers
 
-In additional to congestion control, implementations may wish to
+In additional to congestion control, implementations may choose to
 define and implement circuit breakers ^RFC8084^ as a recovery method
 of last resort. Enabling circuit breakers is also a reason a user may
 wish to enable congestion information reports even when using the
@@ -328,8 +340,8 @@ the CE indication. This additional immediate send SHOULD only be done
 once per normal congestion information sending interval though.
 
 As noted in ^RFC3168^ the ECN bits are not protected by IPsec and
-thus may constitute a covert channel. For this reason ECN use should
-not be enabled by default.
+thus may constitute a covert channel. For this reason ECN use SHOULD
+NOT be enabled by default.
 
 * Configuration
 
@@ -342,11 +354,11 @@ single-ended provisioning).
 ** Bandwidth
 
 Bandwidth is a local configuration option. For non-congestion
-controlled mode the only configuration required is the requested
-bandwidth. For congestion controlled mode one can manually configure
-the bandwidth or one could default to the maximum bandwidth allowed
-in which case no bandwidth configuration is required. No standardized
-configuration method is required.
+controlled mode the bandwidth SHOULD be configured. For
+congestion controlled mode one can configure the bandwidth
+or have no configuration and let congestion control discover the
+maximum bandwidth available. No standardized configuration method is
+required.
 
 ** Fixed Packet Size
 
@@ -355,7 +367,7 @@ can be configured manually or can be automatically determined using
 Path MTU discovery (see ^RFC1191^ and ^RFC8201^). No standardized
 configuration method is required.
 
-** Congestion Information Configuration.
+** Congestion Information Configuration
 
 If congestion control mode is to be used, or if the user wishes to
 receive congestion information on the sender for circuit breaking or
@@ -376,9 +388,12 @@ the tunnel. This value is configured using a CFG_REQUEST payload and
 is acknowledge by the receiver using a CFG_REPLY payload. This
 configuration exchange SHOULD be sent during the IKEv2 configuration
 exchanges occurring as the tunnel is first brought up. The sending
-interval value may also be changed at any time afterwards using a
+interval value MAY also be changed at any time afterwards using a
 similar CFG_REQUEST/CFG_REPLY payload inside an IKEv2 INFORMATIONAL
 exchange.
+
+In the absence of a congestion information configuration exchange
+the sending interval is up to the receiving device configuration.
 
 The sending interval value is given in milliseconds and is 16 bits
 wide; however, it is not recommended that values below 1/10th of a
@@ -500,6 +515,30 @@ the encapsulated IP packet.
 - Padding :: extends to end of the encapsulating packet.
 
 ** IKEv2
+*** IKEv2 Congestion Information Configuration Attribute
+
+The following defines the configuration attribute structure used in
+the IKEv2 ^RFC7296^ configuration exchange to set the congestion
+information report sending interval.
+
+#+begin_example
+
+  0                   1                   2                   3
+  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
+ +-----------------------------------------------------------------+
+ |R|       Attribute Type        |             Length              |
+ +-----------------------------------------------------------------+
+ |                            Interval                             |
+ +-----------------------------------------------------------------+
+
+#+end_example
+
+- R :: 1 bit set to 0.
+- Attribute Type :: 15 bit value set to TFS_INFO_INTERVAL (TBD).
+- Length :: 2 octet length set to 2.
+- SendInterval :: A 2 octet unsigned integer. The sending interval in
+                  milliseconds.
+
 ***  IKEv2 Congestion Information Notification Data
 
 We utilize a send only (i.e., no response expected) IKEv2
@@ -525,21 +564,26 @@ payload. The following diagram defines the notification payload data.
 
 #+end_example
 
-- E :: Packet[s] with Congestion Experienced (CE) ECN bits set were
-       received and used in calculating the DropCount value.
-- Reserved :: Set to 0 ignored on receipt.
-- DropCount :: The drop count that occurred between AckSeqStart and
-               AckSeqEnd, If the drops exceed the resolution of the
-               counter then set to the max value.
-- AckSeqStart :: The first ESP sequence number of the packet range
-                 that this information relates to.
-- AckSeqEnd :: The last ESP sequence number of the packet range that
-               this information relates to.
-- Timestamp :: The lower 32 bits of a running monotonic millisecond
-               timer of when this notification data was created/sent.
-               This value is used to determine duplicates and drop
-               counts of this information. Implementations should
-               deal with wrapping of this timer value.
+- E :: A 1 bit value that if set indicates that packet[s] with
+       Congestion Experienced (CE) ECN bits set were received and
+       used in calculating the DropCount value.
+- Reserved :: A 7 bit field set to 0 ignored on receipt.
+- DropCount :: A 24 bit unsigned integer count of the drops that
+               occurred between AckSeqStart and AckSeqEnd. If the
+               drops exceed the resolution of the counter then set to
+               the maximum value (i.e., 0xFFFFFF).
+- AckSeqStart :: A 32 bit unsigned integer containing the first ESP
+                 sequence number (as defined in ^RFC4303^) of the
+                 packet range that this information relates to.
+- AckSeqEnd :: A 32 bit unsigned integer containing the last ESP
+               sequence number (as defined in ^RFC4303^) of the
+               packet range that this information relates to.
+- Timestamp :: A 32 bit unsigned integer containing the lower 32
+               bits of a running monotonic millisecond timer of when
+               this notification data was created/sent. This value is
+               used to determine duplicates and drop counts of this
+               information. Implementations should deal with wrapping
+               of this timer value.
 
 * IANA Considerations
 

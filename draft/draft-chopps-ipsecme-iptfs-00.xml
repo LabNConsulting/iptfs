@@ -21,7 +21,7 @@
         <date/>
     <abstract>
         <t>
-This document describes a mechanism that provides for robust traffic
+This document describes a mechanism that improves IPsec traffic
 flow security by adding traffic flow confidentiality to encrypted IP
 encapsulated traffic. Traffic flow confidentiality is provided by
 obscuring the size and frequency of IP traffic using a constant sized
@@ -54,9 +54,9 @@ these fixed-sized packets can contain partial, full or multiple IP
 packets to maximize the bandwidth of the tunnel.
     </t>
     <t>
-Additionally, IP-TFS provides for dealing with network congestion.
-This is important for when the IP-TFS user is not in full control of
-the domain through which the IP-TFS tunnel path flows <xref target="RFC2914"/>.
+Additionally, IP-TFS provides for dealing with network congestion
+<xref target="RFC2914"/>. This is important for when the IP-TFS user is not in full
+control of the domain through which the IP-TFS tunnel path flows.
     </t>
 <section title="Terminology &amp; Concepts" anchor="terminology--concepts">
     <t>
@@ -72,7 +72,7 @@ in <xref target="RFC4301"/>.
     </t>
 </section>
 </section>
-<section title="The IP-TFS Tunnel." anchor="the-ip-tfs-tunnel">
+<section title="The IP-TFS Tunnel" anchor="the-ip-tfs-tunnel">
     <t>
 As mentioned in <xref target="introduction"/> IP-TFS utilizes an IPsec <xref target="RFC4303"/>
 tunnel as it&apos;s transport. To provide for full TFC we send fixed sized
@@ -151,6 +151,9 @@ subsequent encapsulating packet. When the BlockOffset is non-zero the
 data immediately following the header belongs to the previous
 data-block that is still being re-assembled.
     </t>
+    <t>
+The V (version) bit is included for future compatibility.
+    </t>
 </section>
 <section title="Data-Blocks" anchor="data-blocks">
         <figure>
@@ -169,7 +172,7 @@ length of the data block is extracted from the encapsulated IPv4 or
 IPv6 packet&apos;s length field.
     </t>
 </section>
-<section title="No Implicit Padding." anchor="no-implicit-padding">
+<section title="No Implicit Padding" anchor="no-implicit-padding">
     <t>
 It&apos;s worth noting that there is no need for implicit pads at the end
 of an encapsulating packet. Even when the start of a data block
@@ -203,7 +206,7 @@ by configuration.
     </t>
 </section>
 </section>
-<section title="Exclusive SA Use." anchor="exclusive-sa-use">
+<section title="Exclusive SA Use" anchor="exclusive-sa-use">
     <t>
 It is not the intention of this specification to allow for mixed use
 of an IPsec SA. In other words, an SA that is created for IP-TFS is
@@ -216,7 +219,7 @@ deemed worthwhile. Other IPsec uses can configure and use their own
 SAs.
     </t>
 </section>
-<section title="Initiation of TFS mode." anchor="initiation-of-tfs-mode">
+<section title="Initiation of TFS mode" anchor="initiation-of-tfs-mode">
     <t>
 While normally a user will configure their IPsec tunnel to operate in
 IP-TFS mode to start, we also allow IP-TFS mode to be enabled post-SA
@@ -226,7 +229,7 @@ of the first ESP payload with the IPTFS_PROTOCOL indicated as the
 payload type.
     </t>
 </section>
-<section title="Example of an encapsulated IP packet flow." anchor="example-of-an-encapsulated-ip-packet-flow">
+<section title="Example of an encapsulated IP packet flow" anchor="example-of-an-encapsulated-ip-packet-flow">
     <t>
 Below we show an example inner IP packet flow within the
 encapsulating tunnel packet stream. Notice how encapsulated IP
@@ -286,7 +289,8 @@ controlled mode should only be used where the user has full
 administrative control over the path the tunnel will take. This is
 required so the user can guarantee the bandwidth and also be sure as
 to not be negatively affecting network congestion <xref target="RFC2914"/>. In this
-case packet loss should be signaled to the administrator so that any
+case packet loss should be reported to the administrator (e.g.,
+via syslog, YANG notification, SNMP traps, etc) so that any
 failures due to a lack of bandwidth can be corrected.
     </t>
 </section>
@@ -322,7 +326,7 @@ confidentiality.
     </t>
 <section title="Circuit Breakers" anchor="circuit-breakers">
     <t>
-In additional to congestion control, implementations may wish to
+In additional to congestion control, implementations may choose to
 define and implement circuit breakers <xref target="RFC8084"/> as a recovery method
 of last resort. Enabling circuit breakers is also a reason a user may
 wish to enable congestion information reports even when using the
@@ -369,8 +373,8 @@ once per normal congestion information sending interval though.
     </t>
     <t>
 As noted in <xref target="RFC3168"/> the ECN bits are not protected by IPsec and
-thus may constitute a covert channel. For this reason ECN use should
-not be enabled by default.
+thus may constitute a covert channel. For this reason ECN use SHOULD
+NOT be enabled by default.
     </t>
 </section>
 </section>
@@ -385,11 +389,11 @@ single-ended provisioning).
 <section title="Bandwidth" anchor="bandwidth">
     <t>
 Bandwidth is a local configuration option. For non-congestion
-controlled mode the only configuration required is the requested
-bandwidth. For congestion controlled mode one can manually configure
-the bandwidth or one could default to the maximum bandwidth allowed
-in which case no bandwidth configuration is required. No standardized
-configuration method is required.
+controlled mode the bandwidth SHOULD be configured. For
+congestion controlled mode one can configure the bandwidth
+or have no configuration and let congestion control discover the
+maximum bandwidth available. No standardized configuration method is
+required.
     </t>
 </section>
 <section title="Fixed Packet Size" anchor="fixed-packet-size">
@@ -400,7 +404,7 @@ Path MTU discovery (see <xref target="RFC1191"/> and <xref target="RFC8201"/>). 
 configuration method is required.
     </t>
 </section>
-<section title="Congestion Information Configuration." anchor="congestion-information-configuration">
+<section title="Congestion Information Configuration" anchor="congestion-information-configuration">
     <t>
 If congestion control mode is to be used, or if the user wishes to
 receive congestion information on the sender for circuit breaking or
@@ -423,9 +427,13 @@ the tunnel. This value is configured using a CFG_REQUEST payload and
 is acknowledge by the receiver using a CFG_REPLY payload. This
 configuration exchange SHOULD be sent during the IKEv2 configuration
 exchanges occurring as the tunnel is first brought up. The sending
-interval value may also be changed at any time afterwards using a
+interval value MAY also be changed at any time afterwards using a
 similar CFG_REQUEST/CFG_REPLY payload inside an IKEv2 INFORMATIONAL
 exchange.
+    </t>
+    <t>
+In the absence of a congestion information configuration exchange
+the sending interval is up to the receiving device configuration.
     </t>
     <t>
 The sending interval value is given in milliseconds and is 16 bits
@@ -572,6 +580,39 @@ inner IPv6 inner packet.
 </section>
 </section>
 <section title="IKEv2" anchor="ikev2">
+<section title="IKEv2 Congestion Information Configuration Attribute" anchor="ikev2-congestion-information-configuration-attribute">
+    <t>
+The following defines the configuration attribute structure used in
+the IKEv2 <xref target="RFC7296"/> configuration exchange to set the congestion
+information report sending interval.
+    </t>
+        <figure>
+            <artwork><![CDATA[
+  0                   1                   2                   3
+  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
+ +-----------------------------------------------------------------+
+ |R|       Attribute Type        |             Length              |
+ +-----------------------------------------------------------------+
+ |                            Interval                             |
+ +-----------------------------------------------------------------+
+            ]]></artwork>
+        </figure>
+ <dl>
+<dt>R</dt>
+<dd>1 bit set to 0.
+ </dd>
+<dt>Attribute Type</dt>
+<dd>15 bit value set to TFS_INFO_INTERVAL (TBD).
+ </dd>
+<dt>Length</dt>
+<dd>2 octet length set to 2.
+ </dd>
+<dt>SendInterval</dt>
+<dd>A 2 octet unsigned integer. The sending interval in
+milliseconds.
+ </dd>
+ </dl>
+</section>
 <section title="IKEv2 Congestion Information Notification Data" anchor="ikev2-congestion-information-notification-data">
     <t>
 We utilize a send only (i.e., no response expected) IKEv2
@@ -598,31 +639,36 @@ payload. The following diagram defines the notification payload data.
         </figure>
  <dl>
 <dt>E</dt>
-<dd>Packet[s] with Congestion Experienced (CE) ECN bits set were
-received and used in calculating the DropCount value.
+<dd>A 1 bit value that if set indicates that packet[s] with
+Congestion Experienced (CE) ECN bits set were received and
+used in calculating the DropCount value.
  </dd>
 <dt>Reserved</dt>
-<dd>Set to 0 ignored on receipt.
+<dd>A 7 bit field set to 0 ignored on receipt.
  </dd>
 <dt>DropCount</dt>
-<dd>The drop count that occurred between AckSeqStart and
-AckSeqEnd, If the drops exceed the resolution of the
-counter then set to the max value.
+<dd>A 24 bit unsigned integer count of the drops that
+occurred between AckSeqStart and AckSeqEnd. If the
+drops exceed the resolution of the counter then set to
+the maximum value (i.e., 0xFFFFFF).
  </dd>
 <dt>AckSeqStart</dt>
-<dd>The first ESP sequence number of the packet range
-that this information relates to.
+<dd>A 32 bit unsigned integer containing the first ESP
+sequence number (as defined in <xref target="RFC4303"/>) of the
+packet range that this information relates to.
  </dd>
 <dt>AckSeqEnd</dt>
-<dd>The last ESP sequence number of the packet range that
-this information relates to.
+<dd>A 32 bit unsigned integer containing the last ESP
+sequence number (as defined in <xref target="RFC4303"/>) of the
+packet range that this information relates to.
  </dd>
 <dt>Timestamp</dt>
-<dd>The lower 32 bits of a running monotonic millisecond
-timer of when this notification data was created/sent.
-This value is used to determine duplicates and drop
-counts of this information. Implementations should
-deal with wrapping of this timer value.
+<dd>A 32 bit unsigned integer containing the lower 32
+bits of a running monotonic millisecond timer of when
+this notification data was created/sent. This value is
+used to determine duplicates and drop counts of this
+information. Implementations should deal with wrapping
+of this timer value.
  </dd>
  </dl>
 </section>

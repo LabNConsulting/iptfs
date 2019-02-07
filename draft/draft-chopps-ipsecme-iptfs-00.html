@@ -7,7 +7,7 @@
 <meta name="author" content="Christian E. Hopps">
 <meta name="description" content="
        
-This document describes a mechanism that provides for robust traffic
+This document describes a mechanism that improves IPsec traffic
 flow security by adding traffic flow confidentiality to encrypted IP
 encapsulated traffic. Traffic flow confidentiality is provided by
 obscuring the size and frequency of IP traffic using a constant sized
@@ -929,7 +929,7 @@ caption a[href] {
 <section id="section-abstract">
       <h2 id="abstract"><a href="#abstract" class="selfRef">Abstract</a></h2>
 <p id="section-abstract-1">
-This document describes a mechanism that provides for robust traffic
+This document describes a mechanism that improves IPsec traffic
 flow security by adding traffic flow confidentiality to encrypted IP
 encapsulated traffic. Traffic flow confidentiality is provided by
 obscuring the size and frequency of IP traffic using a constant sized
@@ -999,7 +999,7 @@ and constant send rate IPsec tunnel.
             </ul>
 </li>
           <li class="toc ulEmpty" id="section-boilerplate.3-1.2">
-            <p id="section-boilerplate.3-1.2.1"><a href="#section-2" class="xref">2</a>.  <a href="#name-the-ip-tfs-tunnel" class="xref">The IP-TFS Tunnel.</a><a href="#section-boilerplate.3-1.2.1" class="pilcrow">¶</a></p>
+            <p id="section-boilerplate.3-1.2.1"><a href="#section-2" class="xref">2</a>.  <a href="#name-the-ip-tfs-tunnel" class="xref">The IP-TFS Tunnel</a><a href="#section-boilerplate.3-1.2.1" class="pilcrow">¶</a></p>
 <ul class="toc ulEmpty">
 <li class="toc ulEmpty" id="section-boilerplate.3-1.2.2.1">
                 <p id="section-boilerplate.3-1.2.2.1.1"><a href="#section-2.1" class="xref">2.1</a>.  <a href="#name-tunnel-content" class="xref">Tunnel Content</a><a href="#section-boilerplate.3-1.2.2.1.1" class="pilcrow">¶</a></p>
@@ -1011,7 +1011,7 @@ and constant send rate IPsec tunnel.
                     <p id="section-boilerplate.3-1.2.2.1.2.2.1"><a href="#section-2.1.2" class="xref">2.1.2</a>.  <a href="#name-data-blocks" class="xref">Data-Blocks</a><a href="#section-boilerplate.3-1.2.2.1.2.2.1" class="pilcrow">¶</a></p>
 </li>
                   <li class="toc ulEmpty" id="section-boilerplate.3-1.2.2.1.2.3">
-                    <p id="section-boilerplate.3-1.2.2.1.2.3.1"><a href="#section-2.1.3" class="xref">2.1.3</a>.  <a href="#name-no-implicit-padding" class="xref">No Implicit Padding.</a><a href="#section-boilerplate.3-1.2.2.1.2.3.1" class="pilcrow">¶</a></p>
+                    <p id="section-boilerplate.3-1.2.2.1.2.3.1"><a href="#section-2.1.3" class="xref">2.1.3</a>.  <a href="#name-no-implicit-padding" class="xref">No Implicit Padding</a><a href="#section-boilerplate.3-1.2.2.1.2.3.1" class="pilcrow">¶</a></p>
 </li>
                   <li class="toc ulEmpty" id="section-boilerplate.3-1.2.2.1.2.4">
                     <p id="section-boilerplate.3-1.2.2.1.2.4.1"><a href="#section-2.1.4" class="xref">2.1.4</a>.  <a href="#name-ip-header-value-mapping" class="xref">IP Header Value Mapping</a><a href="#section-boilerplate.3-1.2.2.1.2.4.1" class="pilcrow">¶</a></p>
@@ -1019,13 +1019,13 @@ and constant send rate IPsec tunnel.
                 </ul>
 </li>
               <li class="toc ulEmpty" id="section-boilerplate.3-1.2.2.2">
-                <p id="section-boilerplate.3-1.2.2.2.1"><a href="#section-2.2" class="xref">2.2</a>.  <a href="#name-exclusive-sa-use" class="xref">Exclusive SA Use.</a><a href="#section-boilerplate.3-1.2.2.2.1" class="pilcrow">¶</a></p>
+                <p id="section-boilerplate.3-1.2.2.2.1"><a href="#section-2.2" class="xref">2.2</a>.  <a href="#name-exclusive-sa-use" class="xref">Exclusive SA Use</a><a href="#section-boilerplate.3-1.2.2.2.1" class="pilcrow">¶</a></p>
 </li>
               <li class="toc ulEmpty" id="section-boilerplate.3-1.2.2.3">
-                <p id="section-boilerplate.3-1.2.2.3.1"><a href="#section-2.3" class="xref">2.3</a>.  <a href="#name-initiation-of-tfs-mode" class="xref">Initiation of TFS mode.</a><a href="#section-boilerplate.3-1.2.2.3.1" class="pilcrow">¶</a></p>
+                <p id="section-boilerplate.3-1.2.2.3.1"><a href="#section-2.3" class="xref">2.3</a>.  <a href="#name-initiation-of-tfs-mode" class="xref">Initiation of TFS mode</a><a href="#section-boilerplate.3-1.2.2.3.1" class="pilcrow">¶</a></p>
 </li>
               <li class="toc ulEmpty" id="section-boilerplate.3-1.2.2.4">
-                <p id="section-boilerplate.3-1.2.2.4.1"><a href="#section-2.4" class="xref">2.4</a>.  <a href="#name-example-of-an-encapsulated-" class="xref">Example of an encapsulated IP packet flow.</a><a href="#section-boilerplate.3-1.2.2.4.1" class="pilcrow">¶</a></p>
+                <p id="section-boilerplate.3-1.2.2.4.1"><a href="#section-2.4" class="xref">2.4</a>.  <a href="#name-example-of-an-encapsulated-" class="xref">Example of an encapsulated IP packet flow</a><a href="#section-boilerplate.3-1.2.2.4.1" class="pilcrow">¶</a></p>
 </li>
               <li class="toc ulEmpty" id="section-boilerplate.3-1.2.2.5">
                 <p id="section-boilerplate.3-1.2.2.5.1"><a href="#section-2.5" class="xref">2.5</a>.  <a href="#name-modes-of-operation" class="xref">Modes of operation</a><a href="#section-boilerplate.3-1.2.2.5.1" class="pilcrow">¶</a></p>
@@ -1058,7 +1058,7 @@ and constant send rate IPsec tunnel.
                 <p id="section-boilerplate.3-1.4.2.2.1"><a href="#section-4.2" class="xref">4.2</a>.  <a href="#name-fixed-packet-size" class="xref">Fixed Packet Size</a><a href="#section-boilerplate.3-1.4.2.2.1" class="pilcrow">¶</a></p>
 </li>
               <li class="toc ulEmpty" id="section-boilerplate.3-1.4.2.3">
-                <p id="section-boilerplate.3-1.4.2.3.1"><a href="#section-4.3" class="xref">4.3</a>.  <a href="#name-congestion-information-conf" class="xref">Congestion Information Configuration.</a><a href="#section-boilerplate.3-1.4.2.3.1" class="pilcrow">¶</a></p>
+                <p id="section-boilerplate.3-1.4.2.3.1"><a href="#section-4.3" class="xref">4.3</a>.  <a href="#name-congestion-information-conf" class="xref">Congestion Information Configuration</a><a href="#section-boilerplate.3-1.4.2.3.1" class="pilcrow">¶</a></p>
 </li>
             </ul>
 </li>
@@ -1080,7 +1080,10 @@ and constant send rate IPsec tunnel.
                 <p id="section-boilerplate.3-1.5.2.2.1"><a href="#section-5.2" class="xref">5.2</a>.  <a href="#name-ikev2" class="xref">IKEv2</a><a href="#section-boilerplate.3-1.5.2.2.1" class="pilcrow">¶</a></p>
 <ul class="toc ulEmpty">
 <li class="toc ulEmpty" id="section-boilerplate.3-1.5.2.2.2.1">
-                    <p id="section-boilerplate.3-1.5.2.2.2.1.1"><a href="#section-5.2.1" class="xref">5.2.1</a>.  <a href="#name-ikev2-congestion-informatio" class="xref">IKEv2 Congestion Information Notification Data</a><a href="#section-boilerplate.3-1.5.2.2.2.1.1" class="pilcrow">¶</a></p>
+                    <p id="section-boilerplate.3-1.5.2.2.2.1.1"><a href="#section-5.2.1" class="xref">5.2.1</a>.  <a href="#name-ikev2-congestion-informatio" class="xref">IKEv2 Congestion Information Configuration Attribute</a><a href="#section-boilerplate.3-1.5.2.2.2.1.1" class="pilcrow">¶</a></p>
+</li>
+                  <li class="toc ulEmpty" id="section-boilerplate.3-1.5.2.2.2.2">
+                    <p id="section-boilerplate.3-1.5.2.2.2.2.1"><a href="#section-5.2.2" class="xref">5.2.2</a>.  <a href="#name-ikev2-congestion-information" class="xref">IKEv2 Congestion Information Notification Data</a><a href="#section-boilerplate.3-1.5.2.2.2.2.1" class="pilcrow">¶</a></p>
 </li>
                 </ul>
 </li>
@@ -1132,9 +1135,9 @@ these fixed-sized packets can contain partial, full or multiple IP
 packets to maximize the bandwidth of the tunnel.
       </span><a href="#section-1-3" class="pilcrow">¶</a></p>
 <p id="section-1-4">
-Additionally, IP-TFS provides for dealing with network congestion.
-This is important for when the IP-TFS user is not in full control of
-the domain through which the IP-TFS tunnel path flows <span>[<a href="#RFC2914" class="xref">RFC2914</a>].
+Additionally, IP-TFS provides for dealing with network congestion
+<span>[<a href="#RFC2914" class="xref">RFC2914</a>]. This is important for when the IP-TFS user is not in full
+control of the domain through which the IP-TFS tunnel path flows.
       </span><a href="#section-1-4" class="pilcrow">¶</a></p>
 <div id="terminology--concepts">
 <section id="section-1.1">
@@ -1159,7 +1162,7 @@ in <span>[<a href="#RFC4301" class="xref">RFC4301</a>].
 <div id="the-ip-tfs-tunnel">
 <section id="section-2">
       <h2 id="name-the-ip-tfs-tunnel">
-<a href="#section-2" class="section-number selfRef">2. </a><a href="#name-the-ip-tfs-tunnel" class="section-name selfRef">The IP-TFS Tunnel.</a>
+<a href="#section-2" class="section-number selfRef">2. </a><a href="#name-the-ip-tfs-tunnel" class="section-name selfRef">The IP-TFS Tunnel</a>
       </h2>
 <p id="section-2-1">
 As mentioned in <a href="#introduction" class="xref">Section 1</a> IP-TFS utilizes an IPsec <span>[<a href="#RFC4303" class="xref">RFC4303</a>]
@@ -1249,6 +1252,9 @@ subsequent encapsulating packet. When the BlockOffset is non-zero the
 data immediately following the header belongs to the previous
 data-block that is still being re-assembled.
           <a href="#section-2.1.1-2" class="pilcrow">¶</a></p>
+<p id="section-2.1.1-3">
+The V (version) bit is included for future compatibility.
+          <a href="#section-2.1.1-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="data-blocks">
@@ -1278,7 +1284,7 @@ IPv6 packet's length field.
 <div id="no-implicit-padding">
 <section id="section-2.1.3">
           <h4 id="name-no-implicit-padding">
-<a href="#section-2.1.3" class="section-number selfRef">2.1.3. </a><a href="#name-no-implicit-padding" class="section-name selfRef">No Implicit Padding.</a>
+<a href="#section-2.1.3" class="section-number selfRef">2.1.3. </a><a href="#name-no-implicit-padding" class="section-name selfRef">No Implicit Padding</a>
           </h4>
 <p id="section-2.1.3-1">
 It's worth noting that there is no need for implicit pads at the end
@@ -1322,7 +1328,7 @@ by configuration.
 <div id="exclusive-sa-use">
 <section id="section-2.2">
         <h3 id="name-exclusive-sa-use">
-<a href="#section-2.2" class="section-number selfRef">2.2. </a><a href="#name-exclusive-sa-use" class="section-name selfRef">Exclusive SA Use.</a>
+<a href="#section-2.2" class="section-number selfRef">2.2. </a><a href="#name-exclusive-sa-use" class="section-name selfRef">Exclusive SA Use</a>
         </h3>
 <p id="section-2.2-1">
 It is not the intention of this specification to allow for mixed use
@@ -1340,7 +1346,7 @@ SAs.
 <div id="initiation-of-tfs-mode">
 <section id="section-2.3">
         <h3 id="name-initiation-of-tfs-mode">
-<a href="#section-2.3" class="section-number selfRef">2.3. </a><a href="#name-initiation-of-tfs-mode" class="section-name selfRef">Initiation of TFS mode.</a>
+<a href="#section-2.3" class="section-number selfRef">2.3. </a><a href="#name-initiation-of-tfs-mode" class="section-name selfRef">Initiation of TFS mode</a>
         </h3>
 <p id="section-2.3-1">
 While normally a user will configure their IPsec tunnel to operate in
@@ -1355,7 +1361,7 @@ payload type.
 <div id="example-of-an-encapsulated-ip-packet-flow">
 <section id="section-2.4">
         <h3 id="name-example-of-an-encapsulated-">
-<a href="#section-2.4" class="section-number selfRef">2.4. </a><a href="#name-example-of-an-encapsulated-" class="section-name selfRef">Example of an encapsulated IP packet flow.</a>
+<a href="#section-2.4" class="section-number selfRef">2.4. </a><a href="#name-example-of-an-encapsulated-" class="section-name selfRef">Example of an encapsulated IP packet flow</a>
         </h3>
 <p id="section-2.4-1">
 Below we show an example inner IP packet flow within the
@@ -1427,7 +1433,8 @@ controlled mode should only be used where the user has full
 administrative control over the path the tunnel will take. This is
 required so the user can guarantee the bandwidth and also be sure as
 to not be negatively affecting network congestion </span><span>[<a href="#RFC2914" class="xref">RFC2914</a>]. In this
-case packet loss should be signaled to the administrator so that any
+case packet loss should be reported to the administrator (e.g.,
+via syslog, YANG notification, SNMP traps, etc) so that any
 failures due to a lack of bandwidth can be corrected.
           </span><a href="#section-2.5.1-2" class="pilcrow">¶</a></p>
 </section>
@@ -1472,7 +1479,7 @@ confidentiality.
 <a href="#section-2.5.2.1" class="section-number selfRef">2.5.2.1. </a><a href="#name-circuit-breakers" class="section-name selfRef">Circuit Breakers</a>
             </h5>
 <p id="section-2.5.2.1-1">
-In additional to congestion control, implementations may wish to
+In additional to congestion control, implementations may choose to
 define and implement circuit breakers <span>[<a href="#RFC8084" class="xref">RFC8084</a>] as a recovery method
 of last resort. Enabling circuit breakers is also a reason a user may
 wish to enable congestion information reports even when using the
@@ -1531,8 +1538,8 @@ once per normal congestion information sending interval though.
         </span><a href="#section-3.1-1" class="pilcrow">¶</a></p>
 <p id="section-3.1-2">
 As noted in <span>[<a href="#RFC3168" class="xref">RFC3168</a>] the ECN bits are not protected by IPsec and
-thus may constitute a covert channel. For this reason ECN use should
-not be enabled by default.
+thus may constitute a covert channel. For this reason ECN use SHOULD
+NOT be enabled by default.
         </span><a href="#section-3.1-2" class="pilcrow">¶</a></p>
 </section>
 </div>
@@ -1557,11 +1564,11 @@ single-ended provisioning).
         </h3>
 <p id="section-4.1-1">
 Bandwidth is a local configuration option. For non-congestion
-controlled mode the only configuration required is the requested
-bandwidth. For congestion controlled mode one can manually configure
-the bandwidth or one could default to the maximum bandwidth allowed
-in which case no bandwidth configuration is required. No standardized
-configuration method is required.
+controlled mode the bandwidth SHOULD be configured. For
+congestion controlled mode one can configure the bandwidth
+or have no configuration and let congestion control discover the
+maximum bandwidth available. No standardized configuration method is
+required.
         <a href="#section-4.1-1" class="pilcrow">¶</a></p>
 </section>
 </div>
@@ -1581,7 +1588,7 @@ configuration method is required.
 <div id="congestion-information-configuration">
 <section id="section-4.3">
         <h3 id="name-congestion-information-conf">
-<a href="#section-4.3" class="section-number selfRef">4.3. </a><a href="#name-congestion-information-conf" class="section-name selfRef">Congestion Information Configuration.</a>
+<a href="#section-4.3" class="section-number selfRef">4.3. </a><a href="#name-congestion-information-conf" class="section-name selfRef">Congestion Information Configuration</a>
         </h3>
 <p id="section-4.3-1">
 If congestion control mode is to be used, or if the user wishes to
@@ -1605,21 +1612,25 @@ the tunnel. This value is configured using a CFG_REQUEST payload and
 is acknowledge by the receiver using a CFG_REPLY payload. This
 configuration exchange SHOULD be sent during the IKEv2 configuration
 exchanges occurring as the tunnel is first brought up. The sending
-interval value may also be changed at any time afterwards using a
+interval value MAY also be changed at any time afterwards using a
 similar CFG_REQUEST/CFG_REPLY payload inside an IKEv2 INFORMATIONAL
 exchange.
         <a href="#section-4.3-3" class="pilcrow">¶</a></p>
 <p id="section-4.3-4">
+In the absence of a congestion information configuration exchange
+the sending interval is up to the receiving device configuration.
+        <a href="#section-4.3-4" class="pilcrow">¶</a></p>
+<p id="section-4.3-5">
 The sending interval value is given in milliseconds and is 16 bits
 wide; however, it is not recommended that values below 1/10th of a
 second are used as this could lead to early exhaustion of the Message
 ID field used in the IKEv2 INFORMATIONAL exchange to send the
 congestion information.
-        <a href="#section-4.3-4" class="pilcrow">¶</a></p>
-<p id="section-4.3-5">
+        <a href="#section-4.3-5" class="pilcrow">¶</a></p>
+<p id="section-4.3-6">
 A sending interval value of 0 disables sending of the congestion
 information.
-        <a href="#section-4.3-5" class="pilcrow">¶</a></p>
+        <a href="#section-4.3-6" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -1804,21 +1815,61 @@ inner IPv6 inner packet.
         <h3 id="name-ikev2">
 <a href="#section-5.2" class="section-number selfRef">5.2. </a><a href="#name-ikev2" class="section-name selfRef">IKEv2</a>
         </h3>
-<div id="ikev2-congestion-information-notification-data">
+<div id="ikev2-congestion-information-configuration-attribute">
 <section id="section-5.2.1">
           <h4 id="name-ikev2-congestion-informatio">
-<a href="#section-5.2.1" class="section-number selfRef">5.2.1. </a><a href="#name-ikev2-congestion-informatio" class="section-name selfRef">IKEv2 Congestion Information Notification Data</a>
+<a href="#section-5.2.1" class="section-number selfRef">5.2.1. </a><a href="#name-ikev2-congestion-informatio" class="section-name selfRef">IKEv2 Congestion Information Configuration Attribute</a>
           </h4>
 <p id="section-5.2.1-1">
+The following defines the configuration attribute structure used in
+the IKEv2 <span>[<a href="#RFC7296" class="xref">RFC7296</a>] configuration exchange to set the congestion
+information report sending interval.
+          </span><a href="#section-5.2.1-1" class="pilcrow">¶</a></p>
+<figure id="figure-9">
+            <div class="artwork art-text alignLeft" id="section-5.2.1-2.1">
+<pre>
+  0                   1                   2                   3
+  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
+ +-----------------------------------------------------------------+
+ |R|       Attribute Type        |             Length              |
+ +-----------------------------------------------------------------+
+ |                            Interval                             |
+ +-----------------------------------------------------------------+
+            </pre>
+</div>
+<figcaption><a href="#figure-9">Figure 9</a></figcaption></figure>
+<dl class="dlParallel" id="section-5.2.1-3">
+            <dt id="section-5.2.1-3.1">R</dt>
+            <dd id="section-5.2.1-3.2">1 bit set to 0.
+ </dd>
+            <dt id="section-5.2.1-3.3">Attribute Type</dt>
+            <dd id="section-5.2.1-3.4">15 bit value set to TFS_INFO_INTERVAL (TBD).
+ </dd>
+            <dt id="section-5.2.1-3.5">Length</dt>
+            <dd id="section-5.2.1-3.6">2 octet length set to 2.
+ </dd>
+            <dt id="section-5.2.1-3.7">SendInterval</dt>
+            <dd id="section-5.2.1-3.8">A 2 octet unsigned integer. The sending interval in
+milliseconds.
+ </dd>
+          </dl>
+</section>
+</div>
+<div id="ikev2-congestion-information-notification-data">
+<section id="section-5.2.2">
+          <h4 id="name-ikev2-congestion-information">
+<a href="#section-5.2.2" class="section-number selfRef">5.2.2. </a><a href="#name-ikev2-congestion-information" class="section-name selfRef">IKEv2 Congestion Information Notification Data</a>
+          </h4>
+<p id="section-5.2.2-1">
 We utilize a send only (i.e., no response expected) IKEv2
 INFORMATIONAL exchange (37) to transmit the congestion information
 using a notification payload of type TFS_CONGEST_INFO (TBD). The The
 Response bit should be set to 0. As no response is expected the only
 payload should be the congestion information in the notification
 payload. The following diagram defines the notification payload data.
-          <a href="#section-5.2.1-1" class="pilcrow">¶</a></p>
-<figure id="figure-9">
-            <div class="artwork art-text alignLeft" id="section-5.2.1-2.1">
+          <a href="#section-5.2.2-1" class="pilcrow">¶</a></p>
+<figure id="figure-10">
+            <div class="artwork art-text alignLeft" id="section-5.2.2-2.1">
 <pre>
   0                   1                   2                   3
   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
@@ -1833,34 +1884,41 @@ payload. The following diagram defines the notification payload data.
  +-----------------------------------------------------------------+
             </pre>
 </div>
-<figcaption><a href="#figure-9">Figure 9</a></figcaption></figure>
-<dl class="dlParallel" id="section-5.2.1-3">
-            <dt id="section-5.2.1-3.1">E</dt>
-            <dd id="section-5.2.1-3.2">Packet[s] with Congestion Experienced (CE) ECN bits set were
-received and used in calculating the DropCount value.
+<figcaption><a href="#figure-10">Figure 10</a></figcaption></figure>
+<dl class="dlParallel" id="section-5.2.2-3">
+            <dt id="section-5.2.2-3.1">E</dt>
+            <dd id="section-5.2.2-3.2">A 1 bit value that if set indicates that packet[s] with
+Congestion Experienced (CE) ECN bits set were received and
+used in calculating the DropCount value.
  </dd>
-            <dt id="section-5.2.1-3.3">Reserved</dt>
-            <dd id="section-5.2.1-3.4">Set to 0 ignored on receipt.
+            <dt id="section-5.2.2-3.3">Reserved</dt>
+            <dd id="section-5.2.2-3.4">A 7 bit field set to 0 ignored on receipt.
  </dd>
-            <dt id="section-5.2.1-3.5">DropCount</dt>
-            <dd id="section-5.2.1-3.6">The drop count that occurred between AckSeqStart and
-AckSeqEnd, If the drops exceed the resolution of the
-counter then set to the max value.
+            <dt id="section-5.2.2-3.5">DropCount</dt>
+            <dd id="section-5.2.2-3.6">A 24 bit unsigned integer count of the drops that
+occurred between AckSeqStart and AckSeqEnd. If the
+drops exceed the resolution of the counter then set to
+the maximum value (i.e., 0xFFFFFF).
  </dd>
-            <dt id="section-5.2.1-3.7">AckSeqStart</dt>
-            <dd id="section-5.2.1-3.8">The first ESP sequence number of the packet range
-that this information relates to.
- </dd>
-            <dt id="section-5.2.1-3.9">AckSeqEnd</dt>
-            <dd id="section-5.2.1-3.10">The last ESP sequence number of the packet range that
-this information relates to.
- </dd>
-            <dt id="section-5.2.1-3.11">Timestamp</dt>
-            <dd id="section-5.2.1-3.12">The lower 32 bits of a running monotonic millisecond
-timer of when this notification data was created/sent.
-This value is used to determine duplicates and drop
-counts of this information. Implementations should
-deal with wrapping of this timer value.
+            <dt id="section-5.2.2-3.7">AckSeqStart</dt>
+            <dd id="section-5.2.2-3.8">A 32 bit unsigned integer containing the first ESP
+sequence number (as defined in <span>[<a href="#RFC4303" class="xref">RFC4303</a>]) of the
+packet range that this information relates to.
+ </span>
+</dd>
+            <dt id="section-5.2.2-3.9">AckSeqEnd</dt>
+            <dd id="section-5.2.2-3.10">A 32 bit unsigned integer containing the last ESP
+sequence number (as defined in <span>[<a href="#RFC4303" class="xref">RFC4303</a>]) of the
+packet range that this information relates to.
+ </span>
+</dd>
+            <dt id="section-5.2.2-3.11">Timestamp</dt>
+            <dd id="section-5.2.2-3.12">A 32 bit unsigned integer containing the lower 32
+bits of a running monotonic millisecond timer of when
+this notification data was created/sent. This value is
+used to determine duplicates and drop counts of this
+information. Implementations should deal with wrapping
+of this timer value.
  </dd>
           </dl>
 </section>
@@ -1879,7 +1937,7 @@ This document requests a protocol number IPTFS_PROTOCOL be allocated
 by IANA from "Assigned Internet Protocol Numbers" registry for
 identifying the IP-TFS ESP payload format.
       <a href="#section-6-1" class="pilcrow">¶</a></p>
-<figure id="figure-10">
+<figure id="figure-11">
         <div class="artwork art-text alignLeft" id="section-6-2.1">
 <pre>
   Type: TBD
@@ -1887,13 +1945,13 @@ identifying the IP-TFS ESP payload format.
   Reference: This document
             </pre>
 </div>
-<figcaption><a href="#figure-10">Figure 10</a></figcaption></figure>
+<figcaption><a href="#figure-11">Figure 11</a></figcaption></figure>
 <p id="section-6-3">
 Additionally this document requests an attribute value
 TFS_INFO_INTERVAL (TBD) be allocated by IANA from "IKEv2
 Configuration Payload Attribute Types" registry.
       <a href="#section-6-3" class="pilcrow">¶</a></p>
-<figure id="figure-11">
+<figure id="figure-12">
         <div class="artwork art-text alignLeft" id="section-6-4.1">
 <pre>
   Type: TBD
@@ -1902,13 +1960,13 @@ Configuration Payload Attribute Types" registry.
   Reference: This document
             </pre>
 </div>
-<figcaption><a href="#figure-11">Figure 11</a></figcaption></figure>
+<figcaption><a href="#figure-12">Figure 12</a></figcaption></figure>
 <p id="section-6-5">
 Additionally this document requests a notify message status type
 TFS_CONGEST_INFO (TBD) be allocated by IANA from "IKEv2 Notify
 Message Types - Status Types" registry.
       <a href="#section-6-5" class="pilcrow">¶</a></p>
-<figure id="figure-12">
+<figure id="figure-13">
         <div class="artwork art-text alignLeft" id="section-6-6.1">
 <pre>
   Type: TBD
@@ -1917,7 +1975,7 @@ Message Types - Status Types" registry.
   Reference: This document
             </pre>
 </div>
-<figcaption><a href="#figure-12">Figure 12</a></figcaption></figure>
+<figcaption><a href="#figure-13">Figure 13</a></figcaption></figure>
 </section>
 </div>
 <div id="security-considerations">
