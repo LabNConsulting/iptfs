@@ -4,8 +4,8 @@
 
 Network Working Group                                           C. Hopps
 Internet-Draft                                   LabN Consulting, L.L.C.
-Intended status: Standards Track                         6 February 2019
-Expires: 10 August 2019
+Intended status: Standards Track                         7 February 2019
+Expires: 11 August 2019
 
 
                         IP Traffic Flow Security
@@ -34,7 +34,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 10 August 2019.
+   This Internet-Draft will expire on 11 August 2019.
 
 Copyright Notice
 
@@ -56,10 +56,12 @@ Table of Contents
        1.1.  Terminology & Concepts
    2.  The IP-TFS Tunnel.
        2.1.  Tunnel Content
-             2.1.1.  IPsec Payload
+             2.1.1.  IPSec/ESP Payload
              2.1.2.  Data-Blocks
-             2.1.3.  Example of an encapsulated IP packet flow.
-             2.1.4.  IP Header Value Mapping
+             2.1.3.  No Implicit Padding.
+             2.1.4.  Exclusive SA Use.
+             2.1.5.  Example of an encapsulated IP packet flow.
+             2.1.6.  IP Header Value Mapping
        2.2.  Modes of operation
              2.2.1.  Non-Congestion Controlled Mode
              2.2.2.  Congestion Controlled Mode
@@ -138,11 +140,12 @@ Table of Contents
    fixed-packet-size encapsulating packet.
 
    The egress of the IP-TFS tunnel SHOULD NOT impose any restrictions on
-   tunnel packet arrival rate.  Packet send rate is entirely the
-   function of the ingress (sending) side of the IP-TFS tunnel.  Indeed
-   the ingress (sending) side of the IP-TFS tunnel MUST be allowed to
-   vary the rate at which it sends encapsulating packets, including
-   sending them faster or slower than the requested rate.
+   tunnel packet size or arrival rate.  Packet size and send rate is
+   entirely the function of the ingress (sending) side of the IP-TFS
+   tunnel.  Indeed, the ingress (sending) side of the IP-TFS tunnel MUST
+   be allowed to vary the size and rate at which it sends encapsulating
+   packets, including sending them larger, smaller, faster or slower
+   than the requested size and rate.
 
 2.1.  Tunnel Content
 
@@ -154,41 +157,42 @@ Table of Contents
    With IP-TFS we fragment as well as aggregate the inner IP traffic
    flow into the encapsulating IP tunnel packets.  We only pad the
    tunnel packets if there is no data available to be sent at the time
-   of tunnel packet transmission or an unusable amount of space remains.
+   of tunnel packet transmission.
 
    In order to do this we create a new payload data type identified with
    a new IP protocol number IPTFS_PROTOCOL (TBD).  A payload of
    IPTFS_PROTOCOL type is comprised of a 32 bit header followed by
    either a partial, a full or multiple partial or full data-blocks.
 
-2.1.1.  IPsec Payload
+2.1.1.  IPSec/ESP Payload
 
+    . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+    . Outer Encapsulating Header ...                                  .
+    . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+    . ESP Header...                                                   .
     +-----------------------------------------------------------------+
     |V|          Reserved           |          BlockOffset            |
     +-----------------------------------------------------------------+
-    |       Data Blocks ...
-    +---------------
+    |       Data Blocks Payload ...                                   ~
+    ~                                                                 |
+    +-----------------------------------------------------------------|
+    . ESP Trailer...                                                  .
+    . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
 
                                   Figure 1
 
    The BlockOffset value is either zero or some offset into or past the
-   end of the encapsulating packet.  If the value is zero it means that
-   a new data-block immediately follows the header.  Conversely if the
-   value is non-zero it points at the start of the next data block.  It
-   can be the case that the BlockOffset points past the end of the
-   encapsulating packet.  This simply means that the next data-block
-   occurs in a subsequent encapsulating packet.  When the BlockOffset is
-   non-zero the data immediately following the header belongs to the
-   previous data-block that is still being re-assembled.
+   end of the data blocks payload data.  If the value is zero it means
+   that a new data-block immediately follows the fixed header (i.e., the
+   BlockOffset value).  Conversely if the BlockOffset value is non-zero
+   it points at the start of the next data block.  It can be the case
+   that the BlockOffset points past the end of the data block payload
+   data.  This simply means that the next data-block occurs in a
+   subsequent encapsulating packet.  When the BlockOffset is non-zero
+   the data immediately following the header belongs to the previous
+   data-block that is still being re-assembled.
 
 2.1.2.  Data-Blocks
-
-   A data-block is defined by a 4-bit type code followed by the data
-   block data.  The types values have been carefully chosen to coincide
-   with the IPv4/IPv6 version field values so that no per-data-block
-   type overhead is required to encapsulate an IP packet.  Likewise, the
-   length of the data block is extracted from the encapsulated packet's
-   length field.
 
     +-----------------------------------------------------------------+
     | Type  | rest of IPv4, IPv6 or pad.
@@ -196,7 +200,36 @@ Table of Contents
 
                                   Figure 2
 
-2.1.3.  Example of an encapsulated IP packet flow.
+   A data-block is defined by a 4-bit type code followed by the data
+   block data.  The types values have been carefully chosen to coincide
+   with the IPv4/IPv6 version field values so that no per-data-block
+   type overhead is required to encapsulate an IP packet.  Likewise, the
+   length of the data block is extracted from the encapsulated IPv4 or
+   IPv6 packet's length field.
+
+2.1.3.  No Implicit Padding.
+
+   It's worth noting that there is no need for implicit pads at the end
+   of an encapsulating packet.  Even when the start of a data block
+   occurs near the end of a encapsulating packet such that there is no
+   room for the length field of the encapsulated header to be included
+   in the current encapsulating packet, the fact that the length comes
+   at a known location and as is guaranteed to be present is enough to
+   fetch the length field from the subsequent encapsulating packet
+   payload.
+
+2.1.4.  Exclusive SA Use.
+
+   It is not the intention of this specification to allow for mixed use
+   of an IPsec SA.  In other words, an SA that is created for IP-TFS is
+   exclusively for IP-TFS use and MUST NOT have non-IP-TFS payloads such
+   as IP (IP protocol 4) or TCP transport (IP protocol 6) intermixed
+   with IP-TFS (IP protocol TBD) payloads.  While it's possible to
+   envision making the algorithm work in the presence of sequence number
+   skips, the added complexity is not deemed worthwhile.  Other IPsec
+   uses can configure their own SAs.
+
+2.1.5.  Example of an encapsulated IP packet flow.
 
    Below we show an example inner IP packet flow within the
    encapsulating tunnel packet stream.  Notice how encapsulated IP
@@ -228,7 +261,7 @@ Table of Contents
    allows for quick recovery with minimal inner packet loss in the
    presence of outer encapsulating packet loss.
 
-2.1.4.  IP Header Value Mapping
+2.1.6.  IP Header Value Mapping
 
    [RFC4301] provides some direction on when and how to map various
    values from an inner IP header to the outer encapsulating header,
