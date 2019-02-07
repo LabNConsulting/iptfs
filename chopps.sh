@@ -22,6 +22,51 @@
 # vtun 192.168.32.66/32 via via 192.168.10.66
 #
 
+
+usage() {
+    echo "Usage: $0 [-o] [-p tunpfx] [-u usepfx] [peerip]"
+    echo "o -- default peers start odd (e.g., .1 and .2 vs .2 and .3)"
+    echo "tunpfx -- 3 octet prefix for tfs interface (default: 192.168.30)."
+    echo "usepfx -- 3 octet prefix to use for outer tunnel (default is same as route default)"
+    echo "peerip -- to connect to if default doesn't work."
+    exit 1;
+}
+
+TUNPFX=192.168.30
+autoset=0
+even=0
+while getopts "ap:" o; do
+    case "${o}" in
+        e)
+            even=1
+            ;;
+        p)
+            TUNPFX=${OPTARG}
+            ;;
+        u)
+            USEPFX=${OPTARG}
+            ;;
+        *)
+            usage
+            ;;
+    esac
+done
+shift $((OPTIND-1))
+PEERIP=$1
+
+DEFIP=$(ip -4 route show default | sed -Ee 's/.*via (.*) dev.*/\1/')
+DEFPFX=${DEFIP%.*}
+if [[ -z $PEERIP ]]; then
+    # XXX this really only works for things like .66 / .67 but not for .1 / .2
+    IPID=${DEFIP##*.}
+    ODD=$((IPID % 2))
+    if (( ODD )); then
+        OIPID=$((IPID + 1))
+    else
+        OIPID=$((IPID - 1))
+    fi
+fi
+
 catch () {
     echo "SIGNAL"
     exit 1;
@@ -38,9 +83,6 @@ cleanup () {
 }
 trap cleanup EXIT ERR
 
-IPID=$(ip addr | sed -e '/192\.168\.2\./!d;s,.*192\.168\.2\.\([0-9]*\)/.*,\1,')
-VMID=$((IPID - 64))
-
 # FRAMESZ=1400
 #TXRATE=1000 # (Mbps)
 TXRATE=10 # (Mbps)
@@ -53,10 +95,12 @@ TXRATE=10 # (Mbps)
 #COMMON="--rate=$TXRATE --dev tfs0 --port 8001"
 COMMON="--verbose --rate=$TXRATE --dev tfs0 --port 8001"
 #COMMON="--debug --rate=$TXRATE --dev tfs0 --port 8001"
-if (( VMID == 2 )); then
+if (( IPID == 66 )); then
     OVMID=3
     sleep 1
-    . venv/bin/activate
+    if [[ -d venv ]]; then
+        . venv/bin/activate
+    fi
     #build/iptfs $COMMON --connect 192.168.10.$((OVMID + 64)) &
     venv/bin/iptfs $COMMON --connect 192.168.10.$((OVMID + 64)) &
     tfspid=$!
@@ -67,9 +111,11 @@ if (( VMID == 2 )); then
     #ip link set tfs0 mtu 8970
     ip link set tfs0 up
 else
-    . venv/bin/activate
+    if [[ -d venv ]]; then
+        . venv/bin/activate
+    fi
     #build/iptfs $COMMON --listen 192.168.10.$IPID &
-    venv/bin/iptfs $COMMON --listen 192.168.10.$IPID &
+    iptfs $COMMON --listen 192.168.10.$IPID &
     tfspid=$!
     sleep 1
     sysctl -w net.ipv6.conf.tfs0.disable_ipv6=1
