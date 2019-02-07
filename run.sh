@@ -115,8 +115,8 @@ else
     COMMON="$COMMON --listen $IP"
 fi
 
-#build/iptfs $COMMON &
-iptfs $COMMON &
+build/iptfs $COMMON &
+#iptfs $COMMON &
 tfspid=$!
 
 sleep 1

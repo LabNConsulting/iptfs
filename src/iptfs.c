@@ -162,11 +162,11 @@ write_intf_pkts(int fd, struct miovq *outq, struct miovq *freeq)
 
 static ssize_t __inline__ getiplen(struct miov *m, struct mbuf *tbuf)
 {
-	switch (m->iov[0].iov_base[0] & 0xF0) {
+	switch (*(uint8_t *)m->iov[0].iov_base & 0xF0) {
 	case 0x4:
-		return get16(tbuf->start[2 - MBUF_LEN(m)]);
+		return get16(&tbuf->start[2 - m->len]);
 	case 0x6:
-		return get16(tbuf->start[4 - MBUF_LEN(m)]);
+		return get16(&tbuf->start[4 - m->len]);
 	default:
 		assert(0);
 	}
