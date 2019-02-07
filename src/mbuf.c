@@ -1,7 +1,7 @@
 /*
  * -*- coding: utf-8 -*-*
  *
- * February 1 2019, Christian E. Hopps <chopps@gmail.com>
+ * February 1 2019, Christian E. Hopps <chopps@labn.net>
  *
  * Copyright (c) 2019, LabN Consulting, L.L.C.
  * All Rights Reserved.

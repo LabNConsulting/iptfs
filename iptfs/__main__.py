@@ -1,6 +1,6 @@
 # -*- coding: utf-8 eval: (yapf-mode 1) -*-
 #
-# January 13 2019, Christian E. Hopps <chopps@gmail.com>
+# January 13 2019, Christian E. Hopps <chopps@labn.net>
 #
 # Copyright (c) 2019, LabN Consulting, L.L.C.
 # All Rights Reserved.
