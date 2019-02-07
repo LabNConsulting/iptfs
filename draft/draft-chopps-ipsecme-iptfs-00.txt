@@ -59,14 +59,15 @@ Table of Contents
              2.1.1.  IPSec/ESP Payload
              2.1.2.  Data-Blocks
              2.1.3.  No Implicit Padding.
-             2.1.4.  Exclusive SA Use.
-             2.1.5.  Example of an encapsulated IP packet flow.
-             2.1.6.  IP Header Value Mapping
-       2.2.  Modes of operation
-             2.2.1.  Non-Congestion Controlled Mode
-             2.2.2.  Congestion Controlled Mode
-       2.3.  Congestion Information
-             2.3.1.  ECN Support
+             2.1.4.  IP Header Value Mapping
+       2.2.  Exclusive SA Use.
+       2.3.  Initiation of TFS mode.
+       2.4.  Example of an encapsulated IP packet flow.
+       2.5.  Modes of operation
+             2.5.1.  Non-Congestion Controlled Mode
+             2.5.2.  Congestion Controlled Mode
+       2.6.  Congestion Information
+             2.6.1.  ECN Support
    3.  Configuration
        3.1.  Bandwidth
        3.2.  Fixed Packet Size
@@ -218,7 +219,27 @@ Table of Contents
    fetch the length field from the subsequent encapsulating packet
    payload.
 
-2.1.4.  Exclusive SA Use.
+2.1.4.  IP Header Value Mapping
+
+   [RFC4301] provides some direction on when and how to map various
+   values from an inner IP header to the outer encapsulating header,
+   namely the Don't-Fragment (DF) bit ([RFC0791] and [RFC8200]), the
+   Differentiated Services (DS) field [RFC2474] and the Explicit
+   Congestion Notification (ECN) field [RFC3168].  Unlike [RFC4301] with
+   IP-TFS we may and often will be encapsulating more than 1 IP packet
+   per ESP packet.  To deal with this we further restrict these
+   mappings.  In particular we never map the inner DF bit as it is
+   unrelated to the IP-TFS tunnel functionality; we never directly
+   fragment the inner packets and the inner packets will not affect the
+   fragmentation of the outer encapsulation packets.  Likewise, the ECN
+   value need not be mapped as any congestion related to the constant
+   send rate IP-TFS tunnel is unrelated (by design!) to the inner
+   traffic flow.  Finally, by default the DS field should not be copied
+   although an implementation may choose to allow for configuration to
+   override this behavior.  An implementation SHOULD also allow the DS
+   value to be set by configuration.
+
+2.2.  Exclusive SA Use.
 
    It is not the intention of this specification to allow for mixed use
    of an IPsec SA.  In other words, an SA that is created for IP-TFS is
@@ -226,10 +247,20 @@ Table of Contents
    as IP (IP protocol 4) or TCP transport (IP protocol 6) intermixed
    with IP-TFS (IP protocol TBD) payloads.  While it's possible to
    envision making the algorithm work in the presence of sequence number
-   skips, the added complexity is not deemed worthwhile.  Other IPsec
-   uses can configure their own SAs.
+   skips in the IP-TFS payload stream, the added complexity is not
+   deemed worthwhile.  Other IPsec uses can configure and use their own
+   SAs.
 
-2.1.5.  Example of an encapsulated IP packet flow.
+2.3.  Initiation of TFS mode.
+
+   While normally a user will configure their IPsec tunnel to operate in
+   IP-TFS mode to start, we also allow IP-TFS mode to be enabled post-SA
+   creation.  This may be useful for debugging or other purposes.  In
+   this late enabled mode the receiver would switch to IP-TFS mode on
+   receipt of the first ESP payload with the IPTFS_PROTOCOL indicated as
+   the payload type.
+
+2.4.  Example of an encapsulated IP packet flow.
 
    Below we show an example inner IP packet flow within the
    encapsulating tunnel packet stream.  Notice how encapsulated IP
@@ -261,27 +292,7 @@ Table of Contents
    allows for quick recovery with minimal inner packet loss in the
    presence of outer encapsulating packet loss.
 
-2.1.6.  IP Header Value Mapping
-
-   [RFC4301] provides some direction on when and how to map various
-   values from an inner IP header to the outer encapsulating header,
-   namely the Don't-Fragment (DF) bit ([RFC0791] and [RFC8200]), the
-   Differentiated Services (DS) field [RFC2474] and the Explicit
-   Congestion Notification (ECN) field [RFC3168].  Unlike [RFC4301] with
-   IP-TFS we may and often will be encapsulating more than 1 IP packet
-   per ESP packet.  To deal with this we further restrict these
-   mappings.  In particular we never map the inner DF bit as it is
-   unrelated to the IP-TFS tunnel functionality; we never directly
-   fragment the inner packets and the inner packets will not affect the
-   fragmentation of the outer encapsulation packets.  Likewise, the ECN
-   value need not be mapped as any congestion related to the constant
-   send rate IP-TFS tunnel is unrelated (by design!) to the inner
-   traffic flow.  Finally, by default the DS field should not be copied
-   although an implementation may choose to allow for configuration to
-   override this behavior.  An implementation SHOULD also allow the DS
-   value to be set by configuration.
-
-2.2.  Modes of operation
+2.5.  Modes of operation
 
    Just as with normal IPsec tunnels IP-TFS tunnels are unidirectional.
    Bidirectional functionality is achieved by setting up 2 tunnels, one
@@ -290,7 +301,7 @@ Table of Contents
    An IP-TFS tunnel can operate in 2 modes, a non-congestion controlled
    mode and congestion controlled mode.
 
-2.2.1.  Non-Congestion Controlled Mode
+2.5.1.  Non-Congestion Controlled Mode
 
    In the non-congestion controlled mode IP-TFS sends fixed-sized
    packets at a constant rate.  The packet send rate is constant and is
@@ -305,7 +316,7 @@ Table of Contents
    case packet loss should be signaled to the administrator so that any
    failures due to a lack of bandwidth can be corrected.
 
-2.2.2.  Congestion Controlled Mode
+2.5.2.  Congestion Controlled Mode
 
    With the congestion controlled mode, IP-TFS adapts to network
    congestion by lowering the packet send rate to accommodate the
@@ -334,7 +345,7 @@ Table of Contents
    the variations in the tunnel rate will not break the traffic flow
    confidentiality.
 
-2.2.2.1.  Circuit Breakers
+2.5.2.1.  Circuit Breakers
 
    In additional to congestion control, implementations may wish to
    define and implement circuit breakers [RFC8084] as a recovery method
@@ -343,7 +354,7 @@ Table of Contents
    non-congestion controlled mode of operation.  The definition of
    circuit breakers are outside the scope of this document.
 
-2.3.  Congestion Information
+2.6.  Congestion Information
 
    In order to support the congestion control mode, we send regular
    packet drop reports from the receiver (egress tunnel endpoint) to the
@@ -360,7 +371,7 @@ Table of Contents
    configured interval (which can be configured to 0 to disable the
    sending of the reports).
 
-2.3.1.  ECN Support
+2.6.1.  ECN Support
 
    In additional to normal packet loss IP-TFS supports use of the ECN
    bits in the encapsulating IP header [RFC3168].  If ECN use is enabled
@@ -632,7 +643,7 @@ Table of Contents
    utilizes the security protocols [RFC4303] and [RFC7296] and so their
    security considerations apply to IP-TFS as well.
 
-   As noted previously in Section 2.2.2, for TFC to be fully maintained
+   As noted previously in Section 2.5.2, for TFC to be fully maintained
    the encapsulated traffic flow should not be affecting network
    congestion in a predictable way, and if it would be then non-
    congestion controlled mode use should be considered instead.

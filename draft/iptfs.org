@@ -1,10 +1,26 @@
 # -*- fill-column: 69 -*-
+#+TITLE: IP Traffic Flow Security
+#+AUTHOR: Christian E. Hopps
+#+STARTUP: content entitiespretty
+# Do: title, table-of-contents ::fixed-width-sections |tables
+# Do: ^sup/sub with curly -special-strings *emphasis
+# Don't: \n:preserve-linebreaks ':use-smart-quotes
+#+OPTIONS: title:t toc:t \n:nil ::t |:t ^:{} -:t *:t ':nil
 
+# :PROPERTIES:
+# :ipr: trust200902
+# :category: std
+# :submissionType: IETF
+# :consensus: true
+# :END:
+
+#+begin_abstract
 This document describes a mechanism that provides for robust traffic
 flow security by adding traffic flow confidentiality to encrypted IP
 encapsulated traffic. Traffic flow confidentiality is provided by
 obscuring the size and frequency of IP traffic using a constant sized
 and constant send rate IPsec tunnel.
+#+end_abstract
 
 * Introduction
 
@@ -144,7 +160,27 @@ at a known location and as is guaranteed to be present is enough to
 fetch the length field from the subsequent encapsulating packet
 payload.
 
-*** Exclusive SA Use.
+*** IP Header Value Mapping
+
+^RFC4301^ provides some direction on when and how to map various
+values from an inner IP header to the outer encapsulating header,
+namely the Don't-Fragment (DF) bit (^RFC0791^ and ^RFC8200^), the
+Differentiated Services (DS) field ^RFC2474^ and the Explicit
+Congestion Notification (ECN) field ^RFC3168^. Unlike ^RFC4301^ with
+IP-TFS we may and often will be encapsulating more than 1 IP packet
+per ESP packet. To deal with this we further restrict these mappings.
+In particular we never map the inner DF bit as it is unrelated to the
+IP-TFS tunnel functionality; we never directly fragment the inner
+packets and the inner packets will not affect the fragmentation of
+the outer encapsulation packets. Likewise, the ECN value need not be
+mapped as any congestion related to the constant send rate IP-TFS
+tunnel is unrelated (by design!) to the inner traffic flow. Finally,
+by default the DS field should not be copied although an
+implementation may choose to allow for configuration to override this
+behavior. An implementation SHOULD also allow the DS value to be set
+by configuration.
+
+** Exclusive SA Use.
 
 It is not the intention of this specification to allow for mixed use
 of an IPsec SA. In other words, an SA that is created for IP-TFS is
@@ -152,10 +188,20 @@ exclusively for IP-TFS use and MUST NOT have non-IP-TFS payloads such
 as IP (IP protocol 4) or TCP transport (IP protocol 6) intermixed
 with IP-TFS (IP protocol TBD) payloads. While it's possible to
 envision making the algorithm work in the presence of sequence number
-skips, the added complexity is not deemed worthwhile. Other IPsec
-uses can configure their own SAs.
+skips in the IP-TFS payload stream, the added complexity is not
+deemed worthwhile. Other IPsec uses can configure and use their own
+SAs.
 
-*** Example of an encapsulated IP packet flow.
+** Initiation of TFS mode.
+
+While normally a user will configure their IPsec tunnel to operate in
+IP-TFS mode to start, we also allow IP-TFS mode to be enabled post-SA
+creation. This may be useful for debugging or other purposes. In this
+late enabled mode the receiver would switch to IP-TFS mode on receipt
+of the first ESP payload with the IPTFS_PROTOCOL indicated as the
+payload type.
+
+** Example of an encapsulated IP packet flow.
 
 Below we show an example inner IP packet flow within the
 encapsulating tunnel packet stream. Notice how encapsulated IP
@@ -188,26 +234,6 @@ completion of the continued 4000 octet packet.
 Having the BlockOffset always point at the next available data block
 allows for quick recovery with minimal inner packet loss in the
 presence of outer encapsulating packet loss.
-
-*** IP Header Value Mapping
-
-^RFC4301^ provides some direction on when and how to map various
-values from an inner IP header to the outer encapsulating header,
-namely the Don't-Fragment (DF) bit (^RFC0791^ and ^RFC8200^), the
-Differentiated Services (DS) field ^RFC2474^ and the Explicit
-Congestion Notification (ECN) field ^RFC3168^. Unlike ^RFC4301^ with
-IP-TFS we may and often will be encapsulating more than 1 IP packet
-per ESP packet. To deal with this we further restrict these mappings.
-In particular we never map the inner DF bit as it is unrelated to the
-IP-TFS tunnel functionality; we never directly fragment the inner
-packets and the inner packets will not affect the fragmentation of
-the outer encapsulation packets. Likewise, the ECN value need not be
-mapped as any congestion related to the constant send rate IP-TFS
-tunnel is unrelated (by design!) to the inner traffic flow. Finally,
-by default the DS field should not be copied although an
-implementation may choose to allow for configuration to override this
-behavior. An implementation SHOULD also allow the DS value to be set
-by configuration.
 
 ** Modes of operation
 
@@ -435,7 +461,6 @@ the encapsulated IP packet.
 - TotalLength :: The 16 bit unsigned integer length field of the IPv4
                  inner packet.
 
-
 **** IPv6 Data Block
 
 #+begin_example
@@ -473,7 +498,6 @@ the encapsulated IP packet.
 
 - Type :: A 4 bit value of 0x0 indicating a padding data block.
 - Padding :: extends to end of the encapsulating packet.
-
 
 ** IKEv2
 ***  IKEv2 Congestion Information Notification Data
@@ -568,13 +592,12 @@ affecting network congestion in a predictable way, and if it would be
 then non-congestion controlled mode use should be considered instead.
 
 {{document:
-    name ;
-    ipr trust200902;
-    category std;
-    references references.xml;
-    title "IP Traffic Flow Security";
-    submissionType IETF;
-    consensus true;
-    contributor "author:Christian E. Hopps:LabN Consulting, L.L.C.:chopps@chopps.org";
+   name ;
+   ipr trust200902;
+   category std;
+   references references.xml;
+   title "IP Traffic Flow Security";
+   submissionType IETF;
+   consensus true;
+   contributor "author:Christian E. Hopps:LabN Consulting, L.L.C.:chopps@chopps.org";
 }}
-
