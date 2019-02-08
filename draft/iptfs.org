@@ -1,21 +1,24 @@
-#fill-column: 69 -*-
+# -*- fill-column: 69 -*-
+#+STARTUP: align entitiespretty hidestars inlineimages latexpreview noindent showall
+#
 #+TITLE: IP Traffic Flow Security
 #+AUTHOR: Christian E. Hopps
 #+EMAIL: chopps@chopps.org
-
-#+STARTUP: align entitiespretty hidestars inlineimages latexpreview noindent showall
+#
+#+RFC_NAME: draft-chopps-ipsecme-iptfs
+#+RFC_VERSION: 00
+#+RFC_AUTHORS: (("Christian Hopps" "chopps@chopps.org" "LabN Consulting, L.L.C.") ("Foo Bar" "foobar@chopps.org" "LabN Consulting, L.L.C."))
+#
+# default #+RFC_IPR: trust200902
+# default #+RFC_CATEGORY: std
+# default #+RFC_STREAM: IETF
+# default #+RFC_CONSENSUS: true
+# default #+RFC_UPDATES:
+#
 # Do: title, table-of-contents ::fixed-width-sections |tables
-# Do: ^sup/sub with curly -special-strings *emphasis
-# Don't: \n:preserve-linebreaks ':use-smart-quotes
-#+OPTIONS: title:t toc:t \n:nil ::t |:t ^:{} -:t *:t ':nil
-
-# :PROPERTIES:
-# :ipr: trust200902
-# :category: std
-# :submissionType: IETFF
-# :consensus: true
-# :EXPORT_COMPANY: LabN Consulting
-# :END:
+# Do: ^:sup/sub with curly -:special-strings *:emphasis
+# Don't: prop:no-prop-drawers \n:preserve-linebreaks ':use-smart-quotes
+#+OPTIONS: prop:nil title:t toc:t \n:nil ::t |:t ^:{} -:t *:t ':nil
 
 #+begin_abstract
 This document describes a mechanism that improves IPsec traffic
@@ -24,6 +27,7 @@ encapsulated traffic. Traffic flow confidentiality is provided by
 obscuring the size and frequency of IP traffic using a constant sized
 and constant send rate IPsec tunnel.
 #+end_abstract
+
 
 * Introduction
 
@@ -635,13 +639,38 @@ fully maintained the encapsulated traffic flow should not be
 affecting network congestion in a predictable way, and if it would be
 then non-congestion controlled mode use should be considered instead.
 
-{{document:
-   name ;
-   ipr trust200902;
-   category std;
-   references references.xml;
-   title "IP Traffic Flow Security";
-   submissionType IETF;
-   consensus true;
-   contributor "author:Christian E. Hopps:LabN Consulting, L.L.C.:chopps@chopps.org";
-}}
+* References
+** Normative References
+*** AppCrypt
+    :PROPERTIES:
+    :REF_TITLE: Applied Cryptography: Protocols, Algorithms, and Source Code in C
+    :REF_AUTHOR: Bruce Schneier
+    :REF_DATE: 2017
+    :END:
+*** RFC2119
+*** RFC4303
+*** RFC7296
+*** RFC8174
+** Informative References
+*** RFC0791
+*** RFC1191
+*** RFC2474
+*** RFC2914
+*** RFC3168
+*** RFC4301
+*** RFC7510
+*** RFC8084
+*** RFC8200
+*** RFC8201
+*** I-D.iab-wire-image
+
+# {{document:
+#    name ;
+#    ipr trust200902;
+#    category std;
+#    references references.xml;
+#    title "IP Traffic Flow Security";
+#    submissionType IETF;
+#    consensus true;
+#    contributor "author:Christian E. Hopps:LabN Consulting, L.L.C.:chopps@chopps.org";
+# }}
