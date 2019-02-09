@@ -2,10 +2,10 @@
 
 
 
-Network Working Group
+Network Working Group                                           C. Hopps
 Internet-Draft                                   LabN Consulting, L.L.C.
-Intended status: Standards Track                        February 8, 2019
-Expires: August 12, 2019
+Intended status: Standards Track                         9 February 2019
+Expires: 13 August 2019
 
 
                         IP Traffic Flow Security
@@ -26,7 +26,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on August 12, 2019.
+   This Internet-Draft will expire on 13 August 2019.
 
 Copyright Notice
 
@@ -34,65 +34,50 @@ Copyright Notice
    document authors.  All rights reserved.
 
    This document is subject to BCP 78 and the IETF Trust's Legal
-   Provisions Relating to IETF Documents
-   (https://trustee.ietf.org/license-info) in effect on the date of
-   publication of this document.  Please review these documents
-   carefully, as they describe your rights and restrictions with respect
-   to this document.  Code Components extracted from this document must
-   include Simplified BSD License text as described in Section 4.e of
-   the Trust Legal Provisions and are provided without warranty as
-   described in the Simplified BSD License.
-
-
-
-
-
-
-
-
-
-
-
-                         Expires August 12, 2019                [Page 1]
-
-Internet-Draft          IP Traffic Flow Security           February 2019
-
+   Provisions Relating to IETF Documents (https://trustee.ietf.org/
+   license-info) in effect on the date of publication of this document.
+   Please review these documents carefully, as they describe your rights
+   and restrictions with respect to this document.  Code Components
+   extracted from this document must include Simplified BSD License text
+   as described in Section 4.e of the Trust Legal Provisions and are
+   provided without warranty as described in the Simplified BSD License.
 
 Table of Contents
 
-   1.  Introduction  . . . . . . . . . . . . . . . . . . . . . . . .   2
-     1.1.  Terminology & Concepts  . . . . . . . . . . . . . . . . .   3
-   2.  The IP-TFS Tunnel . . . . . . . . . . . . . . . . . . . . . .   3
-     2.1.  Tunnel Content  . . . . . . . . . . . . . . . . . . . . .   4
-       2.1.1.  IPSec/ESP Payload . . . . . . . . . . . . . . . . . .   4
-       2.1.2.  Data-Blocks . . . . . . . . . . . . . . . . . . . . .   5
-       2.1.3.  No Implicit Padding . . . . . . . . . . . . . . . . .   5
-       2.1.4.  IP Header Value Mapping . . . . . . . . . . . . . . .   5
-     2.2.  Exclusive SA Use  . . . . . . . . . . . . . . . . . . . .   6
-     2.3.  Initiation of TFS mode  . . . . . . . . . . . . . . . . .   6
-     2.4.  Example of an encapsulated IP packet flow . . . . . . . .   6
-     2.5.  Modes of operation  . . . . . . . . . . . . . . . . . . .   7
-       2.5.1.  Non-Congestion Controlled Mode  . . . . . . . . . . .   7
-       2.5.2.  Congestion Controlled Mode  . . . . . . . . . . . . .   7
-   3.  Congestion Information  . . . . . . . . . . . . . . . . . . .   8
-     3.1.  ECN Support . . . . . . . . . . . . . . . . . . . . . . .   8
-   4.  Configuration . . . . . . . . . . . . . . . . . . . . . . . .   9
-     4.1.  Bandwidth . . . . . . . . . . . . . . . . . . . . . . . .   9
-     4.2.  Fixed Packet Size . . . . . . . . . . . . . . . . . . . .   9
-     4.3.  Congestion Information Configuration  . . . . . . . . . .   9
-   5.  Packet and Data Formats . . . . . . . . . . . . . . . . . . .  10
-     5.1.  IPSec . . . . . . . . . . . . . . . . . . . . . . . . . .  10
-       5.1.1.  Payload Format  . . . . . . . . . . . . . . . . . . .  10
-       5.1.2.  Data Blocks . . . . . . . . . . . . . . . . . . . . .  11
-     5.2.  IKEv2 . . . . . . . . . . . . . . . . . . . . . . . . . .  12
-       5.2.1.  IKEv2 Congestion Information Configuration Attribute   12
-       5.2.2.  IKEv2 Congestion Information Notification Data  . . .  13
-   6.  IANA Considerations . . . . . . . . . . . . . . . . . . . . .  14
-   7.  Security Considerations . . . . . . . . . . . . . . . . . . .  14
-   8.  References  . . . . . . . . . . . . . . . . . . . . . . . . .  15
-     8.1.  Normative References  . . . . . . . . . . . . . . . . . .  15
-     8.2.  Informative References  . . . . . . . . . . . . . . . . .  15
-   Author's Address  . . . . . . . . . . . . . . . . . . . . . . . .  16
+   1.  Introduction
+       1.1.  Terminology & Concepts
+   2.  The IP-TFS Tunnel
+       2.1.  Tunnel Content
+             2.1.1.  IPSec/ESP Payload
+             2.1.2.  Data-Blocks
+             2.1.3.  No Implicit Padding
+             2.1.4.  IP Header Value Mapping
+       2.2.  Exclusive SA Use
+       2.3.  Initiation of TFS mode
+       2.4.  Example of an encapsulated IP packet flow
+       2.5.  Modes of operation
+             2.5.1.  Non-Congestion Controlled Mode
+             2.5.2.  Congestion Controlled Mode
+   3.  Congestion Information
+       3.1.  ECN Support
+   4.  Configuration
+       4.1.  Bandwidth
+       4.2.  Fixed Packet Size
+       4.3.  Congestion Information Configuration
+   5.  Packet and Data Formats
+       5.1.  IPSec
+             5.1.1.  Payload Format
+             5.1.2.  Data Blocks
+       5.2.  IKEv2
+             5.2.1.  IKEv2 Congestion Information Configuration
+                     Attribute
+             5.2.2.  IKEv2 Congestion Information Notification
+                     Data
+   6.  IANA Considerations
+   7.  Security Considerations
+   8.  Normative References
+   9.  Informative References
+   Author's Address
 
 1.  Introduction
 
@@ -106,14 +91,6 @@ Table of Contents
 
    [RFC4303] provides for TFC by allowing padding to be added to the
    encrypted IP packets and allowing for sending all-pad packets
-
-
-
-                         Expires August 12, 2019                [Page 2]
-
-Internet-Draft          IP Traffic Flow Security           February 2019
-
-
    (protocol 59).  This method has the major limitation that it can
    significantly under-utilize the available bandwidth.
 
@@ -162,14 +139,6 @@ Internet-Draft          IP Traffic Flow Security           February 2019
    entirely the function of the ingress (sending) side of the IP-TFS
    tunnel.  Indeed, the ingress (sending) side of the IP-TFS tunnel MUST
    be allowed to vary the size and rate at which it sends encapsulating
-
-
-
-                         Expires August 12, 2019                [Page 3]
-
-Internet-Draft          IP Traffic Flow Security           February 2019
-
-
    packets, including sending them larger, smaller, faster or slower
    than the requested size and rate.
 
@@ -192,7 +161,6 @@ Internet-Draft          IP Traffic Flow Security           February 2019
 
 2.1.1.  IPSec/ESP Payload
 
-
    . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
    . Outer Encapsulating Header ...                                  .
    . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
@@ -206,6 +174,7 @@ Internet-Draft          IP Traffic Flow Security           February 2019
    . ESP Trailer...                                                  .
    . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
 
+                                 Figure 1:
 
    The BlockOffset value is either zero or some offset into or past the
    end of the data blocks payload data.  If the value is zero it means
@@ -218,23 +187,15 @@ Internet-Draft          IP Traffic Flow Security           February 2019
    the data immediately following the header belongs to the previous
    data-block that is still being re-assembled.
 
-
-
-
-                         Expires August 12, 2019                [Page 4]
-
-Internet-Draft          IP Traffic Flow Security           February 2019
-
-
    The V (version) bit is included for future compatibility.
 
 2.1.2.  Data-Blocks
-
 
    +-----------------------------------------------------------------+
    | Type  | rest of IPv4, IPv6 or pad.
    +--------
 
+                                 Figure 2:
 
    A data-block is defined by a 4-bit type code followed by the data
    block data.  The types values have been carefully chosen to coincide
@@ -274,14 +235,6 @@ Internet-Draft          IP Traffic Flow Security           February 2019
    override this behavior.  An implementation SHOULD also allow the DS
    value to be set by configuration.
 
-
-
-
-                         Expires August 12, 2019                [Page 5]
-
-Internet-Draft          IP Traffic Flow Security           February 2019
-
-
 2.2.  Exclusive SA Use
 
    It is not the intention of this specification to allow for mixed use
@@ -310,11 +263,11 @@ Internet-Draft          IP Traffic Flow Security           February 2019
    packets can start and end anywhere, and more than one or less than 1
    may occur in a single encapsulating packet.
 
-
     Offset: 0        Offset: 100    Offset: 2900    Offset: 1400
    [ ESP1  (1500) ][ ESP2  (1500) ][ ESP3  (1500) ][ ESP4  (1500) ]
    [--800--][--800--][60][-240-][--4000----------------------][pad]
 
+                                 Figure 3:
 
    The encapsulated IP packet flow (lengths include IP header and
    payload) is as follows: an 800 octet packet, an 800 octet packet, a
@@ -330,13 +283,6 @@ Internet-Draft          IP Traffic Flow Security           February 2019
    offset points past its end and into the forth encapsulating packet.
    The fourth packet ESP4s offset is 1400 pointing at the padding which
    follows the completion of the continued 4000 octet packet.
-
-
-
-                         Expires August 12, 2019                [Page 6]
-
-Internet-Draft          IP Traffic Flow Security           February 2019
-
 
    Having the BlockOffset always point at the next available data block
    allows for quick recovery with minimal inner packet loss in the
@@ -386,14 +332,6 @@ Internet-Draft          IP Traffic Flow Security           February 2019
 
    When an implementation is choosing a congestion control algorithm it
    is worth noting that IP-TFS is not providing for reliable delivery of
-
-
-
-                         Expires August 12, 2019                [Page 7]
-
-Internet-Draft          IP Traffic Flow Security           February 2019
-
-
    IP traffic and so per packet ACKs are not required, and are not
    provided.
 
@@ -442,14 +380,6 @@ Internet-Draft          IP Traffic Flow Security           February 2019
    congestion information notification data.  In order to respond
    quickly to the congestion indication the receiver MAY immediately
    send a congestion information notification to the sender upon
-
-
-
-                         Expires August 12, 2019                [Page 8]
-
-Internet-Draft          IP Traffic Flow Security           February 2019
-
-
    receiving a packet with the CE indication.  This additional immediate
    send SHOULD only be done once per normal congestion information
    sending interval though.
@@ -497,15 +427,6 @@ Internet-Draft          IP Traffic Flow Security           February 2019
    implementations of IP-TFS MUST support configuration using the IKEv2
    exchange described below.
 
-
-
-
-
-                         Expires August 12, 2019                [Page 9]
-
-Internet-Draft          IP Traffic Flow Security           February 2019
-
-
    We utilize a new IKEv2 configuration attribute TFS_INFO_INTERVAL
    (TBD) to configure the sending interval from the egress endpoint of
    the tunnel.  This value is configured using a CFG_REQUEST payload and
@@ -539,120 +460,103 @@ Internet-Draft          IP Traffic Flow Security           February 2019
 
 5.1.1.  Payload Format
 
-    0                   1                   2                   3
+                        1                   2                   3
     0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
-   +-----------------------------------------------------------------+
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
    |V|          Reserved           |          BlockOffset            |
-   +-----------------------------------------------------------------+
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
    |       DataBlocks ...
-   +---------------
+   +-+-+-+-+-+-+-+-+-+-+-
 
+                                 Figure 4:
 
-   V: A 1 bit version field that MUST be set to zero.  If received as
-      one the packet MUST be dropped.
+   V            A 1 bit version field that MUST be set to zero.  If
+                received as one the packet MUST be dropped.
 
-   Reserved:  A 15 bit field set to 0 and ignored on receipt.
+   Reserved     A 15 bit field set to 0 and ignored on receipt.
 
+   BlockOffset  A 16 bit unsigned integer counting the number of octets
+                following this 32 bit header before the next data block.
+                It can also point past the end of the containing packet
+                in which case the data entirely belongs to the previous
+                data block.  If the offset extends into subsequent
+                packets the subsequent 32 bit IP-TFS headers are not
+                counted by this value.
 
-
-
-
-                         Expires August 12, 2019               [Page 10]
-
-Internet-Draft          IP Traffic Flow Security           February 2019
-
-
-   BlockOffset:  A 16 bit unsigned integer counting the number of octets
-      following this 32 bit header before the next data block.  It can
-      also point past the end of the containing packet in which case the
-      data entirely belongs to the previous data block.  If the offset
-      extends into subsequent packets the subsequent 32 bit IP-TFS
-      headers are not counted by this value.
-
-   DataBlocks:  Variable number of octets that constitute the start or
-      continuation of a previous data block.
+   DataBlocks   Variable number of octets that constitute the start or
+                continuation of a previous data block.
 
 5.1.2.  Data Blocks
 
-
-    0                   1                   2                   3
+                        1                   2                   3
     0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
-   +-----------------------------------------------------------------+
-   | Type  | IPv4, IPv6 or pad.
-   +--------
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   | Type  | IPv4, IPv6 or pad...
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 
+                                 Figure 5:
 
-   Type:  A 4 bit field where 0x0 identifies a pad data block, 0x4
-      indicates an IPv4 data block, and 0x6 indicates an IPv6 data
-      block.
+   Type  A 4 bit field where 0x0 identifies a pad data block, 0x4
+         indicates an IPv4 data block, and 0x6 indicates an IPv6 data
+         block.
 
 5.1.2.1.  IPv4 Data Block
 
-
-    0                   1                   2                   3
+                        1                   2                   3
     0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
-   +-----------------------------------------------------------------+
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
    |  0x4  |  IHL  |  TypeOfService  |         TotalLength           |
-   +------------------------------------------------------------------
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
    | Rest of the inner packet ...
-   +
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 
+                                 Figure 6:
 
    These values are the actual values within the encapsulated IPv4
    header.  In other words, the start of this data block is the start of
    the encapsulated IP packet.
 
-   Type:  A 4 bit value of 0x4 indicating IPv4 (i.e., first nibble of
-      the IPv4 packet).
+   Type         A 4 bit value of 0x4 indicating IPv4 (i.e., first nibble
+                of the IPv4 packet).
 
-   TotalLength:  The 16 bit unsigned integer length field of the IPv4
-      inner packet.
-
-
-
-
-
-
-                         Expires August 12, 2019               [Page 11]
-
-Internet-Draft          IP Traffic Flow Security           February 2019
-
+   TotalLength  The 16 bit unsigned integer length field of the IPv4
+                inner packet.
 
 5.1.2.2.  IPv6 Data Block
 
-
-    0                   1                   2                   3
+                        1                   2                   3
     0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
-   +-----------------------------------------------------------------+
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
    |  0x6  | TrafficClass  |               FlowLabel                 |
-   +------------------------------------------------------------------
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
    |          TotalLength          | Rest of the inner packet ...
-   +--------------------------------
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 
+                                 Figure 7:
 
    These values are the actual values within the encapsulated IPv6
    header.  In other words, the start of this data block is the start of
    the encapsulated IP packet.
 
-   Type:  A 4 bit value of 0x6 indicating IPv6 (i.e., first nibble of
-      the IPv6 packet).
+   Type         A 4 bit value of 0x6 indicating IPv6 (i.e., first nibble
+                of the IPv6 packet).
 
-   TotalLength:  The 16 bit unsigned integer length field of the inner
-      IPv6 inner packet.
+   TotalLength  The 16 bit unsigned integer length field of the inner
+                IPv6 inner packet.
 
 5.1.2.3.  Pad Data Block
 
-
-    0                   1                   2                   3
+                        1                   2                   3
     0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
-   +-----------------------------------------------------------------+
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
    |  0x0  | Padding ...
-   +--------
+   +-+-+-+-+-+-+-+-+-+-+-
 
+                                 Figure 8:
 
-   Type:  A 4 bit value of 0x0 indicating a padding data block.
+   Type     A 4 bit value of 0x0 indicating a padding data block.
 
-   Padding:  extends to end of the encapsulating packet.
+   Padding  extends to end of the encapsulating packet.
 
 5.2.  IKEv2
 
@@ -662,35 +566,24 @@ Internet-Draft          IP Traffic Flow Security           February 2019
    the IKEv2 [RFC7296] configuration exchange to set the congestion
    information report sending interval.
 
-
-
-
-
-
-
-
-                         Expires August 12, 2019               [Page 12]
-
-Internet-Draft          IP Traffic Flow Security           February 2019
-
-
-    0                   1                   2                   3
+                        1                   2                   3
     0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
-   +-----------------------------------------------------------------+
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
    |R|       Attribute Type        |             Length              |
-   +-----------------------------------------------------------------+
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
    |                            Interval                             |
-   +-----------------------------------------------------------------+
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
+                                 Figure 9:
 
-   R: 1 bit set to 0.
+   R               1 bit set to 0.
 
-   Attribute Type:  15 bit value set to TFS_INFO_INTERVAL (TBD).
+   Attribute Type  15 bit value set to TFS_INFO_INTERVAL (TBD).
 
-   Length:  2 octet length set to 2.
+   Length          2 octet length set to 2.
 
-   SendInterval:  A 2 octet unsigned integer.  The sending interval in
-      milliseconds.
+   SendInterval    A 2 octet unsigned integer.  The sending interval in
+                   milliseconds.
 
 5.2.2.  IKEv2 Congestion Information Notification Data
 
@@ -702,52 +595,45 @@ Internet-Draft          IP Traffic Flow Security           February 2019
    payload.  The following diagram defines the notification payload
    data.
 
-
-    0                   1                   2                   3
+                        1                   2                   3
     0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
-   +-----------------------------------------------------------------+
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
    |E|  Reserved   |                  DropCount                      |
-   +-----------------------------------------------------------------+
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
    |                          Timestamp                              |
-   +-----------------------------------------------------------------+
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
    |                          AckSeqStart                            |
-   +-----------------------------------------------------------------+
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
    |                          AckSeqEnd                              |
-   +-----------------------------------------------------------------+
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
+                                Figure 10:
 
-   E: A 1 bit value that if set indicates that packet[s] with Congestion
-      Experienced (CE) ECN bits set were received and used in
-      calculating the DropCount value.
+   E            A 1 bit value that if set indicates that packet[s] with
+                Congestion Experienced (CE) ECN bits set were received
+                and used in calculating the DropCount value.
 
-   Reserved:  A 7 bit field set to 0 ignored on receipt.
+   Reserved     A 7 bit field set to 0 ignored on receipt.
 
+   DropCount    A 24 bit unsigned integer count of the drops that
+                occurred between AckSeqStart and AckSeqEnd.  If the
+                drops exceed the resolution of the counter then set to
+                the maximum value (i.e., 0xFFFFFF).
 
+   AckSeqStart  A 32 bit unsigned integer containing the first ESP
+                sequence number (as defined in [RFC4303]) of the packet
+                range that this information relates to.
 
+   AckSeqEnd    A 32 bit unsigned integer containing the last ESP
+                sequence number (as defined in [RFC4303]) of the packet
+                range that this information relates to.
 
-                         Expires August 12, 2019               [Page 13]
-
-Internet-Draft          IP Traffic Flow Security           February 2019
-
-
-   DropCount:  A 24 bit unsigned integer count of the drops that
-      occurred between AckSeqStart and AckSeqEnd.  If the drops exceed
-      the resolution of the counter then set to the maximum value (i.e.,
-      0xFFFFFF).
-
-   AckSeqStart:  A 32 bit unsigned integer containing the first ESP
-      sequence number (as defined in [RFC4303]) of the packet range that
-      this information relates to.
-
-   AckSeqEnd:  A 32 bit unsigned integer containing the last ESP
-      sequence number (as defined in [RFC4303]) of the packet range that
-      this information relates to.
-
-   Timestamp:  A 32 bit unsigned integer containing the lower 32 bits of
-      a running monotonic millisecond timer of when this notification
-      data was created/sent.  This value is used to determine duplicates
-      and drop counts of this information.  Implementations should deal
-      with wrapping of this timer value.
+   Timestamp    A 32 bit unsigned integer containing the lower 32 bits
+                of a running monotonic millisecond timer of when this
+                notification data was created/sent.  This value is used
+                to determine duplicates and drop counts of this
+                information.  Implementations should deal with wrapping
+                of this timer value.
 
 6.  IANA Considerations
 
@@ -778,14 +664,6 @@ Internet-Draft          IP Traffic Flow Security           February 2019
    Confidentiality to IP traffic.  Use of this mechanism is expected to
    increase the security of the traffic being transported.  Other than
    the additional security afforded by using this mechanism, IP-TFS
-
-
-
-                         Expires August 12, 2019               [Page 14]
-
-Internet-Draft          IP Traffic Flow Security           February 2019
-
-
    utilizes the security protocols [RFC4303] and [RFC7296] and so their
    security considerations apply to IP-TFS as well.
 
@@ -794,13 +672,10 @@ Internet-Draft          IP Traffic Flow Security           February 2019
    congestion in a predictable way, and if it would be then non-
    congestion controlled mode use should be considered instead.
 
-8.  References
+8.  Normative References
 
-8.1.  Normative References
-
-   [AppCrypt]
-              "Applied Cryptography: Protocols, Algorithms, and Source
-              Code in C", 2017.
+   [AppCrypt] "Applied Cryptography: Protocols, Algorithms, and Source
+              Code in C", , 2017.
 
    [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
               Requirement Levels", BCP 14, RFC 2119,
@@ -820,27 +695,21 @@ Internet-Draft          IP Traffic Flow Security           February 2019
               2119 Key Words", BCP 14, RFC 8174, DOI 10.17487/RFC8174,
               May 2017, <https://www.rfc-editor.org/info/rfc8174>.
 
-8.2.  Informative References
+9.  Informative References
 
    [I-D.iab-wire-image]
               Trammell, B. and M. Kuehlewind, "The Wire Image of a
               Network Protocol", draft-iab-wire-image-01 (work in
-              progress), November 2018.
+              progress), 5 November 2018,
+              <https://www.ietf.org/archive/id/draft-iab-wire-image-01>.
 
    [RFC0791]  Postel, J., "Internet Protocol", STD 5, RFC 791,
               DOI 10.17487/RFC0791, September 1981,
               <https://www.rfc-editor.org/info/rfc791>.
 
-   [RFC1191]  Mogul, J. and S. Deering, "Path MTU discovery", RFC 1191,
-              DOI 10.17487/RFC1191, November 1990,
+   [RFC1191]  Mogul, J.C. and S.E. Deering, "Path MTU discovery",
+              RFC 1191, DOI 10.17487/RFC1191, November 1990,
               <https://www.rfc-editor.org/info/rfc1191>.
-
-
-
-                         Expires August 12, 2019               [Page 15]
-
-Internet-Draft          IP Traffic Flow Security           February 2019
-
 
    [RFC2474]  Nichols, K., Blake, S., Baker, F., and D. Black,
               "Definition of the Differentiated Services Field (DS
@@ -886,11 +755,3 @@ Author's Address
    LabN Consulting, L.L.C.
 
    Email: chopps@chopps.org
-
-
-
-
-
-
-
-                         Expires August 12, 2019               [Page 16]
