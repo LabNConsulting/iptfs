@@ -46,7 +46,8 @@ these fixed-sized packets can contain partial, full or multiple IP
 packets to maximize the bandwidth of the tunnel.
 
 For a comparison of the overhead of IP-TFS with the RFC4303
-perscribed TFC solution see [[overhead]]
+prescribed TFC solution see [[Comparison of Overhead for IPSec vs.
+IP-TFS]]
 
 Additionally, IP-TFS provides for dealing with network congestion
 [[RFC2914]]. This is important for when the IP-TFS user is not in full
@@ -643,8 +644,6 @@ then non-congestion controlled mode use should be considered instead.
 *** I-D.iab-wire-image
 
 ** Comparison of Overhead for IPSec vs. IP-TFS
-<<overhead>>
-
 The overhead of IP-TFS is 40 bytes per outer packet. Therefore the
 octet overhead per inner packet is 40 divided by the number of outer
 packets required (fractional allowed). The overhead as a percentage of

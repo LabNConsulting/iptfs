@@ -11,6 +11,14 @@ Expires: 14 August 2019
                         IP Traffic Flow Security
                      draft-chopps-ipsecme-iptfs-00
 
+Abstract
+
+   This document describes a mechanism that improves IPsec traffic flow
+   security by adding traffic flow confidentiality to encrypted IP
+   encapsulated traffic.  Traffic flow confidentiality is provided by
+   obscuring the size and frequency of IP traffic using a constant sized
+   and constant send rate IPsec tunnel.
+
 Status of This Memo
 
    This Internet-Draft is submitted in full conformance with the
@@ -104,7 +112,7 @@ Table of Contents
    packets to maximize the bandwidth of the tunnel.
 
    For a comparison of the overhead of IP-TFS with the RFC4303
-   perscribed TFC solution see 8.3 (orgefd1d04)
+   prescribed TFC solution see Section appendix.a
 
    Additionally, IP-TFS provides for dealing with network congestion
    [RFC2914].  This is important for when the IP-TFS user is not in full
@@ -742,8 +750,6 @@ Table of Contents
               <https://www.rfc-editor.org/info/rfc8201>.
 
 Appendix A.  Comparison of Overhead for IPSec vs. IP-TFS
-
-
 
    The overhead of IP-TFS is 40 bytes per outer packet.  Therefore the
    octet overhead per inner packet is 40 divided by the number of outer
