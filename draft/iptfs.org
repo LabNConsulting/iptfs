@@ -45,6 +45,9 @@ bandwidth limitation. To do this we use a constant send rate IPsec
 these fixed-sized packets can contain partial, full or multiple IP
 packets to maximize the bandwidth of the tunnel.
 
+For a comparison of the overhead of IP-TFS with the RFC4303
+perscribed TFC solution see [[overhead]]
+
 Additionally, IP-TFS provides for dealing with network congestion
 [[RFC2914]]. This is important for when the IP-TFS user is not in full
 control of the domain through which the IP-TFS tunnel path flows.
@@ -61,81 +64,6 @@ This document assumes familiarity with IP security concepts described
 in [[RFC4301]].
 
 * The IP-TFS Tunnel
-
-** A Overhead Comparison of IPSec vs. IP-TFS
-
-The overhead of TFS is 40 bytes per encap packet. Therefor the
-octet overhead per inner packet is 40 divided by the number of inner
-packets (fractional allowed).
-
-The overhead per inner packet for constant send rate padded IPSec
-(i.e., IPSec TFC) is 36 octets plus any padding. So 36 plus the
-difference between the remaining MTU and the inner packet
-MTU, unless fragmentation is required.
-
-When fragmentation of IPsec is required the overhead is number of
-fragments times IP overhead (20) plus a single ESP overhead (16) plus
-any required tail padding. The required tail padding is the number of
-fragments times the outer MTU times minus the ESP overhead minus the
-inner MTU length. So:
-
-     nf*ipoh + espoh + nf*omtu - espoh - imtu
-     nf*ipo + nf*omtu - imtu
-     nf*(ipo + omtu) - imtu
-
-#+TBLNAME:pohead
-#+CAPTION: Overhead of tunnel type in octets
-| Type  | overhead |
-|-------+----------|
-| IP    |       20 |
-| IPSec |       36 |
-| TFS   |       40 |
-
-#+CONSTANTS: ipo=20 ipso=36 tfso=40
-#+CAPTION: Percentage of overhead for TFC contstant send rate.
-#+TBLNAME:obytes
-| Type | IPSec | IPSec | IPSec |    TFS |    TFS |   TFS |
-|  MTU |   576 |  1500 |  9000 |    576 |   1500 |  9000 |
-|------+-------+-------+-------+--------+--------+-------|
-|   64 |   512 |  1436 |  8936 |   4.78 |   1.75 |  0.29 |
-|  536 |    40 |   964 |  8464 |  40.00 |  14.68 |  2.39 |
-| 1460 |   328 |    40 |  7540 | 108.96 |  40.00 |  6.52 |
-| 1500 |   288 |  1540 |  7500 | 111.94 |  41.10 |  6.70 |
-| 8960 |  1172 |  1680 |    40 | 668.66 | 245.48 | 40.00 |
-| 9000 |  1132 |  1640 |  9040 | 671.64 | 246.58 | 40.18 |
-|      |       |       |       |        |        |       |
- #+TBLFM: @3$2..@8$4=if(@2-$ipso > $1, $ipso+(@2-$ipso-$1), ceil($1/(@2-$ipo)) * ($ipo + @2) - $1)::@3$5..@8$7=$tfso/((@2-$tfso)/$1);%.2f
-
-#+CAPTION: Percentage of overhead for TFC contstant send rate.
-#+TBLNAME:avail-pct
-| Type | IPSec 576 | IPSec 1500 | IPSec 9000 | TFS 576 | TFS 1500 | TFS 9000 |
-|      |           |            |            |         |          |          |
-|------+-----------+------------+------------+---------+----------+----------|
-|   64 |    800.0% |    2243.8% |   13962.5% |    7.5% |     2.7% |     0.5% |
-|  536 |      7.5% |     179.9% |    1579.1% |    7.5% |     2.7% |     0.4% |
-| 1460 |     22.5% |       2.7% |     516.4% |    7.5% |     2.7% |     0.4% |
-| 1500 |     19.2% |     102.7% |     500.0% |    7.5% |     2.7% |     0.4% |
-| 8960 |     13.1% |      18.8% |       0.4% |    7.5% |     2.7% |     0.4% |
-| 9000 |     12.6% |      18.2% |     100.4% |    7.5% |     2.7% |     0.4% |
-#+TBLFM: $1=remote(obytes,@@#$1)::@3$2..@8$7=100*remote(obytes,@@#$$#)/$1;%.1f%%
-
-#+begin_src gnuplot :var data=avail-pct :file auto/tfs-ipsec-overhead.png
-  set title "IPSec vs TFS Overhead"
-
-  red = "#AA0000"; green = "#00AA00"; blue = "#0000AA";
-  lightred = "#FF0000"; lightgreen = "#00FF00"; lightblue = "#0000FF";
-  set yrange [0:1000]
-  set style data histogram
-  set style histogram cluster gap 1
-  set style fill solid
-  set boxwidth 0.9
-  set grid ytics
-
-  plot data using 2 title "IPSec 576" linecolor rgb red, '' using 3 title "IPSec 1500" linecolor rgb blue, '' using 4 title "IPSec 1500"  linecolor rgb green, '' using 5 title "IPSec 576" linecolor rgb lightred, '' using 6 title "IPSec 1500" linecolor rgb lightblue, '' using 4 title "IPSec 1500"  linecolor rgb lightgreen
-#+end_src
-
-#+RESULTS:
-[[file:auto/tfs-ipsec-overhead.png]]
 
 
 As mentioned in [[Introduction]] IP-TFS utilizes an IPsec [[RFC4303]]
@@ -184,8 +112,8 @@ either a partial, a full or multiple partial or full data-blocks.
 
 *** IPSec/ESP Payload
 
+#+name: Layout of IP-TFS IPSec Packet
 #+begin_example
-
  . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
  . Outer Encapsulating Header ...                                  .
  . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
@@ -198,7 +126,6 @@ either a partial, a full or multiple partial or full data-blocks.
  +-----------------------------------------------------------------|
  . ESP Trailer...                                                  .
  . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
-
 #+end_example
 
 The BlockOffset value is either zero or some offset into or past the
@@ -216,12 +143,11 @@ The V (version) bit is included for future compatibility.
 
 *** Data-Blocks
 
+#+name: Layout of IP-TFS data block
 #+begin_example
-
  +-----------------------------------------------------------------+
  | Type  | rest of IPv4, IPv6 or pad.
  +--------
-
 #+end_example
 
 A data-block is defined by a 4-bit type code followed by the data
@@ -293,12 +219,11 @@ may occur in a single encapsulating packet.
 # XXX Consider doing a timing diagram showing random paced input going
 # into fixed rate output, maybe Y axis
 
+#+name: Inner and Outer Packet Flow
 #+begin_example
-
   Offset: 0        Offset: 100    Offset: 2900    Offset: 1400
  [ ESP1  (1500) ][ ESP2  (1500) ][ ESP3  (1500) ][ ESP4  (1500) ]
  [--800--][--800--][60][-240-][--4000----------------------][pad]
-
 #+end_example
 
 
@@ -487,7 +412,6 @@ information.
 * Packet and Data Formats
 ** IPSec
 *** Payload Format
-
 #+begin_example
                       1                   2                   3
   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
@@ -496,7 +420,6 @@ information.
  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  |       DataBlocks ...
  +-+-+-+-+-+-+-+-+-+-+-
-
 #+end_example
 
 - V :: A 1 bit version field that MUST be set to zero. If received as
@@ -513,15 +436,12 @@ information.
                  or continuation of a previous data block.
 
 *** Data Blocks
-
 #+begin_example
-
                       1                   2                   3
   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  | Type  | IPv4, IPv6 or pad...
  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
-
 #+end_example
 
 - Type :: A 4 bit field where 0x0 identifies a pad data block, 0x4
@@ -529,9 +449,7 @@ information.
           data block.
 
 **** IPv4 Data Block
-
 #+begin_example
-
                       1                   2                   3
   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -539,7 +457,6 @@ information.
  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  | Rest of the inner packet ...
  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
-
 #+end_example
 
 These values are the actual values within the encapsulated IPv4
@@ -552,9 +469,7 @@ the encapsulated IP packet.
                  inner packet.
 
 **** IPv6 Data Block
-
 #+begin_example
-
                       1                   2                   3
   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -562,7 +477,6 @@ the encapsulated IP packet.
  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  |          TotalLength          | Rest of the inner packet ...
  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
-
 #+end_example
 
 These values are the actual values within the encapsulated IPv6
@@ -575,15 +489,12 @@ the encapsulated IP packet.
                  inner IPv6 inner packet.
 
 **** Pad Data Block
-
 #+begin_example
-
                       1                   2                   3
   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  |  0x0  | Padding ...
  +-+-+-+-+-+-+-+-+-+-+-
-
 #+end_example
 
 - Type :: A 4 bit value of 0x0 indicating a padding data block.
@@ -597,7 +508,6 @@ the IKEv2 [[RFC7296]] configuration exchange to set the congestion
 information report sending interval.
 
 #+begin_example
-
                       1                   2                   3
   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -605,7 +515,6 @@ information report sending interval.
  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  |                            Interval                             |
  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-
 #+end_example
 
 - R :: 1 bit set to 0.
@@ -624,7 +533,6 @@ payload should be the congestion information in the notification
 payload. The following diagram defines the notification payload data.
 
 #+begin_example
-
                       1                   2                   3
   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -636,7 +544,6 @@ payload. The following diagram defines the notification payload data.
  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  |                          AckSeqEnd                              |
  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-
 #+end_example
 
 - E :: A 1 bit value that if set indicates that packet[s] with
@@ -734,3 +641,76 @@ then non-congestion controlled mode use should be considered instead.
 *** RFC8200
 *** RFC8201
 *** I-D.iab-wire-image
+
+** Comparison of Overhead for IPSec vs. IP-TFS
+<<overhead>>
+
+The overhead of IP-TFS is 40 bytes per outer packet. Therefore the
+octet overhead per inner packet is 40 divided by the number of outer
+packets required (fractional allowed). The overhead as a percentage of
+inner packet size is a constant value based on the outer MTU size.
+
+The overhead per inner packet for constant send rate padded IPSec
+(i.e., IPSec TFC) is 36 octets plus any padding, unless fragmentation
+is required.
+
+When fragmentation of IPsec is required the overhead is number of
+fragments required for inner mtu and the ESP overhead times IP
+overhead (20) plus a any required tail padding. The required tail
+padding is the number of fragments times the outer MTU minus
+the ESP overhead minus the inner MTU length. So:
+
+#+begin_example
+     Total Inner MTU = Inner MTU + ESP Overhead
+     NF = CEILING(Total Inner MTU/Outer MTU)
+     OH = NF * IP Overhead + NF * Outer MTU - Total Inner MTU
+     OH = NF * (IP Overhead + Outer MTU) - Total Inner MTU
+#+end_example
+
+#+CAPTION: Overhead as Percentage of Inner Packet Size
+#+TBLNAME:avail-pct
+| Type |  IPSec |   IPSec |    IPSec |  TFS |  TFS |  TFS |
+|  MTU |    576 |    1500 |     9000 |  576 | 1500 | 9000 |
+|------+--------+---------+----------+------+------+------|
+|   64 | 800.0% | 2243.8% | 13962.5% | 7.5% | 2.7% | 0.4% |
+|  128 | 350.0% | 1071.9% |  6931.2% | 7.5% | 2.7% | 0.4% |
+|  256 | 125.0% |  485.9% |  3415.6% | 7.5% | 2.7% | 0.4% |
+|  536 |   7.5% |  179.9% |  1579.1% | 7.5% | 2.7% | 0.4% |
+|  576 | 104.2% |  160.4% |  1462.5% | 7.5% | 2.7% | 0.4% |
+| 1460 |  21.4% |    2.7% |   516.4% | 7.5% | 2.7% | 0.4% |
+| 1500 |  18.1% |  101.6% |   500.0% | 7.5% | 2.7% | 0.4% |
+| 8960 |   6.2% |    1.6% |     0.4% | 7.5% | 2.7% | 0.4% |
+| 9000 |   5.8% |   18.0% |   100.3% | 7.5% | 2.7% | 0.4% |
+#+TBLFM: $1=remote(obytes,@@#$1)::@3$2..@11$4=100*remote(obytes,@@#$$#)/$1;%.1f%%::@3$5..@11$7=100*$tfso/((@2-$tfso)/$1)/$1;%.1f%%
+
+These percentages were derived from the following table.
+
+#+CONSTANTS: ipo=20 espoh=16 ipso=36 tfso=40
+#+CAPTION: Overhead in octets
+#+TBLNAME:obytes
+| Type | IPSec | IPSec | IPSec |   TFS |   TFS |  TFS |
+|  MTU |   576 |  1500 |  9000 |   576 |  1500 | 9000 |
+|------+-------+-------+-------+-------+-------+------|
+|   64 |   512 |  1436 |  8936 |   4.8 |   1.8 |  0.3 |
+|  128 |   448 |  1372 |  8872 |   9.6 |   3.5 |  0.6 |
+|  256 |   320 |  1244 |  8744 |  19.1 |   7.0 |  1.1 |
+|  536 |    40 |   964 |  8464 |  40.0 |  14.7 |  2.4 |
+|  576 |   600 |   924 |  8424 |  43.0 |  15.8 |  2.6 |
+| 1460 |   312 |    40 |  7540 | 109.0 |  40.0 |  6.5 |
+| 1500 |   272 |  1524 |  7500 | 111.9 |  41.1 |  6.7 |
+| 8960 |   560 |   144 |    40 | 668.7 | 245.5 | 40.0 |
+| 9000 |   520 |  1624 |  9024 | 671.6 | 246.6 | 40.2 |
+#+TBLFM: @3$2..@11$4=if(@2-$ipso > $1, $ipso+(@2-$ipso-$1), ceil(($1+$espoh)/@2) * ($ipo + @2) - ($1+$espoh))::@3$5..@11$7=$tfso/((@2-$tfso)/$1);%.1f
+
+** Acknowledgements
+We would like to thank Don Fedyk for help in reviewing this work.
+
+** Contributors
+The following people made significant contributions to this document.
+
+#+begin_example
+   Lou Berger
+   LabN Consulting, L.L.C.
+
+   Email: lberger@labn.net
+#+end_example

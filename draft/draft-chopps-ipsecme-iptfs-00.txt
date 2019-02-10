@@ -4,8 +4,8 @@
 
 Network Working Group                                           C. Hopps
 Internet-Draft                                   LabN Consulting, L.L.C.
-Intended status: Standards Track                         9 February 2019
-Expires: 13 August 2019
+Intended status: Standards Track                        10 February 2019
+Expires: 14 August 2019
 
 
                         IP Traffic Flow Security
@@ -26,7 +26,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 13 August 2019.
+   This Internet-Draft will expire on 14 August 2019.
 
 Copyright Notice
 
@@ -77,6 +77,9 @@ Table of Contents
    7.  Security Considerations
    8.  Normative References
    9.  Informative References
+   Appendix A.  Comparison of Overhead for IPSec vs. IP-TFS
+   Appendix B.  Acknowledgements
+   Appendix C.  Contributors
    Author's Address
 
 1.  Introduction
@@ -99,6 +102,9 @@ Table of Contents
    [RFC4303] tunnel with fixed-sized encapsulating packets; however,
    these fixed-sized packets can contain partial, full or multiple IP
    packets to maximize the bandwidth of the tunnel.
+
+   For a comparison of the overhead of IP-TFS with the RFC4303
+   perscribed TFC solution see 8.3 (orgefd1d04)
 
    Additionally, IP-TFS provides for dealing with network congestion
    [RFC2914].  This is important for when the IP-TFS user is not in full
@@ -174,7 +180,7 @@ Table of Contents
    . ESP Trailer...                                                  .
    . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
 
-                                 Figure 1:
+                  Figure 1: Layout of IP-TFS IPSec Packet
 
    The BlockOffset value is either zero or some offset into or past the
    end of the data blocks payload data.  If the value is zero it means
@@ -195,7 +201,7 @@ Table of Contents
    | Type  | rest of IPv4, IPv6 or pad.
    +--------
 
-                                 Figure 2:
+                   Figure 2: Layout of IP-TFS data block
 
    A data-block is defined by a 4-bit type code followed by the data
    block data.  The types values have been carefully chosen to coincide
@@ -267,7 +273,7 @@ Table of Contents
    [ ESP1  (1500) ][ ESP2  (1500) ][ ESP3  (1500) ][ ESP4  (1500) ]
    [--800--][--800--][60][-240-][--4000----------------------][pad]
 
-                                 Figure 3:
+                   Figure 3: Inner and Outer Packet Flow
 
    The encapsulated IP packet flow (lengths include IP header and
    payload) is as follows: an 800 octet packet, an 800 octet packet, a
@@ -468,8 +474,6 @@ Table of Contents
    |       DataBlocks ...
    +-+-+-+-+-+-+-+-+-+-+-
 
-                                 Figure 4:
-
    V            A 1 bit version field that MUST be set to zero.  If
                 received as one the packet MUST be dropped.
 
@@ -494,8 +498,6 @@ Table of Contents
    | Type  | IPv4, IPv6 or pad...
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 
-                                 Figure 5:
-
    Type  A 4 bit field where 0x0 identifies a pad data block, 0x4
          indicates an IPv4 data block, and 0x6 indicates an IPv6 data
          block.
@@ -509,8 +511,6 @@ Table of Contents
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
    | Rest of the inner packet ...
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
-
-                                 Figure 6:
 
    These values are the actual values within the encapsulated IPv4
    header.  In other words, the start of this data block is the start of
@@ -532,8 +532,6 @@ Table of Contents
    |          TotalLength          | Rest of the inner packet ...
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 
-                                 Figure 7:
-
    These values are the actual values within the encapsulated IPv6
    header.  In other words, the start of this data block is the start of
    the encapsulated IP packet.
@@ -551,8 +549,6 @@ Table of Contents
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
    |  0x0  | Padding ...
    +-+-+-+-+-+-+-+-+-+-+-
-
-                                 Figure 8:
 
    Type     A 4 bit value of 0x0 indicating a padding data block.
 
@@ -573,8 +569,6 @@ Table of Contents
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
    |                            Interval                             |
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-
-                                 Figure 9:
 
    R               1 bit set to 0.
 
@@ -606,8 +600,6 @@ Table of Contents
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
    |                          AckSeqEnd                              |
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-
-                                Figure 10:
 
    E            A 1 bit value that if set indicates that packet[s] with
                 Congestion Experienced (CE) ECN bits set were received
@@ -748,6 +740,97 @@ Table of Contents
               "Path MTU Discovery for IP version 6", STD 87, RFC 8201,
               DOI 10.17487/RFC8201, July 2017,
               <https://www.rfc-editor.org/info/rfc8201>.
+
+Appendix A.  Comparison of Overhead for IPSec vs. IP-TFS
+
+
+
+   The overhead of IP-TFS is 40 bytes per outer packet.  Therefore the
+   octet overhead per inner packet is 40 divided by the number of outer
+   packets required (fractional allowed).  The overhead as a percentage
+   of inner packet size is a constant value based on the outer MTU size.
+
+   The overhead per inner packet for constant send rate padded IPSec
+   (i.e., IPSec TFC) is 36 octets plus any padding, unless fragmentation
+   is required.
+
+   When fragmentation of IPsec is required the overhead is number of
+   fragments required for inner mtu and the ESP overhead times IP
+   overhead (20) plus a any required tail padding.  The required tail
+   padding is the number of fragments times the outer MTU minus the ESP
+   overhead minus the inner MTU length.  So:
+
+   Total Inner MTU = Inner MTU + ESP Overhead
+   NF = CEILING(Total Inner MTU/Outer MTU)
+   OH = NF * IP Overhead + NF * Outer MTU - Total Inner MTU
+   OH = NF * (IP Overhead + Outer MTU) - Total Inner MTU
+
+        +------+--------+---------+----------+------+------+------+
+        | Type | IPSec  | IPSec   | IPSec    | TFS  | TFS  | TFS  |
+        +------+--------+---------+----------+------+------+------+
+        | MTU  | 576    | 1500    | 9000     | 576  | 1500 | 9000 |
+        +======+========+=========+==========+======+======+======+
+        | 64   | 800.0% | 2243.8% | 13962.5% | 7.5% | 2.7% | 0.4% |
+        +------+--------+---------+----------+------+------+------+
+        | 128  | 350.0% | 1071.9% | 6931.2%  | 7.5% | 2.7% | 0.4% |
+        +------+--------+---------+----------+------+------+------+
+        | 256  | 125.0% | 485.9%  | 3415.6%  | 7.5% | 2.7% | 0.4% |
+        +------+--------+---------+----------+------+------+------+
+        | 536  | 7.5%   | 179.9%  | 1579.1%  | 7.5% | 2.7% | 0.4% |
+        +------+--------+---------+----------+------+------+------+
+        | 576  | 104.2% | 160.4%  | 1462.5%  | 7.5% | 2.7% | 0.4% |
+        +------+--------+---------+----------+------+------+------+
+        | 1460 | 21.4%  | 2.7%    | 516.4%   | 7.5% | 2.7% | 0.4% |
+        +------+--------+---------+----------+------+------+------+
+        | 1500 | 18.1%  | 101.6%  | 500.0%   | 7.5% | 2.7% | 0.4% |
+        +------+--------+---------+----------+------+------+------+
+        | 8960 | 6.2%   | 1.6%    | 0.4%     | 7.5% | 2.7% | 0.4% |
+        +------+--------+---------+----------+------+------+------+
+        | 9000 | 5.8%   | 18.0%   | 100.3%   | 7.5% | 2.7% | 0.4% |
+        +------+--------+---------+----------+------+------+------+
+
+            Table 1: Overhead as Percentage of Inner Packet Size
+
+   These percentages were derived from the following table.
+
+          +------+-------+-------+-------+-------+-------+------+
+          | Type | IPSec | IPSec | IPSec | TFS   | TFS   | TFS  |
+          +------+-------+-------+-------+-------+-------+------+
+          | MTU  | 576   | 1500  | 9000  | 576   | 1500  | 9000 |
+          +======+=======+=======+=======+=======+=======+======+
+          | 64   | 512   | 1436  | 8936  | 4.8   | 1.8   | 0.3  |
+          +------+-------+-------+-------+-------+-------+------+
+          | 128  | 448   | 1372  | 8872  | 9.6   | 3.5   | 0.6  |
+          +------+-------+-------+-------+-------+-------+------+
+          | 256  | 320   | 1244  | 8744  | 19.1  | 7.0   | 1.1  |
+          +------+-------+-------+-------+-------+-------+------+
+          | 536  | 40    | 964   | 8464  | 40.0  | 14.7  | 2.4  |
+          +------+-------+-------+-------+-------+-------+------+
+          | 576  | 600   | 924   | 8424  | 43.0  | 15.8  | 2.6  |
+          +------+-------+-------+-------+-------+-------+------+
+          | 1460 | 312   | 40    | 7540  | 109.0 | 40.0  | 6.5  |
+          +------+-------+-------+-------+-------+-------+------+
+          | 1500 | 272   | 1524  | 7500  | 111.9 | 41.1  | 6.7  |
+          +------+-------+-------+-------+-------+-------+------+
+          | 8960 | 560   | 144   | 40    | 668.7 | 245.5 | 40.0 |
+          +------+-------+-------+-------+-------+-------+------+
+          | 9000 | 520   | 1624  | 9024  | 671.6 | 246.6 | 40.2 |
+          +------+-------+-------+-------+-------+-------+------+
+
+                        Table 2: Overhead in octets
+
+Appendix B.  Acknowledgements
+
+   We would like to thank Don Fedyk for help in reviewing this work.
+
+Appendix C.  Contributors
+
+   The following people made significant contributions to this document.
+
+   Lou Berger
+   LabN Consulting, L.L.C.
+
+   Email: lberger@labn.net
 
 Author's Address
 

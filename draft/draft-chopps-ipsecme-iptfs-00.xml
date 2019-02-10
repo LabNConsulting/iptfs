@@ -1,6 +1,4 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE rfc SYSTEM "rfc2629.dtd" [
-  ]>
 <?xml-stylesheet type="text/xsl" href="rfc2629.xslt"?>
 <?rfc toc="yes"?>
 <?rfc compact="no"?>
@@ -21,7 +19,7 @@
 </author>  <date/>  </front>  <middle>
 
 
-<section title="Introduction" anchor="org364ad58">
+<section title="Introduction" anchor="org1af2901">
 <t>Traffic Analysis (<xref target="RFC4301"/>, <xref target="AppCrypt"/>) is the act of extracting
 information about data being sent through a network. While one may
 directly obscure the data through the use of encryption <xref target="RFC4303"/>,
@@ -41,11 +39,14 @@ bandwidth limitation. To do this we use a constant send rate IPsec
 these fixed-sized packets can contain partial, full or multiple IP
 packets to maximize the bandwidth of the tunnel.</t>
 
+<t>For a comparison of the overhead of IP-TFS with the RFC4303
+perscribed TFC solution see <eref target="orgefd1d04">8.3</eref></t>
+
 <t>Additionally, IP-TFS provides for dealing with network congestion
 <xref target="RFC2914"/>. This is important for when the IP-TFS user is not in full
 control of the domain through which the IP-TFS tunnel path flows.</t>
 
-<section title="Terminology &amp; Concepts" anchor="org4c64ea4">
+<section title="Terminology &amp; Concepts" anchor="org22cfabc">
 <t>The keywords "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
 "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and
 "OPTIONAL" in this document are to be interpreted as described in BCP
@@ -59,8 +60,8 @@ in <xref target="RFC4301"/>.</t>
 
 </section>
 
-<section title="The IP-TFS Tunnel" anchor="orgd8ed7ab">
-<t>As mentioned in <xref target="org364ad58"/> IP-TFS utilizes an IPsec <xref target="RFC4303"/>
+<section title="The IP-TFS Tunnel" anchor="orgb7ed81b">
+<t>As mentioned in <xref target="org1af2901"/> IP-TFS utilizes an IPsec <xref target="RFC4303"/>
 tunnel as it's transport. To provide for full TFC we send fixed sized
 encapsulating packets at a constant rate on the tunnel.</t>
 
@@ -85,7 +86,7 @@ be allowed to vary the size and rate at which it sends encapsulating
 packets, including sending them larger, smaller, faster or slower
 than the requested size and rate.</t>
 
-<section title="Tunnel Content" anchor="orgbd4f47b">
+<section title="Tunnel Content" anchor="org863f096">
 <t>As previously mentioned, one issue with the TFC padding solution in
 <xref target="RFC4303"/> is the large amount of wasted bandwidth as only one IP
 packet can be sent per encapsulating packet. In order to maximize
@@ -101,9 +102,8 @@ a new IP protocol number IPTFS_PROTOCOL (TBD). A payload of
 IPTFS_PROTOCOL type is comprised of a 32 bit header followed by
 either a partial, a full or multiple partial or full data-blocks.</t>
 
-<section title="IPSec/ESP Payload" anchor="orga016ae7">
-<figure><artwork><![CDATA[
-
+<section title="IPSec/ESP Payload" anchor="org3c696d8">
+<figure><name>Layout of IP-TFS IPSec Packet</name><artwork><![CDATA[
 . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
 . Outer Encapsulating Header ...                                  .
 . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
@@ -116,7 +116,6 @@ either a partial, a full or multiple partial or full data-blocks.</t>
 +-----------------------------------------------------------------|
 . ESP Trailer...                                                  .
 . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
-
 ]]></artwork></figure>
 
 <t>The BlockOffset value is either zero or some offset into or past the
@@ -134,13 +133,11 @@ data-block that is still being re-assembled.</t>
 
 </section>
 
-<section title="Data-Blocks" anchor="org47ef81d">
-<figure><artwork><![CDATA[
-
+<section title="Data-Blocks" anchor="org7e27acb">
+<figure><name>Layout of IP-TFS data block</name><artwork><![CDATA[
 +-----------------------------------------------------------------+
 | Type  | rest of IPv4, IPv6 or pad.
 +--------
-
 ]]></artwork></figure>
 
 <t>A data-block is defined by a 4-bit type code followed by the data
@@ -152,7 +149,7 @@ IPv6 packet's length field.</t>
 
 </section>
 
-<section title="No Implicit Padding" anchor="orgcbb0519">
+<section title="No Implicit Padding" anchor="orgdcb8081">
 <t>It's worth noting that there is no need for implicit pads at the end
 of an encapsulating packet. Even when the start of a data block
 occurs near the end of a encapsulating packet such that there is no
@@ -164,7 +161,7 @@ payload.</t>
 
 </section>
 
-<section title="IP Header Value Mapping" anchor="org0d32279">
+<section title="IP Header Value Mapping" anchor="orgad78b5c">
 <t><xref target="RFC4301"/> provides some direction on when and how to map various
 values from an inner IP header to the outer encapsulating header,
 namely the Don't-Fragment (DF) bit (<xref target="RFC0791"/> and <xref target="RFC8200"/>), the
@@ -187,7 +184,7 @@ by configuration.</t>
 
 </section>
 
-<section title="Exclusive SA Use" anchor="orga04c0b2">
+<section title="Exclusive SA Use" anchor="org9f6637c">
 <t>It is not the intention of this specification to allow for mixed use
 of an IPsec SA. In other words, an SA that is created for IP-TFS is
 exclusively for IP-TFS use and MUST NOT have non-IP-TFS payloads such
@@ -200,7 +197,7 @@ SAs.</t>
 
 </section>
 
-<section title="Initiation of TFS mode" anchor="org7f69b72">
+<section title="Initiation of TFS mode" anchor="org55233a3">
 <t>While normally a user will configure their IPsec tunnel to operate in
 IP-TFS mode to start, we also allow IP-TFS mode to be enabled post-SA
 creation. This may be useful for debugging or other purposes. In this
@@ -210,18 +207,16 @@ payload type.</t>
 
 </section>
 
-<section title="Example of an encapsulated IP packet flow" anchor="orgb0691f8">
+<section title="Example of an encapsulated IP packet flow" anchor="org2a8aec6">
 <t>Below we show an example inner IP packet flow within the
 encapsulating tunnel packet stream. Notice how encapsulated IP
 packets can start and end anywhere, and more than one or less than 1
 may occur in a single encapsulating packet.</t>
 
-<figure><artwork><![CDATA[
-
+<figure><name>Inner and Outer Packet Flow</name><artwork><![CDATA[
  Offset: 0        Offset: 100    Offset: 2900    Offset: 1400
 [ ESP1  (1500) ][ ESP2  (1500) ][ ESP3  (1500) ][ ESP4  (1500) ]
 [--800--][--800--][60][-240-][--4000----------------------][pad]
-
 ]]></artwork></figure>
 
 
@@ -246,7 +241,7 @@ presence of outer encapsulating packet loss.</t>
 
 </section>
 
-<section title="Modes of operation" anchor="org9207a67">
+<section title="Modes of operation" anchor="org1aeed65">
 <t>Just as with normal IPsec tunnels IP-TFS tunnels are unidirectional.
 Bidirectional functionality is achieved by setting up 2 tunnels, one
 in either direction.</t>
@@ -254,7 +249,7 @@ in either direction.</t>
 <t>An IP-TFS tunnel can operate in 2 modes, a non-congestion controlled
 mode and congestion controlled mode.</t>
 
-<section title="Non-Congestion Controlled Mode" anchor="org07882ff">
+<section title="Non-Congestion Controlled Mode" anchor="orgbb3aedb">
 <t>In the non-congestion controlled mode IP-TFS sends fixed-sized
 packets at a constant rate. The packet send rate is constant and is
 not automatically adjusted regardless of any network congestion
@@ -271,7 +266,7 @@ failures due to a lack of bandwidth can be corrected.</t>
 
 </section>
 
-<section title="Congestion Controlled Mode" anchor="orgfed1254">
+<section title="Congestion Controlled Mode" anchor="org2675de6">
 <t>With the congestion controlled mode, IP-TFS adapts to network
 congestion by lowering the packet send rate to accommodate the
 congestion. If congestion were handled in the network on a octet level
@@ -313,7 +308,7 @@ circuit breakers are outside the scope of this document.</t>
 
 </section>
 
-<section title="Congestion Information" anchor="org8be37a9">
+<section title="Congestion Information" anchor="org3954bc2">
 <t>In order to support the congestion control mode, we send regular
 packet drop reports from the receiver (egress tunnel endpoint) to the
 sender. These reports indicate the number of packet drops during a
@@ -329,7 +324,7 @@ notifications <xref target="RFC7296"/>. These notifications are sent at a config
 interval (which can be configured to 0 to disable the sending of the
 reports).</t>
 
-<section title="ECN Support" anchor="org731862d">
+<section title="ECN Support" anchor="org2b35c6e">
 <t>In additional to normal packet loss information IP-TFS supports use
 of the ECN bits in the encapsulating IP header <xref target="RFC3168"/> for
 identifying congestion. If ECN use is enabled and a packet arrives at
@@ -351,14 +346,14 @@ NOT be enabled by default.</t>
 
 </section>
 
-<section title="Configuration" anchor="orgbc00d30">
+<section title="Configuration" anchor="orga199fe7">
 <t>IP-TFS is meant to be deployable with a minimal amount of
 configuration. All IP-TFS specific configuration (i.e., in addition
 to the underlying IPsec tunnel configuration) should be able to be
 specified at the tunnel ingress (sending) side alone (i.e.,
 single-ended provisioning).</t>
 
-<section title="Bandwidth" anchor="org2a1dae0">
+<section title="Bandwidth" anchor="orgb80b3e0">
 <t>Bandwidth is a local configuration option. For non-congestion
 controlled mode the bandwidth SHOULD be configured. For
 congestion controlled mode one can configure the bandwidth
@@ -368,7 +363,7 @@ required.</t>
 
 </section>
 
-<section title="Fixed Packet Size" anchor="org470d105">
+<section title="Fixed Packet Size" anchor="org241fd37">
 <t>The fixed packet size to be used for the tunnel encapsulation packets
 can be configured manually or can be automatically determined using
 Path MTU discovery (see <xref target="RFC1191"/> and <xref target="RFC8201"/>). No standardized
@@ -376,7 +371,7 @@ configuration method is required.</t>
 
 </section>
 
-<section title="Congestion Information Configuration" anchor="org8c3b162">
+<section title="Congestion Information Configuration" anchor="orgfce15c6">
 <t>If congestion control mode is to be used, or if the user wishes to
 receive congestion information on the sender for circuit breaking or
 other operational notifications in the non-congestion controlled
@@ -421,10 +416,10 @@ information.</t>
 
 </section>
 
-<section title="Packet and Data Formats" anchor="org29abbe3">
-<section title="IPSec" anchor="org9907307">
-<section title="Payload Format" anchor="orgc6cbdd9">
-<figure><artwork><![CDATA[
+<section title="Packet and Data Formats" anchor="orgbec8332">
+<section title="IPSec" anchor="org9e38b48">
+<section title="Payload Format" anchor="orgd0d9e85">
+<artwork><![CDATA[
                      1                   2                   3
  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -432,8 +427,7 @@ information.</t>
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 |       DataBlocks ...
 +-+-+-+-+-+-+-+-+-+-+-
-
-]]></artwork></figure>
+]]></artwork>
 
 <dl>
 <dt>V</dt> <dd><t>A 1 bit version field that MUST be set to zero. If received as
@@ -456,16 +450,14 @@ or continuation of a previous data block.</t>
 
 </section>
 
-<section title="Data Blocks" anchor="org90e0425">
-<figure><artwork><![CDATA[
-
+<section title="Data Blocks" anchor="org5599da7">
+<artwork><![CDATA[
                      1                   2                   3
  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 | Type  | IPv4, IPv6 or pad...
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
-
-]]></artwork></figure>
+]]></artwork>
 
 <dl>
 <dt>Type</dt> <dd><t>A 4 bit field where 0x0 identifies a pad data block, 0x4
@@ -475,8 +467,7 @@ data block.</t>
 </dl>
 
 <section title="IPv4 Data Block">
-<figure><artwork><![CDATA[
-
+<artwork><![CDATA[
                      1                   2                   3
  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -484,8 +475,7 @@ data block.</t>
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 | Rest of the inner packet ...
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
-
-]]></artwork></figure>
+]]></artwork>
 
 <t>These values are the actual values within the encapsulated IPv4
 header. In other words, the start of this data block is the start of
@@ -503,8 +493,7 @@ inner packet.</t>
 </section>
 
 <section title="IPv6 Data Block">
-<figure><artwork><![CDATA[
-
+<artwork><![CDATA[
                      1                   2                   3
  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -512,8 +501,7 @@ inner packet.</t>
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 |          TotalLength          | Rest of the inner packet ...
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
-
-]]></artwork></figure>
+]]></artwork>
 
 <t>These values are the actual values within the encapsulated IPv6
 header. In other words, the start of this data block is the start of
@@ -531,15 +519,13 @@ inner IPv6 inner packet.</t>
 </section>
 
 <section title="Pad Data Block">
-<figure><artwork><![CDATA[
-
+<artwork><![CDATA[
                      1                   2                   3
  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 |  0x0  | Padding ...
 +-+-+-+-+-+-+-+-+-+-+-
-
-]]></artwork></figure>
+]]></artwork>
 
 <dl>
 <dt>Type</dt> <dd><t>A 4 bit value of 0x0 indicating a padding data block.</t>
@@ -554,14 +540,13 @@ inner IPv6 inner packet.</t>
 
 </section>
 
-<section title="IKEv2" anchor="org58ecfe1">
-<section title="IKEv2 Congestion Information Configuration Attribute" anchor="orgd821b24">
+<section title="IKEv2" anchor="org6306123">
+<section title="IKEv2 Congestion Information Configuration Attribute" anchor="org28683e6">
 <t>The following defines the configuration attribute structure used in
 the IKEv2 <xref target="RFC7296"/> configuration exchange to set the congestion
 information report sending interval.</t>
 
-<figure><artwork><![CDATA[
-
+<artwork><![CDATA[
                      1                   2                   3
  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -569,8 +554,7 @@ information report sending interval.</t>
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 |                            Interval                             |
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-
-]]></artwork></figure>
+]]></artwork>
 
 <dl>
 <dt>R</dt> <dd><t>1 bit set to 0.</t>
@@ -586,7 +570,7 @@ milliseconds.</t>
 
 </section>
 
-<section title="IKEv2 Congestion Information Notification Data" anchor="orgd3cfce9">
+<section title="IKEv2 Congestion Information Notification Data" anchor="orge8c3ea8">
 <t>We utilize a send only (i.e., no response expected) IKEv2
 INFORMATIONAL exchange (37) to transmit the congestion information
 using a notification payload of type TFS_CONGEST_INFO (TBD). The The
@@ -594,8 +578,7 @@ Response bit should be set to 0. As no response is expected the only
 payload should be the congestion information in the notification
 payload. The following diagram defines the notification payload data.</t>
 
-<figure><artwork><![CDATA[
-
+<artwork><![CDATA[
                      1                   2                   3
  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -607,8 +590,7 @@ payload. The following diagram defines the notification payload data.</t>
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 |                          AckSeqEnd                              |
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-
-]]></artwork></figure>
+]]></artwork>
 
 <dl>
 <dt>E</dt> <dd><t>A 1 bit value that if set indicates that packet[s] with
@@ -645,7 +627,7 @@ of this timer value.</t>
 
 </section>
 
-<section title="IANA Considerations" anchor="orgdb4f8e9">
+<section title="IANA Considerations" anchor="orgbddb3c5">
 <t>This document requests a protocol number IPTFS_PROTOCOL be allocated
 by IANA from "Assigned Internet Protocol Numbers" registry for
 identifying the IP-TFS ESP payload format.</t>
@@ -674,7 +656,7 @@ Reference: This document</t>
 
 </section>
 
-<section title="Security Considerations" anchor="org398871e">
+<section title="Security Considerations" anchor="org6b38889">
 <t>This document describes a mechanism to add Traffic Flow
 Confidentiality to IP traffic. Use of this mechanism is expected to
 increase the security of the traffic being transported. Other than
@@ -682,7 +664,7 @@ the additional security afforded by using this mechanism, IP-TFS
 utilizes the security protocols <xref target="RFC4303"/> and <xref target="RFC7296"/> and so their
 security considerations apply to IP-TFS as well.</t>
 
-<t>As noted previously in <xref target="orgfed1254"/>, for TFC to be
+<t>As noted previously in <xref target="org2675de6"/>, for TFC to be
 fully maintained the encapsulated traffic flow should not be
 affecting network congestion in a predictable way, and if it would be
 then non-congestion controlled mode use should be considered instead.</t>
@@ -914,5 +896,85 @@ then non-congestion controlled mode use should be considered instead.</t>
         target='http://www.ietf.org/internet-drafts/draft-iab-wire-image-01.txt' />
 </reference>
 </references>
+
+<section title="Comparison of Overhead for IPSec vs. IP-TFS" anchor="org4d23bda">
+<t></t>
+
+<t>The overhead of IP-TFS is 40 bytes per outer packet. Therefore the
+octet overhead per inner packet is 40 divided by the number of outer
+packets required (fractional allowed). The overhead as a percentage of
+inner packet size is a constant value based on the outer MTU size.</t>
+
+<t>The overhead per inner packet for constant send rate padded IPSec
+(i.e., IPSec TFC) is 36 octets plus any padding, unless fragmentation
+is required.</t>
+
+<t>When fragmentation of IPsec is required the overhead is number of
+fragments required for inner mtu and the ESP overhead times IP
+overhead (20) plus a any required tail padding. The required tail
+padding is the number of fragments times the outer MTU minus
+the ESP overhead minus the inner MTU length. So:</t>
+
+<artwork><![CDATA[
+Total Inner MTU = Inner MTU + ESP Overhead
+NF = CEILING(Total Inner MTU/Outer MTU)
+OH = NF * IP Overhead + NF * Outer MTU - Total Inner MTU
+OH = NF * (IP Overhead + Outer MTU) - Total Inner MTU
+]]></artwork>
+
+<table>
+<name>Overhead as Percentage of Inner Packet Size</name>
+<thead><tr><th>Type</th><th>IPSec</th><th>IPSec</th><th>IPSec</th><th>TFS</th><th>TFS</th><th>TFS</th></tr>
+<tr><th>MTU</th><th>576</th><th>1500</th><th>9000</th><th>576</th><th>1500</th><th>9000</th></tr>
+</thead>
+<tbody><tr><td>64</td><td>800.0%</td><td>2243.8%</td><td>13962.5%</td><td>7.5%</td><td>2.7%</td><td>0.4%</td></tr>
+<tr><td>128</td><td>350.0%</td><td>1071.9%</td><td>6931.2%</td><td>7.5%</td><td>2.7%</td><td>0.4%</td></tr>
+<tr><td>256</td><td>125.0%</td><td>485.9%</td><td>3415.6%</td><td>7.5%</td><td>2.7%</td><td>0.4%</td></tr>
+<tr><td>536</td><td>7.5%</td><td>179.9%</td><td>1579.1%</td><td>7.5%</td><td>2.7%</td><td>0.4%</td></tr>
+<tr><td>576</td><td>104.2%</td><td>160.4%</td><td>1462.5%</td><td>7.5%</td><td>2.7%</td><td>0.4%</td></tr>
+<tr><td>1460</td><td>21.4%</td><td>2.7%</td><td>516.4%</td><td>7.5%</td><td>2.7%</td><td>0.4%</td></tr>
+<tr><td>1500</td><td>18.1%</td><td>101.6%</td><td>500.0%</td><td>7.5%</td><td>2.7%</td><td>0.4%</td></tr>
+<tr><td>8960</td><td>6.2%</td><td>1.6%</td><td>0.4%</td><td>7.5%</td><td>2.7%</td><td>0.4%</td></tr>
+<tr><td>9000</td><td>5.8%</td><td>18.0%</td><td>100.3%</td><td>7.5%</td><td>2.7%</td><td>0.4%</td></tr>
+</tbody>
+</table>
+
+<t>These percentages were derived from the following table.</t>
+
+<table>
+<name>Overhead in octets</name>
+<thead><tr><th>Type</th><th>IPSec</th><th>IPSec</th><th>IPSec</th><th>TFS</th><th>TFS</th><th>TFS</th></tr>
+<tr><th>MTU</th><th>576</th><th>1500</th><th>9000</th><th>576</th><th>1500</th><th>9000</th></tr>
+</thead>
+<tbody><tr><td>64</td><td>512</td><td>1436</td><td>8936</td><td>4.8</td><td>1.8</td><td>0.3</td></tr>
+<tr><td>128</td><td>448</td><td>1372</td><td>8872</td><td>9.6</td><td>3.5</td><td>0.6</td></tr>
+<tr><td>256</td><td>320</td><td>1244</td><td>8744</td><td>19.1</td><td>7.0</td><td>1.1</td></tr>
+<tr><td>536</td><td>40</td><td>964</td><td>8464</td><td>40.0</td><td>14.7</td><td>2.4</td></tr>
+<tr><td>576</td><td>600</td><td>924</td><td>8424</td><td>43.0</td><td>15.8</td><td>2.6</td></tr>
+<tr><td>1460</td><td>312</td><td>40</td><td>7540</td><td>109.0</td><td>40.0</td><td>6.5</td></tr>
+<tr><td>1500</td><td>272</td><td>1524</td><td>7500</td><td>111.9</td><td>41.1</td><td>6.7</td></tr>
+<tr><td>8960</td><td>560</td><td>144</td><td>40</td><td>668.7</td><td>245.5</td><td>40.0</td></tr>
+<tr><td>9000</td><td>520</td><td>1624</td><td>9024</td><td>671.6</td><td>246.6</td><td>40.2</td></tr>
+</tbody>
+</table>
+
+</section>
+
+<section title="Acknowledgements" anchor="org3bb5070">
+<t>We would like to thank Don Fedyk for help in reviewing this work.</t>
+
+</section>
+
+<section title="Contributors" anchor="org50490a5">
+<t>The following people made significant contributions to this document.</t>
+
+<artwork><![CDATA[
+Lou Berger
+LabN Consulting, L.L.C.
+
+Email: lberger@labn.net
+]]></artwork>
+
+</section>
   </back>
 </rfc>
