@@ -4,8 +4,8 @@
 
 Network Working Group                                           C. Hopps
 Internet-Draft                                   LabN Consulting, L.L.C.
-Intended status: Standards Track                        10 February 2019
-Expires: 14 August 2019
+Intended status: Standards Track                        11 February 2019
+Expires: 15 August 2019
 
 
                         IP Traffic Flow Security
@@ -34,7 +34,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 14 August 2019.
+   This Internet-Draft will expire on 15 August 2019.
 
 Copyright Notice
 
@@ -85,7 +85,7 @@ Table of Contents
    7.  Security Considerations
    8.  Normative References
    9.  Informative References
-   Appendix A.  Comparison of Overhead for IPSec vs. IP-TFS
+   Appendix A.  Comparison of ESP+Pad vs. IP-TFS
    Appendix B.  Acknowledgements
    Appendix C.  Contributors
    Author's Address
@@ -749,91 +749,121 @@ Table of Contents
               DOI 10.17487/RFC8201, July 2017,
               <https://www.rfc-editor.org/info/rfc8201>.
 
-Appendix A.  Comparison of Overhead for IPSec vs. IP-TFS
+Appendix A.  Comparison of ESP+Pad vs. IP-TFS
 
    The overhead of IP-TFS is 40 bytes per outer packet.  Therefore the
    octet overhead per inner packet is 40 divided by the number of outer
    packets required (fractional allowed).  The overhead as a percentage
-   of inner packet size is a constant value based on the outer MTU size.
+   of inner packet size is a constant based on the Outer MTU size.
 
-   The overhead per inner packet for constant send rate padded IPSec
-   (i.e., IPSec TFC) is 36 octets plus any padding, unless fragmentation
-   is required.
+   OH = 40 / Outer Payload Size / Inner Packet Size
+   OH % of Inner Packet Size = 100 * OH / Inner Packet Size
+   OH % of Inner Packet Size = 4000 / Outer Payload Size
 
-   When fragmentation of the inner is required to fit in the outer,
-   overhead is the number of outer packets required to carry the
-   fragmented inner packet times both the inner IP overhead (20) and the
-   outer packet overhead (36) plus any required tail padding in the last
-   encap packet.  The required tail padding is the number of required
-   packets times the difference of the Outer Payload Size and the IP
-   Overhead minus the the Inner Payload Size.  So:
+                   +-------+--------+--------+--------+
+                   | Type  | IP-TFS | IP-TFS | IP-TFS |
+                   +-------+--------+--------+--------+
+                   | MTU   | 576    | 1500   | 9000   |
+                   +-------+--------+--------+--------+
+                   | PSize | 536    | 1460   | 8960   |
+                   +=======+========+========+========+
+                   | 40    | 7.46%  | 2.74%  | 0.45%  |
+                   +-------+--------+--------+--------+
+                   | 576   | 7.46%  | 2.74%  | 0.45%  |
+                   +-------+--------+--------+--------+
+                   | 1500  | 7.46%  | 2.74%  | 0.45%  |
+                   +-------+--------+--------+--------+
+                   | 9000  | 7.46%  | 2.74%  | 0.45%  |
+                   +-------+--------+--------+--------+
+
+                       Table 1: IP-TFS Overhead as
+                     Percentage of Inner Packet Size
+
+   The overhead per inner packet for constant send rate padded ESP
+   (i.e., traditional IPSec TFC) is 36 octets plus any padding, unless
+   fragmentation is required.
+
+   When fragmentation of the inner packet is required to fit in the
+   outer IPsec packet, overhead is the number of outer packets required
+   to carry the fragmented inner packet times both the inner IP overhead
+   (20) and the outer packet overhead (36) minus the initial inner IP
+   overhead plus any required tail padding in the last encap packet.
+   The required tail padding is the number of required packets times the
+   difference of the Outer Payload Size and the IP Overhead minus the
+   the Inner Payload Size.  So:
 
    Inner Paylaod Size = IP Packet Size - IP Overhead
+   Outer Payload Size = MTU - IPSec Overhead
    NF = CEILING(Inner Payload Size / (Outer Payload Size - IP Overhead))
 
-   OH = NF * (IP Overhead + IPsec Overhead)
-      + NF * (Outer Payload Size - $ipo) - Inner Payload Size
+   OH = NF * (IP Overhead + IPsec Overhead) - IP Overhead
+      + NF * (Outer Payload Size - IP Overhead) - Inner Payload Size
 
-   OH = NF * (IP Overhead + IPSec Overhead + Outer Payload Size)
-      - Inner Payload Size
+   OH = NF * (IPSec Overhead + Outer Payload Size)
+      - (IP Overhead + Inner Payload Size)
 
-      +---------+---------+---------+----------+------+------+------+
-      | Type    | ESP+Pad | ESP+Pad | ESP+Pad  | TFS  | TFS  | TFS  |
-      +---------+---------+---------+----------+------+------+------+
-      | PktSize | 576     | 1500    | 9000     | 576  | 1500 | 9000 |
-      +---------+---------+---------+----------+------+------+------+
-      |         | 540     | 1464    | 8964     | 536  | 1460 | 8960 |
-      +=========+=========+=========+==========+======+======+======+
-      | 40      | 1250.0% | 3560.0% | 22310.0% | 7.5% | 2.7% | 0.4% |
-      +---------+---------+---------+----------+------+------+------+
-      | 128     | 321.9%  | 1043.8% | 6903.1%  | 7.5% | 2.7% | 0.4% |
-      +---------+---------+---------+----------+------+------+------+
-      | 256     | 110.9%  | 471.9%  | 3401.6%  | 7.5% | 2.7% | 0.4% |
-      +---------+---------+---------+----------+------+------+------+
-      | 536     | 0.7%    | 173.1%  | 1572.4%  | 7.5% | 2.7% | 0.4% |
-      +---------+---------+---------+----------+------+------+------+
-      | 576     | 110.4%  | 154.2%  | 1456.2%  | 7.5% | 2.7% | 0.4% |
-      +---------+---------+---------+----------+------+------+------+
-      | 1460    | 23.8%   | 0.3%    | 514.0%   | 7.5% | 2.7% | 0.4% |
-      +---------+---------+---------+----------+------+------+------+
-      | 1500    | 20.5%   | 104.0%  | 497.6%   | 7.5% | 2.7% | 0.4% |
-      +---------+---------+---------+----------+------+------+------+
-      | 8960    | 20.0%   | 19.0%   | 0.0%     | 7.5% | 2.7% | 0.4% |
-      +---------+---------+---------+----------+------+------+------+
-      | 9000    | 19.4%   | 18.4%   | 100.7%   | 7.5% | 2.7% | 0.4% |
-      +---------+---------+---------+----------+------+------+------+
+   OH = NF * (IPSec Overhead + Outer Payload Size) - Inner Packet Size
 
-            Table 1: Overhead as Percentage of Inner Packet Size
+    +-------+---------+---------+---------+--------+--------+--------+
+    | Type  | ESP+Pad | ESP+Pad | ESP+Pad | IP-TFS | IP-TFS | IP-TFS |
+    +-------+---------+---------+---------+--------+--------+--------+
+    | MTU   | 576     | 1500    | 9000    | 576    | 1500   | 9000   |
+    +-------+---------+---------+---------+--------+--------+--------+
+    | PSize | 540     | 1464    | 8964    | 536    | 1460   | 8960   |
+    +=======+=========+=========+=========+========+========+========+
+    | 40    | 500     | 1424    | 8924    | 3.0    | 1.1    | 0.2    |
+    +-------+---------+---------+---------+--------+--------+--------+
+    | 128   | 412     | 1336    | 8836    | 9.6    | 3.5    | 0.6    |
+    +-------+---------+---------+---------+--------+--------+--------+
+    | 256   | 284     | 1208    | 8708    | 19.1   | 7.0    | 1.1    |
+    +-------+---------+---------+---------+--------+--------+--------+
+    | 536   | 4       | 928     | 8428    | 40.0   | 14.7   | 2.4    |
+    +-------+---------+---------+---------+--------+--------+--------+
+    | 576   | 576     | 888     | 8388    | 43.0   | 15.8   | 2.6    |
+    +-------+---------+---------+---------+--------+--------+--------+
+    | 1460  | 268     | 4       | 7504    | 109.0  | 40.0   | 6.5    |
+    +-------+---------+---------+---------+--------+--------+--------+
+    | 1500  | 228     | 1500    | 7464    | 111.9  | 41.1   | 6.7    |
+    +-------+---------+---------+---------+--------+--------+--------+
+    | 8960  | 1408    | 1540    | 4       | 668.7  | 245.5  | 40.0   |
+    +-------+---------+---------+---------+--------+--------+--------+
+    | 9000  | 1368    | 1500    | 9000    | 671.6  | 246.6  | 40.2   |
+    +-------+---------+---------+---------+--------+--------+--------+
 
-   These percentages were derived from the following table.
+                  Table 2: Overhead comparison in octets
 
-      +-------+---------+---------+---------+-------+-------+------+
-      | Type  | ESP+Pad | ESP+Pad | ESP+Pad | TFS   | TFS   | TFS  |
-      +-------+---------+---------+---------+-------+-------+------+
-      | MTU   | 576     | 1500    | 9000    | 576   | 1500  | 9000 |
-      +-------+---------+---------+---------+-------+-------+------+
-      | PSize | 540     | 1464    | 8964    | 536   | 1460  | 8960 |
-      +=======+=========+=========+=========+=======+=======+======+
-      | 40    | 500     | 1424    | 8924    | 3.0   | 1.1   | 0.2  |
-      +-------+---------+---------+---------+-------+-------+------+
-      | 128   | 412     | 1336    | 8836    | 9.6   | 3.5   | 0.6  |
-      +-------+---------+---------+---------+-------+-------+------+
-      | 256   | 284     | 1208    | 8708    | 19.1  | 7.0   | 1.1  |
-      +-------+---------+---------+---------+-------+-------+------+
-      | 536   | 4       | 928     | 8428    | 40.0  | 14.7  | 2.4  |
-      +-------+---------+---------+---------+-------+-------+------+
-      | 576   | 636     | 888     | 8388    | 43.0  | 15.8  | 2.6  |
-      +-------+---------+---------+---------+-------+-------+------+
-      | 1460  | 348     | 4       | 7504    | 109.0 | 40.0  | 6.5  |
-      +-------+---------+---------+---------+-------+-------+------+
-      | 1500  | 308     | 1560    | 7464    | 111.9 | 41.1  | 6.7  |
-      +-------+---------+---------+---------+-------+-------+------+
-      | 8960  | 1788    | 1700    | 4       | 668.7 | 245.5 | 40.0 |
-      +-------+---------+---------+---------+-------+-------+------+
-      | 9000  | 1748    | 1660    | 9060    | 671.6 | 246.6 | 40.2 |
-      +-------+---------+---------+---------+-------+-------+------+
+   Which we can use to calculate the overhead as a percentage of inner
+   packet size.
 
-                       Table 2: Overhead in octets
+    +-------+---------+---------+----------+--------+--------+--------+
+    | Type  | ESP+Pad | ESP+Pad | ESP+Pad  | IP-TFS | IP-TFS | IP-TFS |
+    +-------+---------+---------+----------+--------+--------+--------+
+    | MTU   | 576     | 1500    | 9000     | 576    | 1500   | 9000   |
+    +-------+---------+---------+----------+--------+--------+--------+
+    | PSize | 540     | 1464    | 8964     | 536    | 1460   | 8960   |
+    +=======+=========+=========+==========+========+========+========+
+    | 40    | 1250.0% | 3560.0% | 22310.0% | 7.46%  | 2.74%  | 0.45%  |
+    +-------+---------+---------+----------+--------+--------+--------+
+    | 128   | 321.9%  | 1043.8% | 6903.1%  | 7.46%  | 2.74%  | 0.45%  |
+    +-------+---------+---------+----------+--------+--------+--------+
+    | 256   | 110.9%  | 471.9%  | 3401.6%  | 7.46%  | 2.74%  | 0.45%  |
+    +-------+---------+---------+----------+--------+--------+--------+
+    | 536   | 0.7%    | 173.1%  | 1572.4%  | 7.46%  | 2.74%  | 0.45%  |
+    +-------+---------+---------+----------+--------+--------+--------+
+    | 576   | 100.0%  | 154.2%  | 1456.2%  | 7.46%  | 2.74%  | 0.45%  |
+    +-------+---------+---------+----------+--------+--------+--------+
+    | 1460  | 18.4%   | 0.3%    | 514.0%   | 7.46%  | 2.74%  | 0.45%  |
+    +-------+---------+---------+----------+--------+--------+--------+
+    | 1500  | 15.2%   | 100.0%  | 497.6%   | 7.46%  | 2.74%  | 0.45%  |
+    +-------+---------+---------+----------+--------+--------+--------+
+    | 8960  | 15.7%   | 17.2%   | 0.0%     | 7.46%  | 2.74%  | 0.45%  |
+    +-------+---------+---------+----------+--------+--------+--------+
+    | 9000  | 15.2%   | 16.7%   | 100.0%   | 7.46%  | 2.74%  | 0.45%  |
+    +-------+---------+---------+----------+--------+--------+--------+
+
+            Table 3: Overhead as Percentage of Inner Packet Size
+
+   NOTE: Will Add Throughput Percentage from included spreadsheet.
 
 Appendix B.  Acknowledgements
 
