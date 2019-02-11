@@ -1,0 +1,38 @@
+# -*- org-latex-listings: t -*-
+#+TITLE: IP-TFS
+#+AUTHOR: Christian E. Hopps
+#+EMAIL: chopps@labn.net
+#+STARTUP: indent beamer content entitiespretty
+
+#+LaTeX_CLASS_OPTIONS: [24pt,presentation]
+# #+OPTIONS: h:2 toc:nil \n:nil @:t ::t |:t ^:t -:t f:t *:t <:t ':t
+#+OPTIONS: toc:nil :nil f:nil H:1 num:0 tags:nil author:nil creator:nil timestamp:nil html-postamble:nil email:t
+
+#+MACRO: mkbold @@latex:\textbf{@@$1@@latex:}@@
+#+MACRO: mkitalic @@latex:\textit{@@$1@@latex:}@@
+#+MACRO: mkcode @@latex:\texttt{@@$1@@latex:}@@
+#+MACRO: mkred @@latex:{\color{red}@@$1@@latex:}@@
+#+MACRO: mkblue @@latex:{\color{blue}@@$1@@latex:}@@
+
+#+BEAMER_OUTER_THEME: metropolis
+#+BEAMER_INNER_THEME: metropolis
+#+BEAMER_FONT_THEME: metropolis
+#+BEAMER_COLOR_THEME: seahorse
+
+# #+BEAMER_THEME: m [everytitleformat=regular]
+#+BEAMER_HEADER: \subtitle{Special Christian E. Hopps \newline More Authors}
+#+BEAMER_HEADER: \usemintedstyle[python]{friendly}
+
+#+latex_header: \AtBeginSection[]{\begin{frame}<beamer>\frametitle{Topic}\tableofcontents[currentsection,hideothersubsections]\end{frame}}
+
+#+BEAMER_HEADER: \usepackage{svg}
+
+# don't use top of file # -*- org-export-babel-evaluate: nil -*-
+# use header argument ‘:eval never-export’.
+
+* IP-TFS Design
+** Key Items
+   - Inelastic/Elastic Modes
+   - Fixed Packet Size
+   - Constant Send
+   - Uses IPsec

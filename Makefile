@@ -15,13 +15,29 @@
 # limitations under the License.
 #
 OBJDIR ?= build
+PYCFG := setup.cfg
+PYSRC := $(wildcard iptfs/*.py)
 SRC := $(wildcard src/*.c)
+INC := $(wildcard src/*.h)
 OBJ := $(patsubst src/%.c,$(OBJDIR)/%.o,$(SRC))
 BIN := $(OBJDIR)/iptfs
 
+ORG := $(shell find -name '*.org')
+DRAFTS := draft/draft-chopps-ipsecme-iptfs-00.txt draft/draft-chopps-ipsecme-iptfs-00.xml
+SCRIPTS := $(wildcard *.sh)
+MAKEFILES := $(shell find -name '*.org')
+
 all: $(BIN)
 
-clean: rm $(BIN) $(OBJ)
+print: $(ALL)
+	enscript -o - -1 $(DRAFTS) $(ORG) | ps2pdf - release-pack-1pp.pdf
+	enscript -r -o - -1 $(PYSRC) | ps2pdf - release-pack-1pp-wide.pdf
+	enscript -r -o - -2 $(SRC) $(INC) $(MAKEFILES) $(SCRIPTS) | ps2pdf - release-pack-2pp.pdf
+	gs -dBATCH -dNOPAUSE -q -sDEVICE=pdfwrite -sOutputFile=release-pack.pdf file1.pdf file2.pdf
+
+
+clean:
+	rm -f $(BIN) $(OBJ) release-pack-*.pdf
 
 $(OBJDIR):
 	mkdir -p $(OBJDIR)
