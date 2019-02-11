@@ -45,7 +45,7 @@ output of the congestion control algorithm if used will adjust the frequency
 that we send our packets until the congestion is accommodated.
 
 * Results
-** Early code throughput tests of UDP in UDP/TCP
+** Early code throughput tests of IP in UDP/TCP
 *** C w/ select (1 pp)
  #+begin_src bash
 
