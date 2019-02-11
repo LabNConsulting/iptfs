@@ -14,283 +14,143 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-* Packet Format
-*** Congestion Control Document (see notepad) RFC2941
-*** Circuit Breaker.
-** Constant Bandwith
-   The goal of IP-TFS is to hide the size and frequency of the packets. To do
-   this we use a constant send IPsec tunnel of same sized packets. The tunnel
-   bandwidth and frame size are the inputs to the algorithm. The frame size can
-   be set based on path MTU discovery for optimal performance. Given those
-   inputs we can calculate the frequency of frame sized tunnel packets we should
-   send in order to achieve the requested bandwidth.
+* Overview
+This software is a proof of concept of IP-TFS as described in
+draft-chopps-ipsecme-iptfs-00. For simplicity sake it does not actually use
+IPsec but instead a more simple UDP outer encapsulation.
 
-   The tunnel can operate in 2 modes, an inelastic and an elastic mode. The
-   inelastic mode should only be used where the user has full administrative
-   control over the path the tunnel will take, and can therefor guarantee the
-   bandwidth. In this case packet loss should be signaled so that any failures
-   due to a lack of bandwidth can be corrected. With the elastic mode we adapt
-   to network congestion and downgrade the bandwidth to accommodate. If
-   congestion were handled in the network on a byte level we might could lower
-   the IPsec (encap) packet size to adjust; however, as congestion is normally
-   handled in the network by dropping packets we instead choose to lower the
-   frequency we send our fixed sized packets to align with this fact. This also
-   minimizes transport overhead.
+For an in depth look at the protocol and the packet formats see
+draft-chopps-ipsecme-iptfs-00.
 
-   For both modes we send regular reports from the receiver to the sender on
-   packet drops over a sequence of packets. This can be used to alert in the
-   inelastic mode or as input into a congestion control algorithm for the
-   elastic mode. The output of the congestion control algorithm if used will
-   adjust the frequency that we send our packets until the congestion is
-   accommodated. We do not standardize the congestion control algorithm,
-   although we will describe an algorithm that one could use.
+** Fixed-Size Constant Bandwidth
 
-   Congestion control is an optional feature. The system can also operate in an
-   inelastic configuration where the bandwidth required is assumed to be
-   available.
+The goal of IP-TFS is to hide the size and frequency of the packets. To do this
+we use a constant send IPsec tunnel of same sized packets. The tunnel bandwidth
+and frame size are the inputs to the algorithm. The frame size can be set based
+on path MTU discovery for optimal performance. Given those inputs we can
+calculate the frequency of frame sized tunnel packets we should send in order to
+achieve the requested bandwidth.
 
-** IPsec
-*** Payload Frame Format
+The tunnel can operate in 2 modes, a non-congestion controlled and an congestion
+controlled mode. The Non-CC mode should only be used where the user has full
+administrative control over the path the tunnel will take, and can therefor
+guarantee the bandwidth. In this case packet loss should be signaled so that any
+failures due to a lack of bandwidth can be corrected. With the CC mode we adapt
+to network congestion and downgrade the bandwidth to accommodate.
 
-#+begin_example
-
-     0                   1                   2                   3
-     0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
-    +-----------------------------------------------------------------+
- -4 |                     SeqNum (non-ipsec only)                     |
-    +-----------------------------------------------------------------+
-  0 |V|          Reserved           |          BlockOffset            |
-    +-----------------------------------------------------------------+
-  4 |       Data Blocks ...
-    +---------------
-
-#+end_example
-
-    - V :: Version, must be set to zero and dropped if set to 1.
-    - Reserved  :: set to 0 ignored on receipt.
-    - BlockOffset :: This is the number of bytes before the next IP/IPv6 data
-                     block. It can point past the end of the containing packet
-                     in which case this packet is the continuation of a preivous
-                     one and possibly padding. NOTE: This can point into the
-                     next packet and yet the current packet can end with padding.
-                     This will happen if there's not enough bytes to start a
-                     new inner packet in the current outer packet.
-    - Data Blocks :: variable number of bytes that constitute the start or
-                     continuation of a previous data block.
-
-*** Data Block
-
-#+begin_example
-
-     0                   1                   2                   3
-     0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
-    +-----------------------------------------------------------------+
-  0 |Version| IPv4, IPv6 or pad.
-    +--------
-
-#+end_example
-
-    - Version :: 0x0 for pad, 0x4 for IPv4, 0x6 for IPv6.
-
-**** IPv4 Data Block
-
-#+begin_example
-
-     0                   1                   2                   3
-     0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
-    +-----------------------------------------------------------------+
-  0 |  0x4  |  IHL  | Type Of Service |         Total Length          |
-    +------------------------------------------------------------------
-  4 | Rest of inner packet ...
-    +
-
-#+end_example
-
-    - Version :: 0x4 for IPv4.
-    - Total Length :: Length of the IPv4 inner packet.
-
-
-**** IPv6 Data Block
-
-#+begin_example
-
-     0                   1                   2                   3
-     0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
-    +-----------------------------------------------------------------+
-  0 |  0x6  | Traffic Class |              Flow Label                 |
-    +------------------------------------------------------------------
-  4 |          Total Length         | Rest of inner packet ...
-    +--------------------------------
-
-#+end_example
-
-    - Version :: 0x6 for for IPv6.
-    - Total Length :: Length of the IPv6 inner packet.
-                 unspecified data. For IPv4 and IPv6 the length field must at
-                 least be present. It is fine and expected that the packet data
-                 may span multiple containing packets. Subsequent packets will
-                 have their offset set to point past this IP data.
-
-
-**** Pad Data Block
-
-#+begin_example
-
-     0                   1                   2                   3
-     0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
-    +-----------------------------------------------------------------+
-  0 |  0x0  | Padding ...
-    +--------
-
-#+end_example
-
-    - Version :: 0x0 for pad
-    - Padding :: extends to end of the encapsulating packet.
-
-
-
-** IKEv2
-***  IKEv2 Informational ACK Notification
-
-#+begin_example
-
-      0                   1                   2                   3
-      0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
-     +-----------------------------------------------------------------+
-  0  |V|  Reserved   |                     DrpCnt                      |
-     +-----------------------------------------------------------------+
-  4  |                          Timestamp...
-     +-----------------------------------------------------------------+
-  8                          ...Timestamp                              |
-     +-----------------------------------------------------------------+
-  12 |                          AckSeqStart                            |
-     +-----------------------------------------------------------------+
-  16 |                          AckSeqEnd                              |
-     +-----------------------------------------------------------------+
-
-#+end_example
-
-    - V :: Version, must be set to zero and dropped if set to 1.
-    - Reserved :: set to 0 ignored on receipt.
-    - DrpCnt :: For ack data block this is the drop count between AckSeqStart
-                and AckSeqEnd, If the drops exceed the resolution of the counter
-                then set to the max value.
-    - AckSeqStart :: The first SeqNum of the range that this information relates
-                     to.
-    - AckSeqEnd :: The last SeqNum of the range that this information relates
-                   to.
-    - Timestamp :: The time when this notification was created and sent.
-
-
-*** Options CFG_REQUEST when to send these ACK.
-*** Options Do a request for ACK information.
+For both modes we send regular reports from the receiver to the sender on packet
+drops over a sequence of packets. This can be used to alert in the inelastic
+mode or as input into a congestion control algorithm for the elastic mode. The
+output of the congestion control algorithm if used will adjust the frequency
+that we send our packets until the congestion is accommodated.
 
 * Results
-** C w/ select (1 pp)
-#+begin_src bash
+** Early code throughput tests of UDP in UDP/TCP
+*** C w/ select (1 pp)
+ #+begin_src bash
 
-    00:00 [10:17:20 dpdk2:~/w/tcptfs]$ iperf -c 192.168.30.67
-    ------------------------------------------------------------
-    Client connecting to 192.168.30.67, TCP port 5001
-    TCP window size: 85.0 KByte (default)
-    ------------------------------------------------------------
-    [  3] local 192.168.30.66 port 33854 connected with 192.168.30.67 port 5001
-    [ ID] Interval       Transfer     Bandwidth
-    [  3]  0.0-10.3 sec   479 KBytes   381 Kbits/sec
-#+end_src
-** Python TCP threaded.
-*** 1500 MTU
-#+begin_src bash
-    (venv) 00:08 [22:04:41 dpdk2:~/w/tcptfs]$ iperf -c 192.168.30.67
-    ------------------------------------------------------------
-    Client connecting to 192.168.30.67, TCP port 5001
-    TCP window size: 85.0 KByte (default)
-    ------------------------------------------------------------
-    [  3] local 192.168.30.66 port 34010 connected with 192.168.30.67 port 5001
-    [ ID] Interval       Transfer     Bandwidth
-    [  3]  0.0-10.0 sec   107 MBytes  89.6 Mbits/sec
-    (venv) 00:10 [22:05:14 dpdk2:~/w/tcptfs]$ iperf -c 192.168.30.67
-    ------------------------------------------------------------
-    Client connecting to 192.168.30.67, TCP port 5001
-    TCP window size: 85.0 KByte (default)
-    ------------------------------------------------------------
-    [  3] local 192.168.30.66 port 34014 connected with 192.168.30.67 port 5001
-    [ ID] Interval       Transfer     Bandwidth
-    [  3]  0.0-10.0 sec   116 MBytes  97.0 Mbits/sec
-#+end_src
-*** 9000 MTU
-#+begin_src bash
-    ------------------------------------------------------------
-    Client connecting to 192.168.30.67, TCP port 5001
-    TCP window size:  325 KByte (default)
-    ------------------------------------------------------------
-    [  3] local 192.168.30.66 port 34060 connected with 192.168.30.67 port 5001
-    [ ID] Interval       Transfer     Bandwidth
-    [  3]  0.0-10.0 sec   636 MBytes   533 Mbits/sec
-#+end_src
+     00:00 [10:17:20 dpdk2:~/w/tcptfs]$ iperf -c 192.168.30.67
+     ------------------------------------------------------------
+     Client connecting to 192.168.30.67, TCP port 5001
+     TCP window size: 85.0 KByte (default)
+     ------------------------------------------------------------
+     [  3] local 192.168.30.66 port 33854 connected with 192.168.30.67 port 5001
+     [ ID] Interval       Transfer     Bandwidth
+     [  3]  0.0-10.3 sec   479 KBytes   381 Kbits/sec
+ #+end_src
+*** Python TCP threaded.
+**** 1500 MTU
+ #+begin_src bash
+     (venv) 00:08 [22:04:41 dpdk2:~/w/tcptfs]$ iperf -c 192.168.30.67
+     ------------------------------------------------------------
+     Client connecting to 192.168.30.67, TCP port 5001
+     TCP window size: 85.0 KByte (default)
+     ------------------------------------------------------------
+     [  3] local 192.168.30.66 port 34010 connected with 192.168.30.67 port 5001
+     [ ID] Interval       Transfer     Bandwidth
+     [  3]  0.0-10.0 sec   107 MBytes  89.6 Mbits/sec
+     (venv) 00:10 [22:05:14 dpdk2:~/w/tcptfs]$ iperf -c 192.168.30.67
+     ------------------------------------------------------------
+     Client connecting to 192.168.30.67, TCP port 5001
+     TCP window size: 85.0 KByte (default)
+     ------------------------------------------------------------
+     [  3] local 192.168.30.66 port 34014 connected with 192.168.30.67 port 5001
+     [ ID] Interval       Transfer     Bandwidth
+     [  3]  0.0-10.0 sec   116 MBytes  97.0 Mbits/sec
+ #+end_src
+**** 9000 MTU
+ #+begin_src bash
+     ------------------------------------------------------------
+     Client connecting to 192.168.30.67, TCP port 5001
+     TCP window size:  325 KByte (default)
+     ------------------------------------------------------------
+     [  3] local 192.168.30.66 port 34060 connected with 192.168.30.67 port 5001
+     [ ID] Interval       Transfer     Bandwidth
+     [  3]  0.0-10.0 sec   636 MBytes   533 Mbits/sec
+ #+end_src
 
-** C TCP threaded.
-*** 1500 MTU
-#+begin_src bash
-    (venv) 00:02 [03:22:52 dpdk2:~/w/tcptfs]$ iperf -c 192.168.30.67
-    ------------------------------------------------------------
-    Client connecting to 192.168.30.67, TCP port 5001
-    TCP window size: 85.0 KByte (default)
-    ------------------------------------------------------------
-    [  3] local 192.168.30.66 port 34038 connected with 192.168.30.67 port 5001
-    [ ID] Interval       Transfer     Bandwidth
-    [  3]  0.0-10.0 sec  1.01 GBytes   866 Mbits/sec
-#+end_src
+*** C TCP threaded.
+**** 1500 MTU
+ #+begin_src bash
+     (venv) 00:02 [03:22:52 dpdk2:~/w/tcptfs]$ iperf -c 192.168.30.67
+     ------------------------------------------------------------
+     Client connecting to 192.168.30.67, TCP port 5001
+     TCP window size: 85.0 KByte (default)
+     ------------------------------------------------------------
+     [  3] local 192.168.30.66 port 34038 connected with 192.168.30.67 port 5001
+     [ ID] Interval       Transfer     Bandwidth
+     [  3]  0.0-10.0 sec  1.01 GBytes   866 Mbits/sec
+ #+end_src
 
-*** 9000 MTU
-#+begin_src bash
-    (venv) 00:10 [03:30:55 dpdk2:~/w/tcptfs]$ iperf -c 192.168.30.67
-    ------------------------------------------------------------
-    Client connecting to 192.168.30.67, TCP port 5001
-    TCP window size:  325 KByte (default)
-    ------------------------------------------------------------
-    [  3] local 192.168.30.66 port 34056 connected with 192.168.30.67 port 5001
-    [ ID] Interval       Transfer     Bandwidth
-    [  3]  0.0-10.0 sec  3.04 GBytes  2.61 Gbits/sec
-#+end_src
-** C UDP Threaded.
-*** 1500 MTU (transport is UDP on 9000 MTU)
-#+begin_src bash
-    ------------------------------------------------------------
-    Client connecting to 192.168.30.67, TCP port 5001
-    TCP window size: 85.0 KByte (default)
-    ------------------------------------------------------------
-    [  3] local 192.168.30.66 port 34100 connected with 192.168.30.67 port 5001
-    [ ID] Interval       Transfer     Bandwidth
-    [  3]  0.0-10.0 sec  1.27 GBytes  1.09 Gbits/sec
-#+end_src
+**** 9000 MTU
+ #+begin_src bash
+     (venv) 00:10 [03:30:55 dpdk2:~/w/tcptfs]$ iperf -c 192.168.30.67
+     ------------------------------------------------------------
+     Client connecting to 192.168.30.67, TCP port 5001
+     TCP window size:  325 KByte (default)
+     ------------------------------------------------------------
+     [  3] local 192.168.30.66 port 34056 connected with 192.168.30.67 port 5001
+     [ ID] Interval       Transfer     Bandwidth
+     [  3]  0.0-10.0 sec  3.04 GBytes  2.61 Gbits/sec
+ #+end_src
+*** C UDP Threaded.
+**** 1500 MTU (transport is UDP on 9000 MTU)
+ #+begin_src bash
+     ------------------------------------------------------------
+     Client connecting to 192.168.30.67, TCP port 5001
+     TCP window size: 85.0 KByte (default)
+     ------------------------------------------------------------
+     [  3] local 192.168.30.66 port 34100 connected with 192.168.30.67 port 5001
+     [ ID] Interval       Transfer     Bandwidth
+     [  3]  0.0-10.0 sec  1.27 GBytes  1.09 Gbits/sec
+ #+end_src
 
-*** 9000 MTU (transport is UDP on 9000 MTU interface)
-#+begin_src bash
-    ------------------------------------------------------------
-    Client connecting to 192.168.30.67, TCP port 5001
-    TCP window size:  325 KByte (default)
-    ------------------------------------------------------------
-    [  3] local 192.168.30.66 port 34098 connected with 192.168.30.67 port 5001
-    [ ID] Interval       Transfer     Bandwidth
-    [  3]  0.0-10.0 sec  2.66 GBytes  2.28 Gbits/sec
-#+end_src
+**** 9000 MTU (transport is UDP on 9000 MTU interface)
+ #+begin_src bash
+     ------------------------------------------------------------
+     Client connecting to 192.168.30.67, TCP port 5001
+     TCP window size:  325 KByte (default)
+     ------------------------------------------------------------
+     [  3] local 192.168.30.66 port 34098 connected with 192.168.30.67 port 5001
+     [ ID] Interval       Transfer     Bandwidth
+     [  3]  0.0-10.0 sec  2.66 GBytes  2.28 Gbits/sec
+ #+end_src
 
-*** 8970 MTU (transport is UDP on 9000 MTU interface)
-#+begin_src bash
-    ------------------------------------------------------------
-    Client connecting to 192.168.30.67, TCP port 5001
-    TCP window size:  325 KByte (default)
-    ------------------------------------------------------------
-    [  3] local 192.168.30.66 port 34102 connected with 192.168.30.67 port 5001
-    [ ID] Interval       Transfer     Bandwidth
-    [  3]  0.0-10.0 sec  4.00 GBytes  3.43 Gbits/sec
-    ------------------------------------------------------------
-    Client connecting to 192.168.30.67, TCP port 5001
-    TCP window size:  325 KByte (default)
-    ------------------------------------------------------------
-    [  3] local 192.168.30.66 port 34104 connected with 192.168.30.67 port 5001
-    [ ID] Interval       Transfer     Bandwidth
-    [  3]  0.0-10.0 sec  3.82 GBytes  3.28 Gbits/sec
+**** 8970 MTU (transport is UDP on 9000 MTU interface)
+ #+begin_src bash
+     ------------------------------------------------------------
+     Client connecting to 192.168.30.67, TCP port 5001
+     TCP window size:  325 KByte (default)
+     ------------------------------------------------------------
+     [  3] local 192.168.30.66 port 34102 connected with 192.168.30.67 port 5001
+     [ ID] Interval       Transfer     Bandwidth
+     [  3]  0.0-10.0 sec  4.00 GBytes  3.43 Gbits/sec
+     ------------------------------------------------------------
+     Client connecting to 192.168.30.67, TCP port 5001
+     TCP window size:  325 KByte (default)
+     ------------------------------------------------------------
+     [  3] local 192.168.30.66 port 34104 connected with 192.168.30.67 port 5001
+     [ ID] Interval       Transfer     Bandwidth
+     [  3]  0.0-10.0 sec  3.82 GBytes  3.28 Gbits/sec
 
-#+end_src
+ #+end_src
