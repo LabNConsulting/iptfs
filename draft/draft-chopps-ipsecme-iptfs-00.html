@@ -1113,7 +1113,7 @@ and constant send rate IPsec tunnel.<a href="#section-abstract-1" class="pilcrow
 </nav>
 </section>
 </div>
-<div id="org29c8e9c">
+<div id="org66d2fa4">
 <section id="section-1">
       <h2 id="name-introduction">
 <a href="#section-1" class="section-number selfRef">1. </a><a href="#name-introduction" class="section-name selfRef">Introduction</a>
@@ -1135,11 +1135,11 @@ bandwidth limitation. To do this we use a constant send rate IPsec
 these fixed-sized packets can contain partial, full or multiple IP
 packets to maximize the bandwidth of the tunnel.</span><a href="#section-1-3" class="pilcrow">¶</a></p>
 <p id="section-1-4">For a comparison of the overhead of IP-TFS with the RFC4303
-prescribed TFC solution see <a href="#org2921f5d" class="xref">Appendix A</a><a href="#section-1-4" class="pilcrow">¶</a></p>
+prescribed TFC solution see <a href="#orgc22a156" class="xref">Appendix A</a><a href="#section-1-4" class="pilcrow">¶</a></p>
 <p id="section-1-5">Additionally, IP-TFS provides for dealing with network congestion
 <span>[<a href="#RFC2914" class="xref">RFC2914</a>]. This is important for when the IP-TFS user is not in full
 control of the domain through which the IP-TFS tunnel path flows.</span><a href="#section-1-5" class="pilcrow">¶</a></p>
-<div id="org10e6278">
+<div id="orga7683a8">
 <section id="section-1.1">
         <h3 id="name-terminology-concepts">
 <a href="#section-1.1" class="section-number selfRef">1.1. </a><a href="#name-terminology-concepts" class="section-name selfRef">Terminology &amp; Concepts</a>
@@ -1155,12 +1155,12 @@ in <span>[<a href="#RFC4301" class="xref">RFC4301</a>].</span><a href="#section-
 </div>
 </section>
 </div>
-<div id="org438f9bb">
+<div id="orga53ee64">
 <section id="section-2">
       <h2 id="name-the-ip-tfs-tunnel">
 <a href="#section-2" class="section-number selfRef">2. </a><a href="#name-the-ip-tfs-tunnel" class="section-name selfRef">The IP-TFS Tunnel</a>
       </h2>
-<p id="section-2-1">As mentioned in <a href="#org29c8e9c" class="xref">Section 1</a> IP-TFS utilizes an IPsec <span>[<a href="#RFC4303" class="xref">RFC4303</a>]
+<p id="section-2-1">As mentioned in <a href="#org66d2fa4" class="xref">Section 1</a> IP-TFS utilizes an IPsec <span>[<a href="#RFC4303" class="xref">RFC4303</a>]
 tunnel as it's transport. To provide for full TFC we send fixed sized
 encapsulating packets at a constant rate on the tunnel.</span><a href="#section-2-1" class="pilcrow">¶</a></p>
 <p id="section-2-2">The primary input to the tunnel algorithm is the requested bandwidth
@@ -1180,7 +1180,7 @@ tunnel. Indeed, the ingress (sending) side of the IP-TFS tunnel MUST
 be allowed to vary the size and rate at which it sends encapsulating
 packets, including sending them larger, smaller, faster or slower
 than the requested size and rate.<a href="#section-2-5" class="pilcrow">¶</a></p>
-<div id="orge14e419">
+<div id="orgc884c36">
 <section id="section-2.1">
         <h3 id="name-tunnel-content">
 <a href="#section-2.1" class="section-number selfRef">2.1. </a><a href="#name-tunnel-content" class="section-name selfRef">Tunnel Content</a>
@@ -1197,7 +1197,7 @@ tunnel packet transmission.<a href="#section-2.1-2" class="pilcrow">¶</a></p>
 a new IP protocol number IPTFS_PROTOCOL (TBD). A payload of
 IPTFS_PROTOCOL type is comprised of a 32 bit header followed by
 either a partial, a full or multiple partial or full data-blocks.<a href="#section-2.1-3" class="pilcrow">¶</a></p>
-<div id="org4b9b0b9">
+<div id="orge42906e">
 <section id="section-2.1.1">
           <h4 id="name-ipsec-esp-payload">
 <a href="#section-2.1.1" class="section-number selfRef">2.1.1. </a><a href="#name-ipsec-esp-payload" class="section-name selfRef">IPSec/ESP Payload</a>
@@ -1235,7 +1235,7 @@ data-block that is still being re-assembled.<a href="#section-2.1.1-2" class="pi
 <p id="section-2.1.1-3">The V (version) bit is included for future compatibility.<a href="#section-2.1.1-3" class="pilcrow">¶</a></p>
 </section>
 </div>
-<div id="orga3f5424">
+<div id="org7889fe5">
 <section id="section-2.1.2">
           <h4 id="name-data-blocks">
 <a href="#section-2.1.2" class="section-number selfRef">2.1.2. </a><a href="#name-data-blocks" class="section-name selfRef">Data-Blocks</a>
@@ -1259,7 +1259,7 @@ length of the data block is extracted from the encapsulated IPv4 or
 IPv6 packet's length field.<a href="#section-2.1.2-2" class="pilcrow">¶</a></p>
 </section>
 </div>
-<div id="orgc56efe6">
+<div id="org1c8a460">
 <section id="section-2.1.3">
           <h4 id="name-no-implicit-padding">
 <a href="#section-2.1.3" class="section-number selfRef">2.1.3. </a><a href="#name-no-implicit-padding" class="section-name selfRef">No Implicit Padding</a>
@@ -1274,7 +1274,7 @@ fetch the length field from the subsequent encapsulating packet
 payload.<a href="#section-2.1.3-1" class="pilcrow">¶</a></p>
 </section>
 </div>
-<div id="orgd19fc27">
+<div id="orgda086aa">
 <section id="section-2.1.4">
           <h4 id="name-ip-header-value-mapping">
 <a href="#section-2.1.4" class="section-number selfRef">2.1.4. </a><a href="#name-ip-header-value-mapping" class="section-name selfRef">IP Header Value Mapping</a>
@@ -1300,7 +1300,7 @@ by configuration.</span><a href="#section-2.1.4-1" class="pilcrow">¶</a></p>
 </div>
 </section>
 </div>
-<div id="org217c6cc">
+<div id="orgf07fef2">
 <section id="section-2.2">
         <h3 id="name-exclusive-sa-use">
 <a href="#section-2.2" class="section-number selfRef">2.2. </a><a href="#name-exclusive-sa-use" class="section-name selfRef">Exclusive SA Use</a>
@@ -1316,7 +1316,7 @@ deemed worthwhile. Other IPsec uses can configure and use their own
 SAs.<a href="#section-2.2-1" class="pilcrow">¶</a></p>
 </section>
 </div>
-<div id="org76d9085">
+<div id="orge2450e7">
 <section id="section-2.3">
         <h3 id="name-initiation-of-tfs-mode">
 <a href="#section-2.3" class="section-number selfRef">2.3. </a><a href="#name-initiation-of-tfs-mode" class="section-name selfRef">Initiation of TFS mode</a>
@@ -1329,7 +1329,7 @@ of the first ESP payload with the IPTFS_PROTOCOL indicated as the
 payload type.<a href="#section-2.3-1" class="pilcrow">¶</a></p>
 </section>
 </div>
-<div id="orgb3e08b0">
+<div id="org98f9c0b">
 <section id="section-2.4">
         <h3 id="name-example-of-an-encapsulated-">
 <a href="#section-2.4" class="section-number selfRef">2.4. </a><a href="#name-example-of-an-encapsulated-" class="section-name selfRef">Example of an encapsulated IP packet flow</a>
@@ -1367,7 +1367,7 @@ allows for quick recovery with minimal inner packet loss in the
 presence of outer encapsulating packet loss.<a href="#section-2.4-5" class="pilcrow">¶</a></p>
 </section>
 </div>
-<div id="orge900174">
+<div id="orgd66c1ee">
 <section id="section-2.5">
         <h3 id="name-modes-of-operation">
 <a href="#section-2.5" class="section-number selfRef">2.5. </a><a href="#name-modes-of-operation" class="section-name selfRef">Modes of operation</a>
@@ -1377,7 +1377,7 @@ Bidirectional functionality is achieved by setting up 2 tunnels, one
 in either direction.<a href="#section-2.5-1" class="pilcrow">¶</a></p>
 <p id="section-2.5-2">An IP-TFS tunnel can operate in 2 modes, a non-congestion controlled
 mode and congestion controlled mode.<a href="#section-2.5-2" class="pilcrow">¶</a></p>
-<div id="orgb333f0d">
+<div id="org4f3ab9f">
 <section id="section-2.5.1">
           <h4 id="name-non-congestion-controlled-m">
 <a href="#section-2.5.1" class="section-number selfRef">2.5.1. </a><a href="#name-non-congestion-controlled-m" class="section-name selfRef">Non-Congestion Controlled Mode</a>
@@ -1396,7 +1396,7 @@ via syslog, YANG notification, SNMP traps, etc) so that any
 failures due to a lack of bandwidth can be corrected.</span><a href="#section-2.5.1-2" class="pilcrow">¶</a></p>
 </section>
 </div>
-<div id="org94d6556">
+<div id="org3f27d32">
 <section id="section-2.5.2">
           <h4 id="name-congestion-controlled-mode">
 <a href="#section-2.5.2" class="section-number selfRef">2.5.2. </a><a href="#name-congestion-controlled-mode" class="section-name selfRef">Congestion Controlled Mode</a>
@@ -1439,7 +1439,7 @@ circuit breakers are outside the scope of this document.</span><a href="#section
 </div>
 </section>
 </div>
-<div id="org6e1e681">
+<div id="org0005028">
 <section id="section-3">
       <h2 id="name-congestion-information">
 <a href="#section-3" class="section-number selfRef">3. </a><a href="#name-congestion-information" class="section-name selfRef">Congestion Information</a>
@@ -1456,7 +1456,7 @@ sending device or to implement Circuit Breakers <span>[<a href="#RFC8084" class=
 notifications <span>[<a href="#RFC7296" class="xref">RFC7296</a>]. These notifications are sent at a configured
 interval (which can be configured to 0 to disable the sending of the
 reports).</span><a href="#section-3-3" class="pilcrow">¶</a></p>
-<div id="org7c95c02">
+<div id="org4343f04">
 <section id="section-3.1">
         <h3 id="name-ecn-support">
 <a href="#section-3.1" class="section-number selfRef">3.1. </a><a href="#name-ecn-support" class="section-name selfRef">ECN Support</a>
@@ -1480,7 +1480,7 @@ NOT be enabled by default.</span><a href="#section-3.1-2" class="pilcrow">¶</a>
 </div>
 </section>
 </div>
-<div id="orgd1c5f48">
+<div id="org1c1e4ba">
 <section id="section-4">
       <h2 id="name-configuration">
 <a href="#section-4" class="section-number selfRef">4. </a><a href="#name-configuration" class="section-name selfRef">Configuration</a>
@@ -1490,7 +1490,7 @@ configuration. All IP-TFS specific configuration (i.e., in addition
 to the underlying IPsec tunnel configuration) should be able to be
 specified at the tunnel ingress (sending) side alone (i.e.,
 single-ended provisioning).<a href="#section-4-1" class="pilcrow">¶</a></p>
-<div id="orgaa2c02c">
+<div id="org95bd231">
 <section id="section-4.1">
         <h3 id="name-bandwidth">
 <a href="#section-4.1" class="section-number selfRef">4.1. </a><a href="#name-bandwidth" class="section-name selfRef">Bandwidth</a>
@@ -1503,7 +1503,7 @@ maximum bandwidth available. No standardized configuration method is
 required.<a href="#section-4.1-1" class="pilcrow">¶</a></p>
 </section>
 </div>
-<div id="org2abe8ae">
+<div id="org2fb9314">
 <section id="section-4.2">
         <h3 id="name-fixed-packet-size">
 <a href="#section-4.2" class="section-number selfRef">4.2. </a><a href="#name-fixed-packet-size" class="section-name selfRef">Fixed Packet Size</a>
@@ -1514,7 +1514,7 @@ Path MTU discovery (see <span>[<a href="#RFC1191" class="xref">RFC1191</a>] and 
 configuration method is required.</span><a href="#section-4.2-1" class="pilcrow">¶</a></p>
 </section>
 </div>
-<div id="org480d429">
+<div id="org3b323f4">
 <section id="section-4.3">
         <h3 id="name-congestion-information-conf">
 <a href="#section-4.3" class="section-number selfRef">4.3. </a><a href="#name-congestion-information-conf" class="section-name selfRef">Congestion Information Configuration</a>
@@ -1556,17 +1556,17 @@ information.<a href="#section-4.3-7" class="pilcrow">¶</a></p>
 </div>
 </section>
 </div>
-<div id="orgfab30c6">
+<div id="orga74bd69">
 <section id="section-5">
       <h2 id="name-packet-and-data-formats">
 <a href="#section-5" class="section-number selfRef">5. </a><a href="#name-packet-and-data-formats" class="section-name selfRef">Packet and Data Formats</a>
       </h2>
-<div id="org5716f4a">
+<div id="org1f5186a">
 <section id="section-5.1">
         <h3 id="name-ipsec">
 <a href="#section-5.1" class="section-number selfRef">5.1. </a><a href="#name-ipsec" class="section-name selfRef">IPSec</a>
         </h3>
-<div id="orgc114ac6">
+<div id="orgeaedb2a">
 <section id="section-5.1.1">
           <h4 id="name-payload-format">
 <a href="#section-5.1.1" class="section-number selfRef">5.1.1. </a><a href="#name-payload-format" class="section-name selfRef">Payload Format</a>
@@ -1611,7 +1611,7 @@ or continuation of a previous data block.<a href="#section-5.1.1-2.8.1" class="p
           </dl>
 </section>
 </div>
-<div id="orgddd6c07">
+<div id="orgdc84bde">
 <section id="section-5.1.2">
           <h4 id="name-data-blocks-2">
 <a href="#section-5.1.2" class="section-number selfRef">5.1.2. </a><a href="#name-data-blocks-2" class="section-name selfRef">Data Blocks</a>
@@ -1727,12 +1727,12 @@ inner IPv6 inner packet.<a href="#section-5.1.2.2-3.4.1" class="pilcrow">¶</a><
 </div>
 </section>
 </div>
-<div id="org3742e21">
+<div id="orgd5d7019">
 <section id="section-5.2">
         <h3 id="name-ikev2">
 <a href="#section-5.2" class="section-number selfRef">5.2. </a><a href="#name-ikev2" class="section-name selfRef">IKEv2</a>
         </h3>
-<div id="org0a60f4a">
+<div id="orgf9b37fd">
 <section id="section-5.2.1">
           <h4 id="name-ikev2-congestion-informatio">
 <a href="#section-5.2.1" class="section-number selfRef">5.2.1. </a><a href="#name-ikev2-congestion-informatio" class="section-name selfRef">IKEv2 Congestion Information Configuration Attribute</a>
@@ -1747,8 +1747,8 @@ information report sending interval.</span><a href="#section-5.2.1-1" class="pil
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 |R|       Attribute Type        |             Length              |
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|                            Interval                             |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|            Interval           |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 </pre>
 <a href="#section-5.2.1-2" class="pilcrow">¶</a>
 </div>
@@ -1773,7 +1773,7 @@ milliseconds.<a href="#section-5.2.1-3.8.1" class="pilcrow">¶</a></p>
           </dl>
 </section>
 </div>
-<div id="org0262134">
+<div id="org0f7fde9">
 <section id="section-5.2.2">
           <h4 id="name-ikev2-congestion-information">
 <a href="#section-5.2.2" class="section-number selfRef">5.2.2. </a><a href="#name-ikev2-congestion-information" class="section-name selfRef">IKEv2 Congestion Information Notification Data</a>
@@ -1846,7 +1846,7 @@ of this timer value.<a href="#section-5.2.2-3.12.1" class="pilcrow">¶</a></p>
 </div>
 </section>
 </div>
-<div id="orgd9e7562">
+<div id="org3a6b89f">
 <section id="section-6">
       <h2 id="name-iana-considerations">
 <a href="#section-6" class="section-number selfRef">6. </a><a href="#name-iana-considerations" class="section-name selfRef">IANA Considerations</a>
@@ -1873,7 +1873,7 @@ Description: The sending rate of congestion information from egress
 Reference: This document<a href="#section-6-6" class="pilcrow">¶</a></p>
 </section>
 </div>
-<div id="orgd484347">
+<div id="orgabd10e2">
 <section id="section-7">
       <h2 id="name-security-considerations">
 <a href="#section-7" class="section-number selfRef">7. </a><a href="#name-security-considerations" class="section-name selfRef">Security Considerations</a>
@@ -1884,7 +1884,7 @@ increase the security of the traffic being transported. Other than
 the additional security afforded by using this mechanism, IP-TFS
 utilizes the security protocols <span>[<a href="#RFC4303" class="xref">RFC4303</a>] and </span><span>[<a href="#RFC7296" class="xref">RFC7296</a>] and so their
 security considerations apply to IP-TFS as well.</span><a href="#section-7-1" class="pilcrow">¶</a></p>
-<p id="section-7-2">As noted previously in <a href="#org94d6556" class="xref">Section 2.5.2</a>, for TFC to be
+<p id="section-7-2">As noted previously in <a href="#org3f27d32" class="xref">Section 2.5.2</a>, for TFC to be
 fully maintained the encapsulated traffic flow should not be
 affecting network congestion in a predictable way, and if it would be
 then non-congestion controlled mode use should be considered instead.<a href="#section-7-2" class="pilcrow">¶</a></p>
@@ -1968,7 +1968,7 @@ then non-congestion controlled mode use should be considered instead.<a href="#s
           <span>, &lt;<a href="https://www.rfc-editor.org/info/rfc8201">https://www.rfc-editor.org/info/rfc8201</a>&gt;</span>. </dd>
 </dl>
 </section>
-<div id="org2921f5d">
+<div id="orgc22a156">
 <section id="section-appendix.a">
       <h2 id="name-comparison-of-overhead-for-">
 <a href="#section-appendix.a" class="section-number selfRef">Appendix A. </a><a href="#name-comparison-of-overhead-for-" class="section-name selfRef">Comparison of Overhead for IPSec vs. IP-TFS</a>
@@ -1980,17 +1980,23 @@ inner packet size is a constant value based on the outer MTU size.<a href="#sect
 <p id="section-appendix.a-2">The overhead per inner packet for constant send rate padded IPSec
 (i.e., IPSec TFC) is 36 octets plus any padding, unless fragmentation
 is required.<a href="#section-appendix.a-2" class="pilcrow">¶</a></p>
-<p id="section-appendix.a-3">When fragmentation of IPsec is required the overhead is number of
-fragments required for inner mtu and the ESP overhead times IP
-overhead (20) plus a any required tail padding. The required tail
-padding is the number of fragments times the outer MTU minus
-the ESP overhead minus the inner MTU length. So:<a href="#section-appendix.a-3" class="pilcrow">¶</a></p>
+<p id="section-appendix.a-3">When fragmentation of the inner is required to fit in the outer,
+overhead is the number of outer packets required to carry the
+fragmented inner packet times both the inner IP overhead (20) and the
+outer packet overhead (36) plus any required tail padding in the
+last encap packet. The required tail padding is the number of
+required packets times the difference of the Outer Payload Size and
+the IP Overhead minus the the Inner Payload Size. So:<a href="#section-appendix.a-3" class="pilcrow">¶</a></p>
 <div class="artwork art-text alignLeft" id="section-appendix.a-4">
 <pre>
-Total Inner MTU = Inner MTU + ESP Overhead
-NF = CEILING(Total Inner MTU/Outer MTU)
-OH = NF * IP Overhead + NF * Outer MTU - Total Inner MTU
-OH = NF * (IP Overhead + Outer MTU) - Total Inner MTU
+Inner Paylaod Size = IP Packet Size - IP Overhead
+NF = CEILING(Inner Payload Size / (Outer Payload Size - IP Overhead))
+
+OH = NF * (IP Overhead + IPsec Overhead)
+   + NF * (Outer Payload Size - $ipo) - Inner Payload Size
+
+OH = NF * (IP Overhead + IPSec Overhead + Outer Payload Size)
+   - Inner Payload Size
 </pre>
 <a href="#section-appendix.a-4" class="pilcrow">¶</a>
 </div>
@@ -2002,101 +2008,110 @@ OH = NF * (IP Overhead + Outer MTU) - Total Inner MTU
 <thead>
           <tr>
             <th class="text-left" rowspan="1" colspan="1">Type</th>
-            <th class="text-left" rowspan="1" colspan="1">IPSec</th>
-            <th class="text-left" rowspan="1" colspan="1">IPSec</th>
-            <th class="text-left" rowspan="1" colspan="1">IPSec</th>
+            <th class="text-left" rowspan="1" colspan="1">ESP+Pad</th>
+            <th class="text-left" rowspan="1" colspan="1">ESP+Pad</th>
+            <th class="text-left" rowspan="1" colspan="1">ESP+Pad</th>
             <th class="text-left" rowspan="1" colspan="1">TFS</th>
             <th class="text-left" rowspan="1" colspan="1">TFS</th>
             <th class="text-left" rowspan="1" colspan="1">TFS</th>
           </tr>
           <tr>
-            <th class="text-left" rowspan="1" colspan="1">MTU</th>
+            <th class="text-left" rowspan="1" colspan="1">PktSize</th>
             <th class="text-left" rowspan="1" colspan="1">576</th>
             <th class="text-left" rowspan="1" colspan="1">1500</th>
             <th class="text-left" rowspan="1" colspan="1">9000</th>
             <th class="text-left" rowspan="1" colspan="1">576</th>
             <th class="text-left" rowspan="1" colspan="1">1500</th>
             <th class="text-left" rowspan="1" colspan="1">9000</th>
+          </tr>
+          <tr>
+            <th class="text-left" rowspan="1" colspan="1"> </th>
+            <th class="text-left" rowspan="1" colspan="1">540</th>
+            <th class="text-left" rowspan="1" colspan="1">1464</th>
+            <th class="text-left" rowspan="1" colspan="1">8964</th>
+            <th class="text-left" rowspan="1" colspan="1">536</th>
+            <th class="text-left" rowspan="1" colspan="1">1460</th>
+            <th class="text-left" rowspan="1" colspan="1">8960</th>
           </tr>
         </thead>
         <tbody>
           <tr>
-            <td class="text-left" rowspan="1" colspan="1">64</td>
-            <td class="text-left" rowspan="1" colspan="1">800.0%</td>
-            <td class="text-left" rowspan="1" colspan="1">2243.8%</td>
-            <td class="text-left" rowspan="1" colspan="1">13962.5%</td>
+            <td class="text-left" rowspan="1" colspan="1">40</td>
+            <td class="text-left" rowspan="1" colspan="1">1250.0%</td>
+            <td class="text-left" rowspan="1" colspan="1">3560.0%</td>
+            <td class="text-left" rowspan="1" colspan="1">22310.0%</td>
             <td class="text-left" rowspan="1" colspan="1">7.5%</td>
             <td class="text-left" rowspan="1" colspan="1">2.7%</td>
             <td class="text-left" rowspan="1" colspan="1">0.4%</td>
           </tr>
           <tr>
             <td class="text-left" rowspan="1" colspan="1">128</td>
-            <td class="text-left" rowspan="1" colspan="1">350.0%</td>
-            <td class="text-left" rowspan="1" colspan="1">1071.9%</td>
-            <td class="text-left" rowspan="1" colspan="1">6931.2%</td>
+            <td class="text-left" rowspan="1" colspan="1">321.9%</td>
+            <td class="text-left" rowspan="1" colspan="1">1043.8%</td>
+            <td class="text-left" rowspan="1" colspan="1">6903.1%</td>
             <td class="text-left" rowspan="1" colspan="1">7.5%</td>
             <td class="text-left" rowspan="1" colspan="1">2.7%</td>
             <td class="text-left" rowspan="1" colspan="1">0.4%</td>
           </tr>
           <tr>
             <td class="text-left" rowspan="1" colspan="1">256</td>
-            <td class="text-left" rowspan="1" colspan="1">125.0%</td>
-            <td class="text-left" rowspan="1" colspan="1">485.9%</td>
-            <td class="text-left" rowspan="1" colspan="1">3415.6%</td>
+            <td class="text-left" rowspan="1" colspan="1">110.9%</td>
+            <td class="text-left" rowspan="1" colspan="1">471.9%</td>
+            <td class="text-left" rowspan="1" colspan="1">3401.6%</td>
             <td class="text-left" rowspan="1" colspan="1">7.5%</td>
             <td class="text-left" rowspan="1" colspan="1">2.7%</td>
             <td class="text-left" rowspan="1" colspan="1">0.4%</td>
           </tr>
           <tr>
             <td class="text-left" rowspan="1" colspan="1">536</td>
-            <td class="text-left" rowspan="1" colspan="1">7.5%</td>
-            <td class="text-left" rowspan="1" colspan="1">179.9%</td>
-            <td class="text-left" rowspan="1" colspan="1">1579.1%</td>
+            <td class="text-left" rowspan="1" colspan="1">0.7%</td>
+            <td class="text-left" rowspan="1" colspan="1">173.1%</td>
+            <td class="text-left" rowspan="1" colspan="1">1572.4%</td>
             <td class="text-left" rowspan="1" colspan="1">7.5%</td>
             <td class="text-left" rowspan="1" colspan="1">2.7%</td>
             <td class="text-left" rowspan="1" colspan="1">0.4%</td>
           </tr>
           <tr>
             <td class="text-left" rowspan="1" colspan="1">576</td>
-            <td class="text-left" rowspan="1" colspan="1">104.2%</td>
-            <td class="text-left" rowspan="1" colspan="1">160.4%</td>
-            <td class="text-left" rowspan="1" colspan="1">1462.5%</td>
+            <td class="text-left" rowspan="1" colspan="1">110.4%</td>
+            <td class="text-left" rowspan="1" colspan="1">154.2%</td>
+            <td class="text-left" rowspan="1" colspan="1">1456.2%</td>
             <td class="text-left" rowspan="1" colspan="1">7.5%</td>
             <td class="text-left" rowspan="1" colspan="1">2.7%</td>
             <td class="text-left" rowspan="1" colspan="1">0.4%</td>
           </tr>
           <tr>
             <td class="text-left" rowspan="1" colspan="1">1460</td>
-            <td class="text-left" rowspan="1" colspan="1">21.4%</td>
-            <td class="text-left" rowspan="1" colspan="1">2.7%</td>
-            <td class="text-left" rowspan="1" colspan="1">516.4%</td>
+            <td class="text-left" rowspan="1" colspan="1">23.8%</td>
+            <td class="text-left" rowspan="1" colspan="1">0.3%</td>
+            <td class="text-left" rowspan="1" colspan="1">514.0%</td>
             <td class="text-left" rowspan="1" colspan="1">7.5%</td>
             <td class="text-left" rowspan="1" colspan="1">2.7%</td>
             <td class="text-left" rowspan="1" colspan="1">0.4%</td>
           </tr>
           <tr>
             <td class="text-left" rowspan="1" colspan="1">1500</td>
-            <td class="text-left" rowspan="1" colspan="1">18.1%</td>
-            <td class="text-left" rowspan="1" colspan="1">101.6%</td>
-            <td class="text-left" rowspan="1" colspan="1">500.0%</td>
+            <td class="text-left" rowspan="1" colspan="1">20.5%</td>
+            <td class="text-left" rowspan="1" colspan="1">104.0%</td>
+            <td class="text-left" rowspan="1" colspan="1">497.6%</td>
             <td class="text-left" rowspan="1" colspan="1">7.5%</td>
             <td class="text-left" rowspan="1" colspan="1">2.7%</td>
             <td class="text-left" rowspan="1" colspan="1">0.4%</td>
           </tr>
           <tr>
             <td class="text-left" rowspan="1" colspan="1">8960</td>
-            <td class="text-left" rowspan="1" colspan="1">6.2%</td>
-            <td class="text-left" rowspan="1" colspan="1">1.6%</td>
-            <td class="text-left" rowspan="1" colspan="1">0.4%</td>
+            <td class="text-left" rowspan="1" colspan="1">20.0%</td>
+            <td class="text-left" rowspan="1" colspan="1">19.0%</td>
+            <td class="text-left" rowspan="1" colspan="1">0.0%</td>
             <td class="text-left" rowspan="1" colspan="1">7.5%</td>
             <td class="text-left" rowspan="1" colspan="1">2.7%</td>
             <td class="text-left" rowspan="1" colspan="1">0.4%</td>
           </tr>
           <tr>
             <td class="text-left" rowspan="1" colspan="1">9000</td>
-            <td class="text-left" rowspan="1" colspan="1">5.8%</td>
-            <td class="text-left" rowspan="1" colspan="1">18.0%</td>
-            <td class="text-left" rowspan="1" colspan="1">100.3%</td>
+            <td class="text-left" rowspan="1" colspan="1">19.4%</td>
+            <td class="text-left" rowspan="1" colspan="1">18.4%</td>
+            <td class="text-left" rowspan="1" colspan="1">100.7%</td>
             <td class="text-left" rowspan="1" colspan="1">7.5%</td>
             <td class="text-left" rowspan="1" colspan="1">2.7%</td>
             <td class="text-left" rowspan="1" colspan="1">0.4%</td>
@@ -2112,9 +2127,9 @@ OH = NF * (IP Overhead + Outer MTU) - Total Inner MTU
 <thead>
           <tr>
             <th class="text-left" rowspan="1" colspan="1">Type</th>
-            <th class="text-left" rowspan="1" colspan="1">IPSec</th>
-            <th class="text-left" rowspan="1" colspan="1">IPSec</th>
-            <th class="text-left" rowspan="1" colspan="1">IPSec</th>
+            <th class="text-left" rowspan="1" colspan="1">ESP+Pad</th>
+            <th class="text-left" rowspan="1" colspan="1">ESP+Pad</th>
+            <th class="text-left" rowspan="1" colspan="1">ESP+Pad</th>
             <th class="text-left" rowspan="1" colspan="1">TFS</th>
             <th class="text-left" rowspan="1" colspan="1">TFS</th>
             <th class="text-left" rowspan="1" colspan="1">TFS</th>
@@ -2128,85 +2143,94 @@ OH = NF * (IP Overhead + Outer MTU) - Total Inner MTU
             <th class="text-left" rowspan="1" colspan="1">1500</th>
             <th class="text-left" rowspan="1" colspan="1">9000</th>
           </tr>
+          <tr>
+            <th class="text-left" rowspan="1" colspan="1">PSize</th>
+            <th class="text-left" rowspan="1" colspan="1">540</th>
+            <th class="text-left" rowspan="1" colspan="1">1464</th>
+            <th class="text-left" rowspan="1" colspan="1">8964</th>
+            <th class="text-left" rowspan="1" colspan="1">536</th>
+            <th class="text-left" rowspan="1" colspan="1">1460</th>
+            <th class="text-left" rowspan="1" colspan="1">8960</th>
+          </tr>
         </thead>
         <tbody>
           <tr>
-            <td class="text-left" rowspan="1" colspan="1">64</td>
-            <td class="text-left" rowspan="1" colspan="1">512</td>
-            <td class="text-left" rowspan="1" colspan="1">1436</td>
-            <td class="text-left" rowspan="1" colspan="1">8936</td>
-            <td class="text-left" rowspan="1" colspan="1">4.8</td>
-            <td class="text-left" rowspan="1" colspan="1">1.8</td>
-            <td class="text-left" rowspan="1" colspan="1">0.3</td>
+            <td class="text-left" rowspan="1" colspan="1">40</td>
+            <td class="text-left" rowspan="1" colspan="1">500</td>
+            <td class="text-left" rowspan="1" colspan="1">1424</td>
+            <td class="text-left" rowspan="1" colspan="1">8924</td>
+            <td class="text-left" rowspan="1" colspan="1">3.0</td>
+            <td class="text-left" rowspan="1" colspan="1">1.1</td>
+            <td class="text-left" rowspan="1" colspan="1">0.2</td>
           </tr>
           <tr>
             <td class="text-left" rowspan="1" colspan="1">128</td>
-            <td class="text-left" rowspan="1" colspan="1">448</td>
-            <td class="text-left" rowspan="1" colspan="1">1372</td>
-            <td class="text-left" rowspan="1" colspan="1">8872</td>
+            <td class="text-left" rowspan="1" colspan="1">412</td>
+            <td class="text-left" rowspan="1" colspan="1">1336</td>
+            <td class="text-left" rowspan="1" colspan="1">8836</td>
             <td class="text-left" rowspan="1" colspan="1">9.6</td>
             <td class="text-left" rowspan="1" colspan="1">3.5</td>
             <td class="text-left" rowspan="1" colspan="1">0.6</td>
           </tr>
           <tr>
             <td class="text-left" rowspan="1" colspan="1">256</td>
-            <td class="text-left" rowspan="1" colspan="1">320</td>
-            <td class="text-left" rowspan="1" colspan="1">1244</td>
-            <td class="text-left" rowspan="1" colspan="1">8744</td>
+            <td class="text-left" rowspan="1" colspan="1">284</td>
+            <td class="text-left" rowspan="1" colspan="1">1208</td>
+            <td class="text-left" rowspan="1" colspan="1">8708</td>
             <td class="text-left" rowspan="1" colspan="1">19.1</td>
             <td class="text-left" rowspan="1" colspan="1">7.0</td>
             <td class="text-left" rowspan="1" colspan="1">1.1</td>
           </tr>
           <tr>
             <td class="text-left" rowspan="1" colspan="1">536</td>
-            <td class="text-left" rowspan="1" colspan="1">40</td>
-            <td class="text-left" rowspan="1" colspan="1">964</td>
-            <td class="text-left" rowspan="1" colspan="1">8464</td>
+            <td class="text-left" rowspan="1" colspan="1">4</td>
+            <td class="text-left" rowspan="1" colspan="1">928</td>
+            <td class="text-left" rowspan="1" colspan="1">8428</td>
             <td class="text-left" rowspan="1" colspan="1">40.0</td>
             <td class="text-left" rowspan="1" colspan="1">14.7</td>
             <td class="text-left" rowspan="1" colspan="1">2.4</td>
           </tr>
           <tr>
             <td class="text-left" rowspan="1" colspan="1">576</td>
-            <td class="text-left" rowspan="1" colspan="1">600</td>
-            <td class="text-left" rowspan="1" colspan="1">924</td>
-            <td class="text-left" rowspan="1" colspan="1">8424</td>
+            <td class="text-left" rowspan="1" colspan="1">636</td>
+            <td class="text-left" rowspan="1" colspan="1">888</td>
+            <td class="text-left" rowspan="1" colspan="1">8388</td>
             <td class="text-left" rowspan="1" colspan="1">43.0</td>
             <td class="text-left" rowspan="1" colspan="1">15.8</td>
             <td class="text-left" rowspan="1" colspan="1">2.6</td>
           </tr>
           <tr>
             <td class="text-left" rowspan="1" colspan="1">1460</td>
-            <td class="text-left" rowspan="1" colspan="1">312</td>
-            <td class="text-left" rowspan="1" colspan="1">40</td>
-            <td class="text-left" rowspan="1" colspan="1">7540</td>
+            <td class="text-left" rowspan="1" colspan="1">348</td>
+            <td class="text-left" rowspan="1" colspan="1">4</td>
+            <td class="text-left" rowspan="1" colspan="1">7504</td>
             <td class="text-left" rowspan="1" colspan="1">109.0</td>
             <td class="text-left" rowspan="1" colspan="1">40.0</td>
             <td class="text-left" rowspan="1" colspan="1">6.5</td>
           </tr>
           <tr>
             <td class="text-left" rowspan="1" colspan="1">1500</td>
-            <td class="text-left" rowspan="1" colspan="1">272</td>
-            <td class="text-left" rowspan="1" colspan="1">1524</td>
-            <td class="text-left" rowspan="1" colspan="1">7500</td>
+            <td class="text-left" rowspan="1" colspan="1">308</td>
+            <td class="text-left" rowspan="1" colspan="1">1560</td>
+            <td class="text-left" rowspan="1" colspan="1">7464</td>
             <td class="text-left" rowspan="1" colspan="1">111.9</td>
             <td class="text-left" rowspan="1" colspan="1">41.1</td>
             <td class="text-left" rowspan="1" colspan="1">6.7</td>
           </tr>
           <tr>
             <td class="text-left" rowspan="1" colspan="1">8960</td>
-            <td class="text-left" rowspan="1" colspan="1">560</td>
-            <td class="text-left" rowspan="1" colspan="1">144</td>
-            <td class="text-left" rowspan="1" colspan="1">40</td>
+            <td class="text-left" rowspan="1" colspan="1">1788</td>
+            <td class="text-left" rowspan="1" colspan="1">1700</td>
+            <td class="text-left" rowspan="1" colspan="1">4</td>
             <td class="text-left" rowspan="1" colspan="1">668.7</td>
             <td class="text-left" rowspan="1" colspan="1">245.5</td>
             <td class="text-left" rowspan="1" colspan="1">40.0</td>
           </tr>
           <tr>
             <td class="text-left" rowspan="1" colspan="1">9000</td>
-            <td class="text-left" rowspan="1" colspan="1">520</td>
-            <td class="text-left" rowspan="1" colspan="1">1624</td>
-            <td class="text-left" rowspan="1" colspan="1">9024</td>
+            <td class="text-left" rowspan="1" colspan="1">1748</td>
+            <td class="text-left" rowspan="1" colspan="1">1660</td>
+            <td class="text-left" rowspan="1" colspan="1">9060</td>
             <td class="text-left" rowspan="1" colspan="1">671.6</td>
             <td class="text-left" rowspan="1" colspan="1">246.6</td>
             <td class="text-left" rowspan="1" colspan="1">40.2</td>
@@ -2215,7 +2239,7 @@ OH = NF * (IP Overhead + Outer MTU) - Total Inner MTU
       </table>
 </section>
 </div>
-<div id="org99ba77d">
+<div id="orge324fea">
 <section id="section-appendix.b">
       <h2 id="name-acknowledgements">
 <a href="#section-appendix.b" class="section-number selfRef">Appendix B. </a><a href="#name-acknowledgements" class="section-name selfRef">Acknowledgements</a>
@@ -2223,7 +2247,7 @@ OH = NF * (IP Overhead + Outer MTU) - Total Inner MTU
 <p id="section-appendix.b-1">We would like to thank Don Fedyk for help in reviewing this work.<a href="#section-appendix.b-1" class="pilcrow">¶</a></p>
 </section>
 </div>
-<div id="org873bb2f">
+<div id="org14d3c9e">
 <section id="section-appendix.c">
       <h2 id="name-contributors">
 <a href="#section-appendix.c" class="section-number selfRef">Appendix C. </a><a href="#name-contributors" class="section-name selfRef">Contributors</a>
