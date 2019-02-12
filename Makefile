@@ -22,13 +22,14 @@ INC := $(wildcard src/*.h)
 OBJ := $(patsubst src/%.c,$(OBJDIR)/%.o,$(SRC))
 BIN := $(OBJDIR)/iptfs
 
-ORG := $(shell find -name '*.org')
+ORG := $(shell find . -name '*.org')
 PDF := $(wildcard doc/*.pdf)
 DRAFTS := draft/draft-chopps-ipsecme-iptfs-00.txt draft/draft-chopps-ipsecme-iptfs-00.xml
 SCRIPTS := $(wildcard *.sh)
-MAKEFILES := $(shell find -name '*.org')
+MAKEFILES := $(shell find . -name '*.org')
 
-all: $(BIN)
+
+all: $(BIN) draft
 
 print: $(ALL)
 	enscript -o - -1 $(DRAFTS) $(ORG) | ps2pdf - /tmp/rp-1pp.pdf
@@ -37,6 +38,10 @@ print: $(ALL)
 	gs -dBATCH -dNOPAUSE -q -sDEVICE=pdfwrite -sOutputFile=release-pack.pdf \
 	     $(PDF) /tmp/rp-*.pdf
 	rm /tmp/rp-*.pdf
+
+.PHONY: draft
+draft:
+	$(MAKE) -C draft
 
 clean:
 	rm -f $(BIN) $(OBJ) release-pack-*.pdf

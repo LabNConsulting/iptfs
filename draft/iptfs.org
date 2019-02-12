@@ -619,17 +619,17 @@ then non-congestion controlled mode use should be considered instead.
 
 * References
 ** Normative References
-*** AppCrypt
-    :PROPERTIES:
-    :REF_TITLE: Applied Cryptography: Protocols, Algorithms, and Source Code in C
-    :REF_AUTHOR: Bruce Schneier
-    :REF_DATE: 2017
-    :END:
 *** RFC2119
 *** RFC4303
 *** RFC7296
 *** RFC8174
 ** Informative References
+*** AppCrypt
+    :PROPERTIES:
+    :REF_TITLE: Applied Cryptography: Protocols, Algorithms, and Source Code in C
+    :REF_AUTHOR: Bruce Schneier
+    :REF_DATE: 2017-11-01
+    :END:
 *** RFC0791
 *** RFC1191
 *** RFC2474

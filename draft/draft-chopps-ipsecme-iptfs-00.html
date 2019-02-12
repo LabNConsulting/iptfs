@@ -900,7 +900,7 @@ caption a[href] {
 </tr></thead>
 <tfoot><tr>
 <td class="left">Hopps</td>
-<td class="center">Expires 15 August 2019</td>
+<td class="center">Expires 16 August 2019</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -908,12 +908,12 @@ caption a[href] {
 <dl id="identifiers">
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2019-02-11" class="published">11 February 2019</time>
+<time datetime="2019-02-12" class="published">12 February 2019</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Standards Track</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2019-08-15">15 August 2019</time></dd>
+<dd class="expires"><time datetime="2019-08-16">16 August 2019</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -954,7 +954,7 @@ and constant send rate IPsec tunnel.<a href="#section-abstract-1" class="pilcrow
         material or to cite them other than as "work in progress."
         <a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 15 August 2019.
+        This Internet-Draft will expire on 16 August 2019.
         <a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
@@ -1113,7 +1113,7 @@ and constant send rate IPsec tunnel.<a href="#section-abstract-1" class="pilcrow
 </nav>
 </section>
 </div>
-<div id="orgb4a89d0">
+<div id="orgabf0d47">
 <section id="section-1">
       <h2 id="name-introduction">
 <a href="#section-1" class="section-number selfRef">1. </a><a href="#name-introduction" class="section-name selfRef">Introduction</a>
@@ -1135,11 +1135,11 @@ bandwidth limitation. To do this we use a constant send rate IPsec
 these fixed-sized packets can contain partial, full or multiple IP
 packets to maximize the bandwidth of the tunnel.</span><a href="#section-1-3" class="pilcrow">¶</a></p>
 <p id="section-1-4">For a comparison of the overhead of IP-TFS with the RFC4303
-prescribed TFC solution see <a href="#orgad6414c" class="xref">Appendix A</a><a href="#section-1-4" class="pilcrow">¶</a></p>
+prescribed TFC solution see <a href="#org48f7dae" class="xref">Appendix A</a><a href="#section-1-4" class="pilcrow">¶</a></p>
 <p id="section-1-5">Additionally, IP-TFS provides for dealing with network congestion
 <span>[<a href="#RFC2914" class="xref">RFC2914</a>]. This is important for when the IP-TFS user is not in full
 control of the domain through which the IP-TFS tunnel path flows.</span><a href="#section-1-5" class="pilcrow">¶</a></p>
-<div id="org1be3cd0">
+<div id="orgeb6359d">
 <section id="section-1.1">
         <h3 id="name-terminology-concepts">
 <a href="#section-1.1" class="section-number selfRef">1.1. </a><a href="#name-terminology-concepts" class="section-name selfRef">Terminology &amp; Concepts</a>
@@ -1155,12 +1155,12 @@ in <span>[<a href="#RFC4301" class="xref">RFC4301</a>].</span><a href="#section-
 </div>
 </section>
 </div>
-<div id="orgfafa43f">
+<div id="org767cc03">
 <section id="section-2">
       <h2 id="name-the-ip-tfs-tunnel">
 <a href="#section-2" class="section-number selfRef">2. </a><a href="#name-the-ip-tfs-tunnel" class="section-name selfRef">The IP-TFS Tunnel</a>
       </h2>
-<p id="section-2-1">As mentioned in <a href="#orgb4a89d0" class="xref">Section 1</a> IP-TFS utilizes an IPsec <span>[<a href="#RFC4303" class="xref">RFC4303</a>]
+<p id="section-2-1">As mentioned in <a href="#orgabf0d47" class="xref">Section 1</a> IP-TFS utilizes an IPsec <span>[<a href="#RFC4303" class="xref">RFC4303</a>]
 tunnel as it's transport. To provide for full TFC we send fixed sized
 encapsulating packets at a constant rate on the tunnel.</span><a href="#section-2-1" class="pilcrow">¶</a></p>
 <p id="section-2-2">The primary input to the tunnel algorithm is the requested bandwidth
@@ -1180,7 +1180,7 @@ tunnel. Indeed, the ingress (sending) side of the IP-TFS tunnel MUST
 be allowed to vary the size and rate at which it sends encapsulating
 packets, including sending them larger, smaller, faster or slower
 than the requested size and rate.<a href="#section-2-5" class="pilcrow">¶</a></p>
-<div id="org38fd7fe">
+<div id="orge2ce0fc">
 <section id="section-2.1">
         <h3 id="name-tunnel-content">
 <a href="#section-2.1" class="section-number selfRef">2.1. </a><a href="#name-tunnel-content" class="section-name selfRef">Tunnel Content</a>
@@ -1197,7 +1197,7 @@ tunnel packet transmission.<a href="#section-2.1-2" class="pilcrow">¶</a></p>
 a new IP protocol number IPTFS_PROTOCOL (TBD). A payload of
 IPTFS_PROTOCOL type is comprised of a 32 bit header followed by
 either a partial, a full or multiple partial or full data-blocks.<a href="#section-2.1-3" class="pilcrow">¶</a></p>
-<div id="org3e1c3dd">
+<div id="orgce0f280">
 <section id="section-2.1.1">
           <h4 id="name-ipsec-esp-payload">
 <a href="#section-2.1.1" class="section-number selfRef">2.1.1. </a><a href="#name-ipsec-esp-payload" class="section-name selfRef">IPSec/ESP Payload</a>
@@ -1235,7 +1235,7 @@ data-block that is still being re-assembled.<a href="#section-2.1.1-2" class="pi
 <p id="section-2.1.1-3">The V (version) bit is included for future compatibility.<a href="#section-2.1.1-3" class="pilcrow">¶</a></p>
 </section>
 </div>
-<div id="org17c438d">
+<div id="orgd33e15a">
 <section id="section-2.1.2">
           <h4 id="name-data-blocks">
 <a href="#section-2.1.2" class="section-number selfRef">2.1.2. </a><a href="#name-data-blocks" class="section-name selfRef">Data-Blocks</a>
@@ -1259,7 +1259,7 @@ length of the data block is extracted from the encapsulated IPv4 or
 IPv6 packet's length field.<a href="#section-2.1.2-2" class="pilcrow">¶</a></p>
 </section>
 </div>
-<div id="org514aaec">
+<div id="org14a9f29">
 <section id="section-2.1.3">
           <h4 id="name-no-implicit-padding">
 <a href="#section-2.1.3" class="section-number selfRef">2.1.3. </a><a href="#name-no-implicit-padding" class="section-name selfRef">No Implicit Padding</a>
@@ -1274,7 +1274,7 @@ fetch the length field from the subsequent encapsulating packet
 payload.<a href="#section-2.1.3-1" class="pilcrow">¶</a></p>
 </section>
 </div>
-<div id="org9a544b2">
+<div id="org219c4ea">
 <section id="section-2.1.4">
           <h4 id="name-ip-header-value-mapping">
 <a href="#section-2.1.4" class="section-number selfRef">2.1.4. </a><a href="#name-ip-header-value-mapping" class="section-name selfRef">IP Header Value Mapping</a>
@@ -1300,7 +1300,7 @@ by configuration.</span><a href="#section-2.1.4-1" class="pilcrow">¶</a></p>
 </div>
 </section>
 </div>
-<div id="orgb24807a">
+<div id="org763919a">
 <section id="section-2.2">
         <h3 id="name-exclusive-sa-use">
 <a href="#section-2.2" class="section-number selfRef">2.2. </a><a href="#name-exclusive-sa-use" class="section-name selfRef">Exclusive SA Use</a>
@@ -1316,7 +1316,7 @@ deemed worthwhile. Other IPsec uses can configure and use their own
 SAs.<a href="#section-2.2-1" class="pilcrow">¶</a></p>
 </section>
 </div>
-<div id="org6e48526">
+<div id="org45a9792">
 <section id="section-2.3">
         <h3 id="name-initiation-of-tfs-mode">
 <a href="#section-2.3" class="section-number selfRef">2.3. </a><a href="#name-initiation-of-tfs-mode" class="section-name selfRef">Initiation of TFS mode</a>
@@ -1329,7 +1329,7 @@ of the first ESP payload with the IPTFS_PROTOCOL indicated as the
 payload type.<a href="#section-2.3-1" class="pilcrow">¶</a></p>
 </section>
 </div>
-<div id="orgdb6fe4b">
+<div id="org28429bf">
 <section id="section-2.4">
         <h3 id="name-example-of-an-encapsulated-">
 <a href="#section-2.4" class="section-number selfRef">2.4. </a><a href="#name-example-of-an-encapsulated-" class="section-name selfRef">Example of an encapsulated IP packet flow</a>
@@ -1367,7 +1367,7 @@ allows for quick recovery with minimal inner packet loss in the
 presence of outer encapsulating packet loss.<a href="#section-2.4-5" class="pilcrow">¶</a></p>
 </section>
 </div>
-<div id="org4c04b33">
+<div id="orgbf5a8ef">
 <section id="section-2.5">
         <h3 id="name-modes-of-operation">
 <a href="#section-2.5" class="section-number selfRef">2.5. </a><a href="#name-modes-of-operation" class="section-name selfRef">Modes of operation</a>
@@ -1377,7 +1377,7 @@ Bidirectional functionality is achieved by setting up 2 tunnels, one
 in either direction.<a href="#section-2.5-1" class="pilcrow">¶</a></p>
 <p id="section-2.5-2">An IP-TFS tunnel can operate in 2 modes, a non-congestion controlled
 mode and congestion controlled mode.<a href="#section-2.5-2" class="pilcrow">¶</a></p>
-<div id="org26a4ab7">
+<div id="orgaefdb86">
 <section id="section-2.5.1">
           <h4 id="name-non-congestion-controlled-m">
 <a href="#section-2.5.1" class="section-number selfRef">2.5.1. </a><a href="#name-non-congestion-controlled-m" class="section-name selfRef">Non-Congestion Controlled Mode</a>
@@ -1396,7 +1396,7 @@ via syslog, YANG notification, SNMP traps, etc) so that any
 failures due to a lack of bandwidth can be corrected.</span><a href="#section-2.5.1-2" class="pilcrow">¶</a></p>
 </section>
 </div>
-<div id="orgd4a7450">
+<div id="orgc22a0ce">
 <section id="section-2.5.2">
           <h4 id="name-congestion-controlled-mode">
 <a href="#section-2.5.2" class="section-number selfRef">2.5.2. </a><a href="#name-congestion-controlled-mode" class="section-name selfRef">Congestion Controlled Mode</a>
@@ -1439,7 +1439,7 @@ circuit breakers are outside the scope of this document.</span><a href="#section
 </div>
 </section>
 </div>
-<div id="org8432944">
+<div id="orgb951915">
 <section id="section-3">
       <h2 id="name-congestion-information">
 <a href="#section-3" class="section-number selfRef">3. </a><a href="#name-congestion-information" class="section-name selfRef">Congestion Information</a>
@@ -1456,7 +1456,7 @@ sending device or to implement Circuit Breakers <span>[<a href="#RFC8084" class=
 notifications <span>[<a href="#RFC7296" class="xref">RFC7296</a>]. These notifications are sent at a configured
 interval (which can be configured to 0 to disable the sending of the
 reports).</span><a href="#section-3-3" class="pilcrow">¶</a></p>
-<div id="org5396b7e">
+<div id="org1dac98c">
 <section id="section-3.1">
         <h3 id="name-ecn-support">
 <a href="#section-3.1" class="section-number selfRef">3.1. </a><a href="#name-ecn-support" class="section-name selfRef">ECN Support</a>
@@ -1480,7 +1480,7 @@ NOT be enabled by default.</span><a href="#section-3.1-2" class="pilcrow">¶</a>
 </div>
 </section>
 </div>
-<div id="orgaf2ccb5">
+<div id="orgc86ba0d">
 <section id="section-4">
       <h2 id="name-configuration">
 <a href="#section-4" class="section-number selfRef">4. </a><a href="#name-configuration" class="section-name selfRef">Configuration</a>
@@ -1490,7 +1490,7 @@ configuration. All IP-TFS specific configuration (i.e., in addition
 to the underlying IPsec tunnel configuration) should be able to be
 specified at the tunnel ingress (sending) side alone (i.e.,
 single-ended provisioning).<a href="#section-4-1" class="pilcrow">¶</a></p>
-<div id="org604fea4">
+<div id="org42b1280">
 <section id="section-4.1">
         <h3 id="name-bandwidth">
 <a href="#section-4.1" class="section-number selfRef">4.1. </a><a href="#name-bandwidth" class="section-name selfRef">Bandwidth</a>
@@ -1503,7 +1503,7 @@ maximum bandwidth available. No standardized configuration method is
 required.<a href="#section-4.1-1" class="pilcrow">¶</a></p>
 </section>
 </div>
-<div id="org7996909">
+<div id="orge735b11">
 <section id="section-4.2">
         <h3 id="name-fixed-packet-size">
 <a href="#section-4.2" class="section-number selfRef">4.2. </a><a href="#name-fixed-packet-size" class="section-name selfRef">Fixed Packet Size</a>
@@ -1514,7 +1514,7 @@ Path MTU discovery (see <span>[<a href="#RFC1191" class="xref">RFC1191</a>] and 
 configuration method is required.</span><a href="#section-4.2-1" class="pilcrow">¶</a></p>
 </section>
 </div>
-<div id="org754a079">
+<div id="orgaecc01f">
 <section id="section-4.3">
         <h3 id="name-congestion-information-conf">
 <a href="#section-4.3" class="section-number selfRef">4.3. </a><a href="#name-congestion-information-conf" class="section-name selfRef">Congestion Information Configuration</a>
@@ -1556,17 +1556,17 @@ information.<a href="#section-4.3-7" class="pilcrow">¶</a></p>
 </div>
 </section>
 </div>
-<div id="org2075513">
+<div id="orgbc7f387">
 <section id="section-5">
       <h2 id="name-packet-and-data-formats">
 <a href="#section-5" class="section-number selfRef">5. </a><a href="#name-packet-and-data-formats" class="section-name selfRef">Packet and Data Formats</a>
       </h2>
-<div id="orgcf66128">
+<div id="orgac66de0">
 <section id="section-5.1">
         <h3 id="name-ipsec">
 <a href="#section-5.1" class="section-number selfRef">5.1. </a><a href="#name-ipsec" class="section-name selfRef">IPSec</a>
         </h3>
-<div id="org1334f5e">
+<div id="org943975b">
 <section id="section-5.1.1">
           <h4 id="name-payload-format">
 <a href="#section-5.1.1" class="section-number selfRef">5.1.1. </a><a href="#name-payload-format" class="section-name selfRef">Payload Format</a>
@@ -1611,7 +1611,7 @@ or continuation of a previous data block.<a href="#section-5.1.1-2.8.1" class="p
           </dl>
 </section>
 </div>
-<div id="org144b317">
+<div id="orgee4c0a0">
 <section id="section-5.1.2">
           <h4 id="name-data-blocks-2">
 <a href="#section-5.1.2" class="section-number selfRef">5.1.2. </a><a href="#name-data-blocks-2" class="section-name selfRef">Data Blocks</a>
@@ -1727,12 +1727,12 @@ inner IPv6 inner packet.<a href="#section-5.1.2.2-3.4.1" class="pilcrow">¶</a><
 </div>
 </section>
 </div>
-<div id="orge2ec0be">
+<div id="orgea54e29">
 <section id="section-5.2">
         <h3 id="name-ikev2">
 <a href="#section-5.2" class="section-number selfRef">5.2. </a><a href="#name-ikev2" class="section-name selfRef">IKEv2</a>
         </h3>
-<div id="org70cd4b9">
+<div id="orgff2a54c">
 <section id="section-5.2.1">
           <h4 id="name-ikev2-congestion-informatio">
 <a href="#section-5.2.1" class="section-number selfRef">5.2.1. </a><a href="#name-ikev2-congestion-informatio" class="section-name selfRef">IKEv2 Congestion Information Configuration Attribute</a>
@@ -1773,7 +1773,7 @@ milliseconds.<a href="#section-5.2.1-3.8.1" class="pilcrow">¶</a></p>
           </dl>
 </section>
 </div>
-<div id="org1d20887">
+<div id="org37de0c3">
 <section id="section-5.2.2">
           <h4 id="name-ikev2-congestion-information">
 <a href="#section-5.2.2" class="section-number selfRef">5.2.2. </a><a href="#name-ikev2-congestion-information" class="section-name selfRef">IKEv2 Congestion Information Notification Data</a>
@@ -1846,7 +1846,7 @@ of this timer value.<a href="#section-5.2.2-3.12.1" class="pilcrow">¶</a></p>
 </div>
 </section>
 </div>
-<div id="orgc072736">
+<div id="org08d602d">
 <section id="section-6">
       <h2 id="name-iana-considerations">
 <a href="#section-6" class="section-number selfRef">6. </a><a href="#name-iana-considerations" class="section-name selfRef">IANA Considerations</a>
@@ -1873,7 +1873,7 @@ Description: The sending rate of congestion information from egress
 Reference: This document<a href="#section-6-6" class="pilcrow">¶</a></p>
 </section>
 </div>
-<div id="orgde7a820">
+<div id="orgce0e874">
 <section id="section-7">
       <h2 id="name-security-considerations">
 <a href="#section-7" class="section-number selfRef">7. </a><a href="#name-security-considerations" class="section-name selfRef">Security Considerations</a>
@@ -1884,7 +1884,7 @@ increase the security of the traffic being transported. Other than
 the additional security afforded by using this mechanism, IP-TFS
 utilizes the security protocols <span>[<a href="#RFC4303" class="xref">RFC4303</a>] and </span><span>[<a href="#RFC7296" class="xref">RFC7296</a>] and so their
 security considerations apply to IP-TFS as well.</span><a href="#section-7-1" class="pilcrow">¶</a></p>
-<p id="section-7-2">As noted previously in <a href="#orgd4a7450" class="xref">Section 2.5.2</a>, for TFC to be
+<p id="section-7-2">As noted previously in <a href="#orgc22a0ce" class="xref">Section 2.5.2</a>, for TFC to be
 fully maintained the encapsulated traffic flow should not be
 affecting network congestion in a predictable way, and if it would be
 then non-congestion controlled mode use should be considered instead.<a href="#section-7-2" class="pilcrow">¶</a></p>
@@ -1895,10 +1895,6 @@ then non-congestion controlled mode use should be considered instead.<a href="#s
 <a href="#section-8" class="section-number selfRef">8. </a><a href="#name-normative-references" class="section-name selfRef">Normative References</a>
       </h2>
 <dl class="references">
-<dt id="AppCrypt">[AppCrypt]</dt>
-      <dd>
-<span class="refAuthor">Schneier, B.</span>, <span class="refTitle">"Applied Cryptography: Protocols, Algorithms, and Source Code in C"</span>, <span class="refContent"></span>, <time datetime="2017">2017</time>. <span class="annotation"></span>
-      </dd>
 <dt id="RFC2119">[RFC2119]</dt>
       <dd>
 <span class="refAuthor">Bradner, S.</span>, <span class="refTitle">"Key words for use in RFCs to Indicate Requirement Levels"</span>, <span class="seriesInfo">BCP 14</span>, <span class="seriesInfo">RFC 2119</span>, <span class="seriesInfo">DOI 10.17487/RFC2119</span>, <time datetime="1997-03">March 1997</time>
@@ -1922,6 +1918,10 @@ then non-congestion controlled mode use should be considered instead.<a href="#s
 <a href="#section-9" class="section-number selfRef">9. </a><a href="#name-informative-references" class="section-name selfRef">Informative References</a>
       </h2>
 <dl class="references">
+<dt id="AppCrypt">[AppCrypt]</dt>
+      <dd>
+<span class="refAuthor">Schneier, B.</span>, <span class="refTitle">"Applied Cryptography: Protocols, Algorithms, and Source Code in C"</span>, <span class="refContent"></span>, <time datetime="2017-11-01">1 November 2017</time>. <span class="annotation"></span>
+      </dd>
 <dt id="I-D.iab-wire-image">[I-D.iab-wire-image]</dt>
       <dd>
 <span class="refAuthor">Trammell, B.</span><span class="refAuthor"> and M. Kuehlewind</span>, <span class="refTitle">"The Wire Image of a Network Protocol"</span>, <span class="seriesInfo">Internet-Draft draft-iab-wire-image-01</span>, <time datetime="2018-11-05">5 November 2018</time>
@@ -1968,7 +1968,7 @@ then non-congestion controlled mode use should be considered instead.<a href="#s
           <span>, &lt;<a href="https://www.rfc-editor.org/info/rfc8201">https://www.rfc-editor.org/info/rfc8201</a>&gt;</span>. </dd>
 </dl>
 </section>
-<div id="orgad6414c">
+<div id="org48f7dae">
 <section id="section-appendix.a">
       <h2 id="name-comparison-of-esppad-vs-ip-">
 <a href="#section-appendix.a" class="section-number selfRef">Appendix A. </a><a href="#name-comparison-of-esppad-vs-ip-" class="section-name selfRef">Comparison of ESP+Pad vs. IP-TFS</a>
@@ -2305,7 +2305,7 @@ packet size.<a href="#section-appendix.a-8" class="pilcrow">¶</a></p>
 <p id="section-appendix.a-10">NOTE: Will Add Throughput Percentage from included spreadsheet.<a href="#section-appendix.a-10" class="pilcrow">¶</a></p>
 </section>
 </div>
-<div id="orgb61fd34">
+<div id="orge26a48a">
 <section id="section-appendix.b">
       <h2 id="name-acknowledgements">
 <a href="#section-appendix.b" class="section-number selfRef">Appendix B. </a><a href="#name-acknowledgements" class="section-name selfRef">Acknowledgements</a>
@@ -2313,7 +2313,7 @@ packet size.<a href="#section-appendix.a-8" class="pilcrow">¶</a></p>
 <p id="section-appendix.b-1">We would like to thank Don Fedyk for help in reviewing this work.<a href="#section-appendix.b-1" class="pilcrow">¶</a></p>
 </section>
 </div>
-<div id="org481ea7e">
+<div id="orgf130644">
 <section id="section-appendix.c">
       <h2 id="name-contributors">
 <a href="#section-appendix.c" class="section-number selfRef">Appendix C. </a><a href="#name-contributors" class="section-name selfRef">Contributors</a>

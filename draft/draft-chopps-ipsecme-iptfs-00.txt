@@ -4,8 +4,8 @@
 
 Network Working Group                                           C. Hopps
 Internet-Draft                                   LabN Consulting, L.L.C.
-Intended status: Standards Track                        11 February 2019
-Expires: 15 August 2019
+Intended status: Standards Track                        12 February 2019
+Expires: 16 August 2019
 
 
                         IP Traffic Flow Security
@@ -34,7 +34,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 15 August 2019.
+   This Internet-Draft will expire on 16 August 2019.
 
 Copyright Notice
 
@@ -674,9 +674,6 @@ Table of Contents
 
 8.  Normative References
 
-   [AppCrypt] "Applied Cryptography: Protocols, Algorithms, and Source
-              Code in C", , 2017.
-
    [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
               Requirement Levels", BCP 14, RFC 2119,
               DOI 10.17487/RFC2119, March 1997,
@@ -696,6 +693,9 @@ Table of Contents
               May 2017, <https://www.rfc-editor.org/info/rfc8174>.
 
 9.  Informative References
+
+   [AppCrypt] "Applied Cryptography: Protocols, Algorithms, and Source
+              Code in C", , 1 November 2017.
 
    [I-D.iab-wire-image]
               Trammell, B. and M. Kuehlewind, "The Wire Image of a
