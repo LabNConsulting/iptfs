@@ -4,8 +4,8 @@
 
 Network Working Group                                           C. Hopps
 Internet-Draft                                   LabN Consulting, L.L.C.
-Intended status: Standards Track                        12 February 2019
-Expires: 16 August 2019
+Intended status: Standards Track                        21 February 2019
+Expires: 25 August 2019
 
 
                         IP Traffic Flow Security
@@ -34,7 +34,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 16 August 2019.
+   This Internet-Draft will expire on 25 August 2019.
 
 Copyright Notice
 
@@ -112,7 +112,7 @@ Table of Contents
    packets to maximize the bandwidth of the tunnel.
 
    For a comparison of the overhead of IP-TFS with the RFC4303
-   prescribed TFC solution see Section appendix.a
+   prescribed TFC solution see Appendix A
 
    Additionally, IP-TFS provides for dealing with network congestion
    [RFC2914].  This is important for when the IP-TFS user is not in full

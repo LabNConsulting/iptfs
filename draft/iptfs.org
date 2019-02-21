@@ -112,7 +112,7 @@ either a partial, a full or multiple partial or full data-blocks.
 
 *** IPSec/ESP Payload
 
-#+name: Layout of IP-TFS IPSec Packet
+#+CAPTION: Layout of IP-TFS IPSec Packet
 #+begin_example
  . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
  . Outer Encapsulating Header ...                                  .
@@ -143,7 +143,7 @@ The V (version) bit is included for future compatibility.
 
 *** Data-Blocks
 
-#+name: Layout of IP-TFS data block
+#+CAPTION: Layout of IP-TFS data block
 #+begin_example
  +-----------------------------------------------------------------+
  | Type  | rest of IPv4, IPv6 or pad.
@@ -219,7 +219,7 @@ may occur in a single encapsulating packet.
 # XXX Consider doing a timing diagram showing random paced input going
 # into fixed rate output, maybe Y axis
 
-#+name: Inner and Outer Packet Flow
+#+CAPTION: Inner and Outer Packet Flow
 #+begin_example
   Offset: 0        Offset: 100    Offset: 2900    Offset: 1400
  [ ESP1  (1500) ][ ESP2  (1500) ][ ESP3  (1500) ][ ESP4  (1500) ]

@@ -14,7 +14,7 @@ clean:
 	rm ${OUTPUT_BASE}.xml ${OUTPUT_BASE}.txt ${OUTPUT_BASE}.html ${OUTPUT_BASE}.pdf
 
 %.xml: $(DRAFT)
-	emacs --batch --load ~/p/org-rfc-export/ox-rfc.el $< -f org-rfc-export-to-xml
+	emacs --batch --load ~/p/org-rfc-export/ox-rfc.el $< -f ox-rfc-export-to-xml
 
 %.txt: %.xml
 	xml2rfc --text -o $@ $<
