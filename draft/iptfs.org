@@ -617,32 +617,31 @@ fully maintained the encapsulated traffic flow should not be
 affecting network congestion in a predictable way, and if it would be
 then non-congestion controlled mode use should be considered instead.
 
-* References
-** Normative References
-*** RFC2119
-*** RFC4303
-*** RFC7296
-*** RFC8174
-** Informative References
-*** AppCrypt
-    :PROPERTIES:
+* Normative References
+** RFC2119
+** RFC4303
+** RFC7296
+** RFC8174
+* Informative References
+** AppCrypt
+   :PROPERTIES:
     :REF_TITLE: Applied Cryptography: Protocols, Algorithms, and Source Code in C
     :REF_AUTHOR: Bruce Schneier
     :REF_DATE: 2017-11-01
     :END:
-*** RFC0791
-*** RFC1191
-*** RFC2474
-*** RFC2914
-*** RFC3168
-*** RFC4301
-*** RFC7510
-*** RFC8084
-*** RFC8200
-*** RFC8201
-*** I-D.iab-wire-image
+** RFC0791
+** RFC1191
+** RFC2474
+** RFC2914
+** RFC3168
+** RFC4301
+** RFC7510
+** RFC8084
+** RFC8200
+** RFC8201
+** I-D.iab-wire-image
 
-** Comparison of ESP+Pad vs. IP-TFS
+* Comparison of ESP+Pad vs. IP-TFS
 The overhead of IP-TFS is 40 bytes per outer packet. Therefore the
 octet overhead per inner packet is 40 divided by the number of outer
 packets required (fractional allowed). The overhead as a percentage of
@@ -733,10 +732,10 @@ packet size.
 
 NOTE: Will Add Throughput Percentage from included spreadsheet.
 
-** Acknowledgements
+* Acknowledgements
 We would like to thank Don Fedyk for help in reviewing this work.
 
-** Contributors
+* Contributors
 The following people made significant contributions to this document.
 
 #+begin_example
