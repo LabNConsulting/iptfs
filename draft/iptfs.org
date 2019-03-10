@@ -2,13 +2,14 @@
 #+STARTUP: align entitiespretty hidestars inlineimages latexpreview noindent showall
 #
 #+TITLE: IP Traffic Flow Security
-#+AUTHOR: Christian E. Hopps
+#+AUTHOR: Christian Hopps
 #+EMAIL: chopps@chopps.org
+#+AFFILIATION: LabN Consulting, L.L.C.
 #
-#+RFC_NAME: draft-chopps-ipsecme-iptfs
+#+RFC_NAME: draft-hopps-ipsecme-iptfs
 #+RFC_VERSION: 00
-#+RFC_AUTHORS: (("Christian Hopps" "chopps@chopps.org" "LabN Consulting, L.L.C."))
-#+RFC_XML_VERSION: 3
+#+RFC_XML_VERSION: 2
+#+RFC_ASCII_TABLE: t
 #
 # Do: title, table-of-contents ::fixed-width-sections |tables
 # Do: ^:sup/sub with curly -:special-strings *:emphasis
@@ -54,11 +55,11 @@ control of the domain through which the IP-TFS tunnel path flows.
 
 ** Terminology & Concepts
 
-The keywords "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
+The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
 "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and
-"OPTIONAL" in this document are to be interpreted as described in BCP
-14, [[RFC2119]] [[RFC8174]] when, and only when, they appear in all
-capitals, as shown here..
+"OPTIONAL" in this document are to be interpreted as described in
+[[RFC2119]] [[RFC8174]] when, and only when, they appear in all capitals,
+as shown here.
 
 This document assumes familiarity with IP security concepts described
 in [[RFC4301]].
@@ -641,18 +642,27 @@ then non-congestion controlled mode use should be considered instead.
 ** RFC8201
 ** I-D.iab-wire-image
 
-* Comparison of ESP+Pad vs. IP-TFS
+* Comparison of ESP with Padding vs. IP-TFS
+  :PROPERTIES:
+  :EXPORT_RFC_ASCII_TABLE: t
+  :END:
+
+** Comparing Overhead
+
+*** IP-TFS Overhead
+
 The overhead of IP-TFS is 40 bytes per outer packet. Therefore the
 octet overhead per inner packet is 40 divided by the number of outer
 packets required (fractional allowed). The overhead as a percentage of
 inner packet size is a constant based on the Outer MTU size.
 
 #+begin_example
-    OH = 40 / Outer Payload Size / Inner Packet Size
-    OH % of Inner Packet Size = 100 * OH / Inner Packet Size
-    OH % of Inner Packet Size = 4000 / Outer Payload Size
+   OH = 40 / Outer Payload Size / Inner Packet Size
+   OH % of Inner Packet Size = 100 * OH / Inner Packet Size
+   OH % of Inner Packet Size = 4000 / Outer Payload Size
 #+end_example
 
+#+BEGIN_CENTER
 #+CAPTION: IP-TFS Overhead as Percentage of Inner Packet Size
 #+TBLNAME: tfsohpct
 |  Type | IP-TFS | IP-TFS | IP-TFS |
@@ -664,6 +674,9 @@ inner packet size is a constant based on the Outer MTU size.
 |  1500 |  7.46% |  2.74% |  0.45% |
 |  9000 |  7.46% |  2.74% |  0.45% |
 #+TBLFM: @3$2..@3$>=@2-$tfso::@4$2..@>$>=4000/@3;%.2f%%
+#+END_CENTER
+
+*** ESP with Padding Overhead
 
 The overhead per inner packet for constant send rate padded ESP
 (i.e., traditional IPSec TFC) is 36 octets plus any padding, unless
@@ -679,20 +692,37 @@ difference of the Outer Payload Size and the IP Overhead minus the
 the Inner Payload Size. So:
 
 #+begin_example
-     Inner Paylaod Size = IP Packet Size - IP Overhead
-     Outer Payload Size = MTU - IPSec Overhead
-     NF = CEILING(Inner Payload Size / (Outer Payload Size - IP Overhead))
+  Inner Paylaod Size = IP Packet Size - IP Overhead
+  Outer Payload Size = MTU - IPSec Overhead
 
-     OH = NF * (IP Overhead + IPsec Overhead) - IP Overhead
-        + NF * (Outer Payload Size - IP Overhead) - Inner Payload Size
+                Inner Payload Size
+  NF0 = ----------------------------------
+         Outer Payload Size - IP Overhead
 
-     OH = NF * (IPSec Overhead + Outer Payload Size)
-        - (IP Overhead + Inner Payload Size)
+  NF = CEILING(NF0)
 
-     OH = NF * (IPSec Overhead + Outer Payload Size) - Inner Packet Size
+  OH = NF * (IP Overhead + IPsec Overhead)
+       - IP Overhead
+       + NF * (Outer Payload Size - IP Overhead)
+       - Inner Payload Size
+
+  OH = NF * (IPSec Overhead + Outer Payload Size)
+       - (IP Overhead + Inner Payload Size)
+
+  OH = NF * (IPSec Overhead + Outer Payload Size)
+       - Inner Packet Size
 #+end_example
 
+** Overhead Comparison
+
+The following 2 tables collect the overhead values for some common
+MTU sizes in order to compare them. The first table is the number of
+octets of overhead for a given MTU sized packet. The second table is
+the percentage of overhead in the same MTU sized packet.
+
 #+CONSTANTS: etho=26 ipo=20 espoh=16 ipso=36 tfso=40
+
+#+BEGIN_CENTER
 #+CAPTION: Overhead comparison in octets
 #+TBLNAME:obytes
 |  Type | ESP+Pad | ESP+Pad | ESP+Pad | IP-TFS | IP-TFS | IP-TFS |
@@ -709,10 +739,9 @@ the Inner Payload Size. So:
 |  8960 |    1408 |    1540 |       4 |  668.7 |  245.5 |   40.0 |
 |  9000 |    1368 |    1500 |    9000 |  671.6 |  246.6 |   40.2 |
 #+TBLFM: @3$2..@3$4=@2-$ipso::@3$5..@3$7=@2-$tfso::@4$2..@>$4=if(@3 > $1, @3-$1, ceil(($1-$ipo)/(@3-$ipo)) * ($ipso + @3) - $1::@4$5..@>$7=$tfso/(@3/$1);%.1f
+#+END_CENTER
 
-Which we can use to calculate the overhead as a percentage of inner
-packet size.
-
+#+BEGIN_CENTER
 #+CAPTION: Overhead as Percentage of Inner Packet Size
 #+TBLNAME:avail-pct
 |  Type | ESP+Pad | ESP+Pad |  ESP+Pad | IP-TFS | IP-TFS | IP-TFS |
@@ -729,8 +758,62 @@ packet size.
 |  8960 |   15.7% |   17.2% |     0.0% |  7.46% |  2.74% |  0.45% |
 |  9000 |   15.2% |   16.7% |   100.0% |  7.46% |  2.74% |  0.45% |
 #+TBLFM: @3$2..@3$4=@2-$ipso::@3$5..@3$7=@2-$tfso::$1=remote(obytes,@@#$1)::@4$2..@>$4=100*remote(obytes,@@#$$#)/$1;%.1f%%::@4$5..@>$7=100*$tfso/(@3/$1)/$1;%.2f%%
+#+END_CENTER
 
-NOTE: Will Add Throughput Percentage from included spreadsheet.
+** Comparing Available Bandwidth
+
+Another way to compare the two solutions is to look at the amount of
+available bandwidth each solution provides. The following sections
+consider and compare the percentage of available bandwidth. For the
+sake of comparison we will also consider a 10G Ethernet link and
+normal ESP. For each solution we subtract the required outer framing
+overhead.
+
+*** Ethernet
+
+In order to calculate the available bandwidth we first calculate the
+per packet overhead in bits. The total overhead of Ethernet is 14+4
+octets of header and CRC plus and additional 20 octets of framing
+(preamble, start, and inter-packet gap) for a total of 48 octets.
+Additionally the minimum payload is 46 octets.
+
+*** IP-TFS Bandwidth
+*** ESP with Padding Bandwidth
+
+#+CAPTION: Packets Per Second on 10G Ethernet Link
+#+TBLNAME: pps
+|  IP Size |   ESP+Pad |   ESP+Pad |   ESP+Pad |  Ethernet |       ESP |
+|      MTU |       576 |      1500 |      9000 |      var. |      var. |
+| Fixed OH |           |           |           |        38 |        74 |
+|----------+-----------+-----------+-----------+-----------+-----------|
+|       40 | 2140411.0 | 828912.47 | 138765.54 | 14880952. | 10964912. |
+|      128 | 2162629.8 | 832223.70 | 138858.03 | 7530120.5 | 6188118.8 |
+|      256 | 2162629.8 | 832223.70 | 138858.03 | 4251700.7 | 3787878.8 |
+|      536 | 2162629.8 | 832223.70 | 138858.03 | 2177700.3 | 2049180.3 |
+|      576 | 1050420.2 | 832223.70 | 138858.03 | 2035830.6 | 1923076.9 |
+|     1460 | 707814.27 | 832223.70 | 138858.03 | 834445.93 | 814863.10 |
+|     1500 | 707814.27 | 411454.90 | 138858.03 | 812743.82 | 794155.02 |
+|     8960 |           |           |           | 138919.76 | 138366.17 |
+|     9000 | 120123.01 | 118618.33 | 69298.148 | 138304.93 | 137756.23 |
+#+TBLFM: $5=(1e10/8)/(max(46,$1)+38)::$6=(1e10/8)/($1+74)
+
+# ::@4$2..@>$4=(1e10/8)/(max(46,$1)+remote(obytes,@@#$$#)+@3$5)
+
+#+CAPTION: Percentage of bandwidth on 10G Ethernet Link
+#+TBLNAME: bwpercent
+| IP Size | E+P 576 | E+P 1500 | E+P 9000 | Ethernet |     ESP |
+|---------+---------+----------+----------+----------+---------|
+|      40 |   6.41% |    2.58% |    0.44% |   47.62% |  86.96% |
+|     128 |  18.13% |    7.85% |    1.40% |   77.11% | 100.00% |
+|     256 |  43.84% |   16.98% |    2.84% |  304.76% | 224.56% |
+|     536 |  92.73% |   35.69% |    5.95% |  322.89% | 265.35% |
+|     576 |  99.65% |   38.35% |    6.40% |  195.92% | 174.55% |
+|    1460 | 252.60% |   97.20% |   16.22% |  254.36% | 239.34% |
+|    1500 | 126.05% |   99.87% |   16.66% |  244.30% | 230.77% |
+|    8960 | 507.36% |  596.54% |   99.53% |  598.13% | 584.09% |
+|    9000 | 509.63% |  296.25% |   99.98% |  585.18% | 571.79% |
+#+TBLFM: @4$5..@>$6=100*($1*remote(pps,@@#$$#))/(1e10/8);%.2f%%
+
 
 * Acknowledgements
 We would like to thank Don Fedyk for help in reviewing this work.

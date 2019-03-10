@@ -1,26 +1,32 @@
-#
-# pip install idnits pyang xml2rfc
-# install oxtradoc (e.g., libstax pkg)
-#
-DRAFT := iptfs.org
-OUTPUT_BASE := draft-chopps-ipsecme-iptfs
+ORG := iptfs.org
+BASE := $(shell sed -e '/^\#+RFC_NAME:/!d;s/\#+RFC_NAME: *\(.*\)/\1/' $(ORG))
+VERSION := $(shell sed -e '/^\#+RFC_VERSION:/!d;s/\#+RFC_VERSION: *\([0-9]*\)/\1/' $(ORG))
+VBASE := publish/$(BASE)-$(VERSION)
 
-VERSION := $(shell sed -e '/^\#+RFC_VERSION:/!d;s/\#+RFC_VERSION: *\([0-9]*\)/\1/' $(DRAFT))
-OUTPUT_BASE := ${OUTPUT_BASE}-${VERSION}
-
-all: ${OUTPUT_BASE}.xml ${OUTPUT_BASE}.txt ${OUTPUT_BASE}.html ${OUTPUT_BASE}.pdf
+all: $(BASE).xml $(VBASE).txt $(VBASE).html $(VBASE).pdf
 
 clean:
-	rm ${OUTPUT_BASE}.xml ${OUTPUT_BASE}.txt ${OUTPUT_BASE}.html ${OUTPUT_BASE}.pdf
+	rm -f ${BASE}.xml ${BASE}-*.{txt,html,pdf}
 
-%.xml: $(DRAFT)
-	emacs --batch --load ~/p/org-rfc-export/ox-rfc.el $< -f ox-rfc-export-to-xml
+ox-rfc.el:
+	curl -fLO 'https://raw.githubusercontent.com/choppsv1/org-rfc-export/master/ox-rfc.el'
 
-%.txt: %.xml
+$(BASE).xml: $(ORG) ox-rfc.el
+	emacs -Q --batch --eval '(setq org-confirm-babel-evaluate nil)' -l ./ox-rfc.el $< -f ox-rfc-export-to-xml
+
+publish/%-$(VERSION).txt: %.xml
 	xml2rfc --text -o $@ $<
 
-%.html: %.xml
+publish/%-$(VERSION).html: %.xml
 	xml2rfc --html -o $@ $<
 
-%.pdf: %.xml
+publish/%-$(VERSION).pdf: %.xml
 	xml2rfc --pdf -o $@ $<
+
+# ------------
+# Verification
+# ------------
+
+idnits: $(VBASE).txt
+	if [ ! -e idnits ]; then curl -fLO 'http://tools.ietf.org/tools/idnits/idnits'; chmod 755 idnits; fi
+	./idnits --verbose $<
