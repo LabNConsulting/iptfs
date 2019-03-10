@@ -47,7 +47,7 @@ these fixed-sized packets can contain partial, full or multiple IP
 packets to maximize the bandwidth of the tunnel.
 
 For a comparison of the overhead of IP-TFS with the RFC4303
-prescribed TFC solution see [[Comparison of ESP+Pad vs. IP-TFS]]
+prescribed TFC solution see [[Comparisons of IP-TFS]].
 
 Additionally, IP-TFS provides for dealing with network congestion
 [[RFC2914]]. This is important for when the IP-TFS user is not in full
@@ -642,7 +642,7 @@ then non-congestion controlled mode use should be considered instead.
 ** RFC8201
 ** I-D.iab-wire-image
 
-* Comparison of ESP with Padding vs. IP-TFS
+* Comparisons of IP-TFS
   :PROPERTIES:
   :EXPORT_RFC_ASCII_TABLE: t
   :END:
@@ -777,8 +777,8 @@ octets of header and CRC plus and additional 20 octets of framing
 (preamble, start, and inter-packet gap) for a total of 48 octets.
 Additionally the minimum payload is 46 octets.
 
-*** IP-TFS Bandwidth
-*** ESP with Padding Bandwidth
+# *** IP-TFS Bandwidth
+# *** ESP with Padding Bandwidth
 
 #+CAPTION: Packets Per Second on 10G Ethernet Link
 #+TBLNAME: pps
