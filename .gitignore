@@ -7,8 +7,14 @@ target/
 README.pdf
 README.tex
 __pycache__/
+*~
 *.egg-info/
 *.so
 avenv
+draft/idnits
+draft/ox-rfc.el
+draft/publish/*-chopps-*
+draft/publish/*.html
+draft/publish/*.pdf
 venv
 .#*
