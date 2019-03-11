@@ -975,10 +975,10 @@ A.1.2.  ESP with Padding Overhead
    outer IPsec packet, overhead is the number of outer packets required
    to carry the fragmented inner packet times both the inner IP overhead
    (20) and the outer packet overhead (36) minus the initial inner IP
-   overhead plus any required tail padding in the last encap packet.
-   The required tail padding is the number of required packets times the
-   difference of the Outer Payload Size and the IP Overhead minus the
-   the Inner Payload Size.  So:
+   overhead plus any required tail padding in the last encapsulation
+   packet.  The required tail padding is the number of required packets
+   times the difference of the Outer Payload Size and the IP Overhead
+   minus the the Inner Payload Size.  So:
 
      Inner Paylaod Size = IP Packet Size - IP Overhead
      Outer Payload Size = MTU - IPSec Overhead

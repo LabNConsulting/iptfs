@@ -85,8 +85,6 @@ bandwidth, the correct packet send rate can be calculated. The packet
 send rate is the requested bandwidth divided by the payload size of
 the encapsulating packet.
 
-# Consider moving conformance language out of more infromative text.
-
 The egress of the IP-TFS tunnel SHOULD NOT impose any restrictions on
 tunnel packet size or arrival rate. Packet size and send rate is
 entirely the function of the ingress (sending) side of the IP-TFS
@@ -689,10 +687,10 @@ When fragmentation of the inner packet is required to fit in the
 outer IPsec packet, overhead is the number of outer packets required
 to carry the fragmented inner packet times both the inner IP overhead
 (20) and the outer packet overhead (36) minus the initial inner IP
-overhead plus any required tail padding in the last encap packet. The
-required tail padding is the number of required packets times the
-difference of the Outer Payload Size and the IP Overhead minus the
-the Inner Payload Size. So:
+overhead plus any required tail padding in the last encapsulation
+packet. The required tail padding is the number of required packets
+times the difference of the Outer Payload Size and the IP Overhead
+minus the the Inner Payload Size. So:
 
 #+begin_example
   Inner Paylaod Size = IP Packet Size - IP Overhead
