@@ -16,9 +16,9 @@ Abstract
    This document describes a mechanism to enhance IPsec traffic flow
    security by adding traffic flow confidentiality to encrypted IP
    encapsulated traffic.  Traffic flow confidentiality is provided by
-   obscuring the size and frequency of IP traffic using a constant
-   sized, constant send rate IPsec tunnel.  The solution allows for
-   congestion control as well.
+   obscuring the size and frequency of IP traffic using a fixed-sized,
+   constant-send-rate IPsec tunnel.  The solution allows for congestion
+   control as well.
 
 Status of This Memo
 
@@ -130,7 +130,7 @@ Internet-Draft          IP Traffic Flow Security              March 2019
    that it can significantly under-utilize the available bandwidth.
 
    The IP-TFS solution provides for full TFC without the aforementioned
-   bandwidth limitation.  To do this we use a constant send rate IPsec
+   bandwidth limitation.  To do this we use a constant-send-rate IPsec
    [RFC4303] tunnel with fixed-sized encapsulating packets; however,
    these fixed-sized packets can contain partial, full or multiple IP
    packets to maximize the bandwidth of the tunnel.
@@ -156,7 +156,7 @@ Internet-Draft          IP Traffic Flow Security              March 2019
 2.  The IP-TFS Tunnel
 
    As mentioned in Section 1 IP-TFS utilizes an IPsec [RFC4303] tunnel
-   as it's transport.  To provide for full TFC we send fixed sized
+   as it's transport.  To provide for full TFC we send fixed-sized
    encapsulating packets at a constant rate on the tunnel.
 
    The primary input to the tunnel algorithm is the requested bandwidth
@@ -198,7 +198,7 @@ Internet-Draft          IP Traffic Flow Security              March 2019
    bandwidth IP-TFS breaks this one-to-one association.
 
    With IP-TFS we fragment as well as aggregate the inner IP traffic
-   flow into fixed sized encapsulating IP tunnel packets.  We only pad
+   flow into fixed-sized encapsulating IP tunnel packets.  We only pad
    the tunnel packets if there is no data available to be sent at the
    time of tunnel packet transmission.
 
@@ -300,8 +300,8 @@ Internet-Draft          IP Traffic Flow Security              March 2019
    unrelated to the IP-TFS tunnel functionality; we never directly
    fragment the inner packets and the inner packets will not affect the
    fragmentation of the outer encapsulation packets.  Likewise, the ECN
-   value need not be mapped as any congestion related to the constant
-   send rate IP-TFS tunnel is unrelated (by design!) to the inner
+   value need not be mapped as any congestion related to the constant-
+   send-rate IP-TFS tunnel is unrelated (by design!) to the inner
    traffic flow.  Finally, by default the DS field SHOULD NOT be copied
    although an implementation MAY choose to allow for configuration to
    override this behavior.  An implementation SHOULD also allow the DS
@@ -967,7 +967,7 @@ Internet-Draft          IP Traffic Flow Security              March 2019
 
 A.1.2.  ESP with Padding Overhead
 
-   The overhead per inner packet for constant send rate padded ESP
+   The overhead per inner packet for constant-send-rate padded ESP
    (i.e., traditional IPSec TFC) is 36 octets plus any padding, unless
    fragmentation is required.
 
