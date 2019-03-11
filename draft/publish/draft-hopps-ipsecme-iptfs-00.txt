@@ -4,8 +4,8 @@
 
 Network Working Group                                           C. Hopps
 Internet-Draft                                   LabN Consulting, L.L.C.
-Intended status: Standards Track                          March 10, 2019
-Expires: September 11, 2019
+Intended status: Standards Track                          March 11, 2019
+Expires: September 12, 2019
 
 
                         IP Traffic Flow Security
@@ -34,7 +34,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on September 11, 2019.
+   This Internet-Draft will expire on September 12, 2019.
 
 Copyright Notice
 
@@ -53,7 +53,7 @@ Copyright Notice
 
 
 
-Hopps                  Expires September 11, 2019               [Page 1]
+Hopps                  Expires September 12, 2019               [Page 1]
 
 Internet-Draft          IP Traffic Flow Security              March 2019
 
@@ -67,27 +67,27 @@ Table of Contents
        2.1.1.  IPSec/ESP Payload . . . . . . . . . . . . . . . . . .   4
        2.1.2.  Data-Blocks . . . . . . . . . . . . . . . . . . . . .   5
        2.1.3.  No Implicit Padding . . . . . . . . . . . . . . . . .   5
-       2.1.4.  IP Header Value Mapping . . . . . . . . . . . . . . .   5
+       2.1.4.  IP Header Value Mapping . . . . . . . . . . . . . . .   6
      2.2.  Exclusive SA Use  . . . . . . . . . . . . . . . . . . . .   6
      2.3.  Initiation of TFS mode  . . . . . . . . . . . . . . . . .   6
-     2.4.  Example of an encapsulated IP packet flow . . . . . . . .   6
+     2.4.  Example of an encapsulated IP packet flow . . . . . . . .   7
      2.5.  Modes of operation  . . . . . . . . . . . . . . . . . . .   7
        2.5.1.  Non-Congestion Controlled Mode  . . . . . . . . . . .   7
-       2.5.2.  Congestion Controlled Mode  . . . . . . . . . . . . .   7
-   3.  Congestion Information  . . . . . . . . . . . . . . . . . . .   8
+       2.5.2.  Congestion Controlled Mode  . . . . . . . . . . . . .   8
+   3.  Congestion Information  . . . . . . . . . . . . . . . . . . .   9
      3.1.  ECN Support . . . . . . . . . . . . . . . . . . . . . . .   9
    4.  Configuration . . . . . . . . . . . . . . . . . . . . . . . .   9
-     4.1.  Bandwidth . . . . . . . . . . . . . . . . . . . . . . . .   9
-     4.2.  Fixed Packet Size . . . . . . . . . . . . . . . . . . . .   9
+     4.1.  Bandwidth . . . . . . . . . . . . . . . . . . . . . . . .  10
+     4.2.  Fixed Packet Size . . . . . . . . . . . . . . . . . . . .  10
      4.3.  Congestion Information Configuration  . . . . . . . . . .  10
-   5.  Packet and Data Formats . . . . . . . . . . . . . . . . . . .  10
+   5.  Packet and Data Formats . . . . . . . . . . . . . . . . . . .  11
      5.1.  IPSec . . . . . . . . . . . . . . . . . . . . . . . . . .  11
        5.1.1.  Payload Format  . . . . . . . . . . . . . . . . . . .  11
-       5.1.2.  Data Blocks . . . . . . . . . . . . . . . . . . . . .  11
+       5.1.2.  Data Blocks . . . . . . . . . . . . . . . . . . . . .  12
      5.2.  IKEv2 . . . . . . . . . . . . . . . . . . . . . . . . . .  13
        5.2.1.  IKEv2 Congestion Information Configuration Attribute   13
-       5.2.2.  IKEv2 Congestion Information Notification Data  . . .  13
-   6.  IANA Considerations . . . . . . . . . . . . . . . . . . . . .  14
+       5.2.2.  IKEv2 Congestion Information Notification Data  . . .  14
+   6.  IANA Considerations . . . . . . . . . . . . . . . . . . . . .  15
    7.  Security Considerations . . . . . . . . . . . . . . . . . . .  15
    8.  References  . . . . . . . . . . . . . . . . . . . . . . . . .  15
      8.1.  Normative References  . . . . . . . . . . . . . . . . . .  15
@@ -95,13 +95,13 @@ Table of Contents
    Appendix A.  Comparisons of IP-TFS  . . . . . . . . . . . . . . .  17
      A.1.  Comparing Overhead  . . . . . . . . . . . . . . . . . . .  17
        A.1.1.  IP-TFS Overhead . . . . . . . . . . . . . . . . . . .  17
-       A.1.2.  ESP with Padding Overhead . . . . . . . . . . . . . .  17
-     A.2.  Overhead Comparison . . . . . . . . . . . . . . . . . . .  18
+       A.1.2.  ESP with Padding Overhead . . . . . . . . . . . . . .  18
+     A.2.  Overhead Comparison . . . . . . . . . . . . . . . . . . .  19
      A.3.  Comparing Available Bandwidth . . . . . . . . . . . . . .  19
-       A.3.1.  Ethernet  . . . . . . . . . . . . . . . . . . . . . .  19
-   Appendix B.  Acknowledgements . . . . . . . . . . . . . . . . . .  20
-   Appendix C.  Contributors . . . . . . . . . . . . . . . . . . . .  20
-   Author's Address  . . . . . . . . . . . . . . . . . . . . . . . .  20
+       A.3.1.  Ethernet  . . . . . . . . . . . . . . . . . . . . . .  20
+   Appendix B.  Acknowledgements . . . . . . . . . . . . . . . . . .  22
+   Appendix C.  Contributors . . . . . . . . . . . . . . . . . . . .  22
+   Author's Address  . . . . . . . . . . . . . . . . . . . . . . . .  22
 
 
 
@@ -109,7 +109,7 @@ Table of Contents
 
 
 
-Hopps                  Expires September 11, 2019               [Page 2]
+Hopps                  Expires September 12, 2019               [Page 2]
 
 Internet-Draft          IP Traffic Flow Security              March 2019
 
@@ -165,7 +165,7 @@ Internet-Draft          IP Traffic Flow Security              March 2019
 
 
 
-Hopps                  Expires September 11, 2019               [Page 3]
+Hopps                  Expires September 12, 2019               [Page 3]
 
 Internet-Draft          IP Traffic Flow Security              March 2019
 
@@ -206,6 +206,26 @@ Internet-Draft          IP Traffic Flow Security              March 2019
 
 2.1.1.  IPSec/ESP Payload
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Hopps                  Expires September 12, 2019               [Page 4]
+
+Internet-Draft          IP Traffic Flow Security              March 2019
+
+
     . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
     . Outer Encapsulating Header ...                                  .
     . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
@@ -219,12 +239,7 @@ Internet-Draft          IP Traffic Flow Security              March 2019
     . ESP Trailer...                                                  .
     . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
 
-
-
-Hopps                  Expires September 11, 2019               [Page 4]
-
-Internet-Draft          IP Traffic Flow Security              March 2019
-
+                  Figure 1: Layout of IP-TFS IPSec Packet
 
    The BlockOffset value is either zero or some offset into or past the
    end of the data blocks payload data.  If the value is zero it means
@@ -245,6 +260,8 @@ Internet-Draft          IP Traffic Flow Security              March 2019
     | Type  | rest of IPv4, IPv6 or pad.
     +--------
 
+                   Figure 2: Layout of IP-TFS data block
+
    A data-block is defined by a 4-bit type code followed by the data
    block data.  The types values have been carefully chosen to coincide
    with the IPv4/IPv6 version field values so that no per-data-block
@@ -257,6 +274,14 @@ Internet-Draft          IP Traffic Flow Security              March 2019
    It's worth noting that there is no need for implicit pads at the end
    of an encapsulating packet.  Even when the start of a data block
    occurs near the end of a encapsulating packet such that there is no
+
+
+
+Hopps                  Expires September 12, 2019               [Page 5]
+
+Internet-Draft          IP Traffic Flow Security              March 2019
+
+
    room for the length field of the encapsulated header to be included
    in the current encapsulating packet, the fact that the length comes
    at a known location and as is guaranteed to be present is enough to
@@ -274,14 +299,6 @@ Internet-Draft          IP Traffic Flow Security              March 2019
    per ESP packet.  To deal with this we further restrict these
    mappings.  In particular we never map the inner DF bit as it is
    unrelated to the IP-TFS tunnel functionality; we never directly
-
-
-
-Hopps                  Expires September 11, 2019               [Page 5]
-
-Internet-Draft          IP Traffic Flow Security              March 2019
-
-
    fragment the inner packets and the inner packets will not affect the
    fragmentation of the outer encapsulation packets.  Likewise, the ECN
    value need not be mapped as any congestion related to the constant
@@ -312,6 +329,15 @@ Internet-Draft          IP Traffic Flow Security              March 2019
    receipt of the first ESP payload with the IPTFS_PROTOCOL indicated as
    the payload type.
 
+
+
+
+
+Hopps                  Expires September 12, 2019               [Page 6]
+
+Internet-Draft          IP Traffic Flow Security              March 2019
+
+
 2.4.  Example of an encapsulated IP packet flow
 
    Below we show an example inner IP packet flow within the
@@ -323,6 +349,8 @@ Internet-Draft          IP Traffic Flow Security              March 2019
     [ ESP1  (1500) ][ ESP2  (1500) ][ ESP3  (1500) ][ ESP4  (1500) ]
     [--800--][--800--][60][-240-][--4000----------------------][pad]
 
+                   Figure 3: Inner and Outer Packet Flow
+
    The encapsulated IP packet flow (lengths include IP header and
    payload) is as follows: an 800 octet packet, an 800 octet packet, a
    60 octet packet, a 240 octet packet, a 4000 octet packet.
@@ -330,14 +358,6 @@ Internet-Draft          IP Traffic Flow Security              March 2019
    The BlockOffset values in the 4 IP-TFS payload headers for this
    packet flow would thus be: 0, 100, 2900, 1400 respectively.  The
    first encapsulating packet ESP1 has a zero BlockOffset which points
-
-
-
-Hopps                  Expires September 11, 2019               [Page 6]
-
-Internet-Draft          IP Traffic Flow Security              March 2019
-
-
    at the IP data block immediately following the IP-TFS header.  The
    following packet ESP2s BlockOffset points inward 100 octets to the
    start of the 60 octet data block.  The third encapsulating packet
@@ -366,6 +386,14 @@ Internet-Draft          IP Traffic Flow Security              March 2019
    not automatically adjusted regardless of any network congestion
    (i.e., packet loss).
 
+
+
+
+Hopps                  Expires September 12, 2019               [Page 7]
+
+Internet-Draft          IP Traffic Flow Security              March 2019
+
+
    For similar reasons as given in [RFC7510] the non-congestion
    controlled mode should only be used where the user has full
    administrative control over the path the tunnel will take.  This is
@@ -385,14 +413,6 @@ Internet-Draft          IP Traffic Flow Security              March 2019
    network by dropping packets we instead choose to lower the frequency
    we send our fixed sized packets.  This choice also minimizes
    transport overhead.
-
-
-
-
-Hopps                  Expires September 11, 2019               [Page 7]
-
-Internet-Draft          IP Traffic Flow Security              March 2019
-
 
    The output of a congestion control algorithm SHOULD adjust the
    frequency that we send our packets until the congestion is
@@ -421,6 +441,15 @@ Internet-Draft          IP Traffic Flow Security              March 2019
    non-congestion controlled mode of operation.  The definition of
    circuit breakers are outside the scope of this document.
 
+
+
+
+
+Hopps                  Expires September 12, 2019               [Page 8]
+
+Internet-Draft          IP Traffic Flow Security              March 2019
+
+
 3.  Congestion Information
 
    In order to support the congestion control mode, we send regular
@@ -437,18 +466,6 @@ Internet-Draft          IP Traffic Flow Security              March 2019
    notifications [RFC7296].  These notifications are sent at a
    configured interval (which can be configured to 0 to disable the
    sending of the reports).
-
-
-
-
-
-
-
-
-Hopps                  Expires September 11, 2019               [Page 8]
-
-Internet-Draft          IP Traffic Flow Security              March 2019
-
 
 3.1.  ECN Support
 
@@ -478,6 +495,17 @@ Internet-Draft          IP Traffic Flow Security              March 2019
    specified at the tunnel ingress (sending) side alone (i.e., single-
    ended provisioning).
 
+
+
+
+
+
+
+Hopps                  Expires September 12, 2019               [Page 9]
+
+Internet-Draft          IP Traffic Flow Security              March 2019
+
+
 4.1.  Bandwidth
 
    Bandwidth is a local configuration option.  For non-congestion
@@ -493,18 +521,6 @@ Internet-Draft          IP Traffic Flow Security              March 2019
    can be configured manually or can be automatically determined using
    Path MTU discovery (see [RFC1191] and [RFC8201]).  No standardized
    configuration method is required.
-
-
-
-
-
-
-
-
-Hopps                  Expires September 11, 2019               [Page 9]
-
-Internet-Draft          IP Traffic Flow Security              March 2019
-
 
 4.3.  Congestion Information Configuration
 
@@ -537,6 +553,15 @@ Internet-Draft          IP Traffic Flow Security              March 2019
    The sending interval value is given in milliseconds and is 16 bits
    wide; however, it is not recommended that values below 1/10th of a
    second are used as this could lead to early exhaustion of the Message
+
+
+
+
+Hopps                  Expires September 12, 2019              [Page 10]
+
+Internet-Draft          IP Traffic Flow Security              March 2019
+
+
    ID field used in the IKEv2 INFORMATIONAL exchange to send the
    congestion information.
 
@@ -549,18 +574,6 @@ Internet-Draft          IP Traffic Flow Security              March 2019
    information.
 
 5.  Packet and Data Formats
-
-
-
-
-
-
-
-
-Hopps                  Expires September 11, 2019              [Page 10]
-
-Internet-Draft          IP Traffic Flow Security              March 2019
-
 
 5.1.  IPSec
 
@@ -593,6 +606,18 @@ Internet-Draft          IP Traffic Flow Security              March 2019
       Variable number of octets that constitute the start or
       continuation of a previous data block.
 
+
+
+
+
+
+
+
+Hopps                  Expires September 12, 2019              [Page 11]
+
+Internet-Draft          IP Traffic Flow Security              March 2019
+
+
 5.1.2.  Data Blocks
 
                          1                   2                   3
@@ -606,17 +631,6 @@ Internet-Draft          IP Traffic Flow Security              March 2019
       an IPv4 data block, and 0x6 indicates an IPv6 data block.
 
 5.1.2.1.  IPv4 Data Block
-
-
-
-
-
-
-
-Hopps                  Expires September 11, 2019              [Page 11]
-
-Internet-Draft          IP Traffic Flow Security              March 2019
-
 
                          1                   2                   3
      0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
@@ -652,6 +666,14 @@ Internet-Draft          IP Traffic Flow Security              March 2019
    the encapsulated IP packet.
 
    Type:
+
+
+
+Hopps                  Expires September 12, 2019              [Page 12]
+
+Internet-Draft          IP Traffic Flow Security              March 2019
+
+
       A 4 bit value of 0x6 indicating IPv6 (i.e., first nibble of the
       IPv6 packet).
 
@@ -666,13 +688,6 @@ Internet-Draft          IP Traffic Flow Security              March 2019
     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
     |  0x0  | Padding ...
     +-+-+-+-+-+-+-+-+-+-+-
-
-
-
-Hopps                  Expires September 11, 2019              [Page 12]
-
-Internet-Draft          IP Traffic Flow Security              March 2019
-
 
    Type:
       A 4 bit value of 0x0 indicating a padding data block.
@@ -708,6 +723,13 @@ Internet-Draft          IP Traffic Flow Security              March 2019
    SendInterval:
       A 2 octet unsigned integer.  The sending interval in milliseconds.
 
+
+
+Hopps                  Expires September 12, 2019              [Page 13]
+
+Internet-Draft          IP Traffic Flow Security              March 2019
+
+
 5.2.2.  IKEv2 Congestion Information Notification Data
 
    We utilize a send only (i.e., no response expected) IKEv2
@@ -717,18 +739,6 @@ Internet-Draft          IP Traffic Flow Security              March 2019
    payload should be the congestion information in the notification
    payload.  The following diagram defines the notification payload
    data.
-
-
-
-
-
-
-
-
-Hopps                  Expires September 11, 2019              [Page 13]
-
-Internet-Draft          IP Traffic Flow Security              March 2019
-
 
                          1                   2                   3
      0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
@@ -768,6 +778,14 @@ Internet-Draft          IP Traffic Flow Security              March 2019
    Timestamp:
       A 32 bit unsigned integer containing the lower 32 bits of a
       running monotonic millisecond timer of when this notification data
+
+
+
+Hopps                  Expires September 12, 2019              [Page 14]
+
+Internet-Draft          IP Traffic Flow Security              March 2019
+
+
       was created/sent.  This value is used to determine duplicates and
       drop counts of this information.  Implementations should deal with
       wrapping of this timer value.
@@ -777,14 +795,6 @@ Internet-Draft          IP Traffic Flow Security              March 2019
    This document requests a protocol number IPTFS_PROTOCOL be allocated
    by IANA from "Assigned Internet Protocol Numbers" registry for
    identifying the IP-TFS ESP payload format.
-
-
-
-
-Hopps                  Expires September 11, 2019              [Page 14]
-
-Internet-Draft          IP Traffic Flow Security              March 2019
-
 
    Type: TBD Description: IP-TFS ESP payload format.  Reference: This
    document
@@ -821,6 +831,17 @@ Internet-Draft          IP Traffic Flow Security              March 2019
 
 8.1.  Normative References
 
+
+
+
+
+
+
+Hopps                  Expires September 12, 2019              [Page 15]
+
+Internet-Draft          IP Traffic Flow Security              March 2019
+
+
    [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
               Requirement Levels", BCP 14, RFC 2119,
               DOI 10.17487/RFC2119, March 1997,
@@ -834,13 +855,6 @@ Internet-Draft          IP Traffic Flow Security              March 2019
               Kivinen, "Internet Key Exchange Protocol Version 2
               (IKEv2)", STD 79, RFC 7296, DOI 10.17487/RFC7296, October
               2014, <https://www.rfc-editor.org/info/rfc7296>.
-
-
-
-Hopps                  Expires September 11, 2019              [Page 15]
-
-Internet-Draft          IP Traffic Flow Security              March 2019
-
 
    [RFC8174]  Leiba, B., "Ambiguity of Uppercase vs Lowercase in RFC
               2119 Key Words", BCP 14, RFC 8174, DOI 10.17487/RFC8174,
@@ -875,6 +889,15 @@ Internet-Draft          IP Traffic Flow Security              March 2019
               RFC 2914, DOI 10.17487/RFC2914, September 2000,
               <https://www.rfc-editor.org/info/rfc2914>.
 
+
+
+
+
+Hopps                  Expires September 12, 2019              [Page 16]
+
+Internet-Draft          IP Traffic Flow Security              March 2019
+
+
    [RFC3168]  Ramakrishnan, K., Floyd, S., and D. Black, "The Addition
               of Explicit Congestion Notification (ECN) to IP",
               RFC 3168, DOI 10.17487/RFC3168, September 2001,
@@ -888,15 +911,6 @@ Internet-Draft          IP Traffic Flow Security              March 2019
               "Encapsulating MPLS in UDP", RFC 7510,
               DOI 10.17487/RFC7510, April 2015,
               <https://www.rfc-editor.org/info/rfc7510>.
-
-
-
-
-
-Hopps                  Expires September 11, 2019              [Page 16]
-
-Internet-Draft          IP Traffic Flow Security              March 2019
-
 
    [RFC8084]  Fairhurst, G., "Network Transport Circuit Breakers",
               BCP 208, RFC 8084, DOI 10.17487/RFC8084, March 2017,
@@ -927,6 +941,19 @@ A.1.1.  IP-TFS Overhead
       OH % of Inner Packet Size = 100 * OH / Inner Packet Size
       OH % of Inner Packet Size = 4000 / Outer Payload Size
 
+
+
+
+
+
+
+
+
+Hopps                  Expires September 12, 2019              [Page 17]
+
+Internet-Draft          IP Traffic Flow Security              March 2019
+
+
                         Type  IP-TFS  IP-TFS  IP-TFS
                          MTU     576    1500    9000
                        PSize     536    1460    8960
@@ -935,6 +962,8 @@ A.1.1.  IP-TFS Overhead
                          576   7.46%   2.74%   0.45%
                         1500   7.46%   2.74%   0.45%
                         9000   7.46%   2.74%   0.45%
+
+       Figure 4: IP-TFS Overhead as Percentage of Inner Packet Size
 
 A.1.2.  ESP with Padding Overhead
 
@@ -946,14 +975,6 @@ A.1.2.  ESP with Padding Overhead
    outer IPsec packet, overhead is the number of outer packets required
    to carry the fragmented inner packet times both the inner IP overhead
    (20) and the outer packet overhead (36) minus the initial inner IP
-
-
-
-Hopps                  Expires September 11, 2019              [Page 17]
-
-Internet-Draft          IP Traffic Flow Security              March 2019
-
-
    overhead plus any required tail padding in the last encap packet.
    The required tail padding is the number of required packets times the
    difference of the Outer Payload Size and the IP Overhead minus the
@@ -979,17 +1000,27 @@ Internet-Draft          IP Traffic Flow Security              March 2019
      OH = NF * (IPSec Overhead + Outer Payload Size)
           - Inner Packet Size
 
+
+
+
+
+
+Hopps                  Expires September 12, 2019              [Page 18]
+
+Internet-Draft          IP Traffic Flow Security              March 2019
+
+
 A.2.  Overhead Comparison
 
-   The following 2 tables collect the overhead values for some common
+   The following tables collect the overhead values for some common L3
    MTU sizes in order to compare them.  The first table is the number of
-   octets of overhead for a given MTU sized packet.  The second table is
-   the percentage of overhead in the same MTU sized packet.
+   octets of overhead for a given L3 MTU sized packet.  The second table
+   is the percentage of overhead in the same MTU sized packet.
 
            Type  ESP+Pad  ESP+Pad  ESP+Pad  IP-TFS  IP-TFS  IP-TFS
-            MTU      576     1500     9000     576    1500    9000
+         L3 MTU      576     1500     9000     576    1500    9000
           PSize      540     1464     8964     536    1460    8960
-         ----------------------------------------------------------
+        -----------------------------------------------------------
              40      500     1424     8924     3.0     1.1     0.2
             128      412     1336     8836     9.6     3.5     0.6
             256      284     1208     8708    19.1     7.0     1.1
@@ -1000,15 +1031,7 @@ A.2.  Overhead Comparison
            8960     1408     1540        4   668.7   245.5    40.0
            9000     1368     1500     9000   671.6   246.6    40.2
 
-
-
-
-
-
-Hopps                  Expires September 11, 2019              [Page 18]
-
-Internet-Draft          IP Traffic Flow Security              March 2019
-
+                  Figure 5: Overhead comparison in octets
 
           Type  ESP+Pad  ESP+Pad   ESP+Pad  IP-TFS  IP-TFS  IP-TFS
            MTU      576     1500      9000     576    1500    9000
@@ -1024,14 +1047,24 @@ Internet-Draft          IP Traffic Flow Security              March 2019
           8960    15.7%    17.2%      0.0%   7.46%   2.74%   0.45%
           9000    15.2%    16.7%    100.0%   7.46%   2.74%   0.45%
 
+           Figure 6: Overhead as Percentage of Inner Packet Size
+
 A.3.  Comparing Available Bandwidth
 
    Another way to compare the two solutions is to look at the amount of
    available bandwidth each solution provides.  The following sections
    consider and compare the percentage of available bandwidth.  For the
-   sake of comparison we will also consider a 10G Ethernet link and
-   normal ESP.  For each solution we subtract the required outer framing
-   overhead.
+   sake of comparison we will also consider normal Ethernet as well as
+   normal ESP use.
+
+
+
+
+
+Hopps                  Expires September 12, 2019              [Page 19]
+
+Internet-Draft          IP Traffic Flow Security              March 2019
+
 
 A.3.1.  Ethernet
 
@@ -1041,19 +1074,37 @@ A.3.1.  Ethernet
    (preamble, start, and inter-packet gap) for a total of 48 octets.
    Additionally the minimum payload is 46 octets.
 
-     IP Size    ESP+Pad    ESP+Pad    ESP+Pad   Ethernet        ESP
-         MTU        576       1500       9000       var.       var.
-    Fixed OH                                          38         74
-   -----------------------------------------------------------------
-          40  2140411.0  828912.47  138765.54  14880952.  10964912.
-         128  2162629.8  832223.70  138858.03  7530120.5  6188118.8
-         256  2162629.8  832223.70  138858.03  4251700.7  3787878.8
-         536  2162629.8  832223.70  138858.03  2177700.3  2049180.3
-         576  1050420.2  832223.70  138858.03  2035830.6  1923076.9
-        1460  707814.27  832223.70  138858.03  834445.93  814863.10
-        1500  707814.27  411454.90  138858.03  812743.82  794155.02
-        8960                                   138919.76  138366.17
-        9000  120123.01  118618.33  69298.148  138304.93  137756.23
+         Size  E + P  E + P  E + P  IPTFS  IPTFS  IPTFS  Enet   ESP
+          MTU    590   1514   9014    590   1514   9014   any   any
+           OH     74     74     74     78     78     78    38    74
+        ------------------------------------------------------------
+           40    614   1538   9038     45     42     40    84   114
+          128    614   1538   9038    146    134    129   166   202
+          256    614   1538   9038    293    269    258   294   330
+          536    614   1538   9038    614    564    540   574   610
+          576   1228   1538   9038    659    606    581   614   650
+         1460   1842   1538   9038   1672   1538   1472  1498  1534
+         1500   1842   3076   9038   1718   1580   1513  1538  1574
+         8960  11052  10766   9038  10263   9438   9038  8998  9034
+         9000  11052  10766  18076  10309   9480   9078  9038  9074
+
+                      Figure 7: L2 Octets Per Packet
+
+        Size  E + P  E + P  E + P  IPTFS  IPTFS  IPTFS  Enet   ESP
+         MTU  590    1514   9014   590    1514   9014   any    any
+          OH  74     74     74     78     78     78     38     74
+       --------------------------------------------------------------
+          40  2.0M   0.8M   0.1M   27.3M  29.7M  31.0M  14.9M  11.0M
+         128  2.0M   0.8M   0.1M   8.5M   9.3M   9.7M   7.5M   6.2M
+         256  2.0M   0.8M   0.1M   4.3M   4.6M   4.8M   4.3M   3.8M
+         536  2.0M   0.8M   0.1M   2.0M   2.2M   2.3M   2.2M   2.0M
+         576  1.0M   0.8M   0.1M   1.9M   2.1M   2.2M   2.0M   1.9M
+        1460  678K   812K   138K   747K   812K   848K   834K   814K
+        1500  678K   406K   138K   727K   791K   826K   812K   794K
+        8960  113K   116K   138K   121K   132K   138K   138K   138K
+        9000  113K   116K   69K    121K   131K   137K   138K   137K
+
+               Figure 8: Packets Per Second on 10G Ethernet
 
 
 
@@ -1061,22 +1112,71 @@ A.3.1.  Ethernet
 
 
 
-Hopps                  Expires September 11, 2019              [Page 19]
+
+
+
+
+
+Hopps                  Expires September 12, 2019              [Page 20]
 
 Internet-Draft          IP Traffic Flow Security              March 2019
 
 
-    IP Size  E+P 576  E+P 1500  E+P 9000  Ethernet      ESP
-   ---------------------------------------------------------
-         40    6.41%     2.58%     0.44%    47.62%   86.96%
-        128   18.13%     7.85%     1.40%    77.11%  100.00%
-        256   43.84%    16.98%     2.84%   304.76%  224.56%
-        536   92.73%    35.69%     5.95%   322.89%  265.35%
-        576   99.65%    38.35%     6.40%   195.92%  174.55%
-       1460  252.60%    97.20%    16.22%   254.36%  239.34%
-       1500  126.05%    99.87%    16.66%   244.30%  230.77%
-       8960  507.36%   596.54%    99.53%   598.13%  584.09%
-       9000  509.63%   296.25%    99.98%   585.18%  571.79%
+   Size   E + P   E + P   E + P   IPTFS   IPTFS   IPTFS    Enet     ESP
+            590    1514    9014     590    1514    9014     any     any
+             74      74      74      78      78      78      38      74
+  ----------------------------------------------------------------------
+     40   6.51%   2.60%   0.44%  87.30%  94.93%  99.14%  47.62%  35.09%
+    128  20.85%   8.32%   1.42%  87.30%  94.93%  99.14%  77.11%  63.37%
+    256  41.69%  16.64%   2.83%  87.30%  94.93%  99.14%  87.07%  77.58%
+    536  87.30%  34.85%   5.93%  87.30%  94.93%  99.14%  93.38%  87.87%
+    576  46.91%  37.45%   6.37%  87.30%  94.93%  99.14%  93.81%  88.62%
+   1460  79.26%  94.93%  16.15%  87.30%  94.93%  99.14%  97.46%  95.18%
+   1500  81.43%  48.76%  16.60%  87.30%  94.93%  99.14%  97.53%  95.30%
+   8960  81.07%  83.22%  99.14%  87.30%  94.93%  99.14%  99.58%  99.18%
+   9000  81.43%  83.60%  49.79%  87.30%  94.93%  99.14%  99.58%  99.18%
+
+             Figure 9: Percentage of Bandwidth on 10G Ethernet
+
+   A sometimes unexpected result of using IP-TFS (or any packet
+   aggregating tunnel) is that, for small to medium sized packets, the
+   available bandwidth is actually greater than native Ethernet.  This
+   is due to the reduction in Ethernet framing overhead.  This increased
+   bandwidth is paid for with an increase in latency.  This latency is
+   the time to send the unrelated octets in the outer tunnel frame.  The
+   following table illustrates the latency for some common values on a
+   10G Ethernet link.  The table also includes latency introduced by
+   padding if using ESP with padding.
+
+                        ESP+Pad  ESP+Pad  IP-TFS   IP-TFS
+                        1500     9000     1500     9000
+
+                 ------------------------------------------
+                    40  1.14 us  7.14 us  1.17 us  7.17 us
+                   128  1.07 us  7.07 us  1.10 us  7.10 us
+                   256  0.97 us  6.97 us  1.00 us  7.00 us
+                   536  0.74 us  6.74 us  0.77 us  6.77 us
+                   576  0.71 us  6.71 us  0.74 us  6.74 us
+                  1460  0.00 us  6.00 us  0.04 us  6.04 us
+                  1500  1.20 us  5.97 us  0.00 us  6.00 us
+
+                         Figure 10: Added Latency
+
+   Notice that the latency values are very similar between the two
+   solutions; however, whereas IP-TFS provides for constant high
+   bandwidth, in some cases even exceeding native Ethernet, ESP with
+   padding often greatly reduces available bandwidth.
+
+
+
+
+
+
+
+Hopps                  Expires September 12, 2019              [Page 21]
+
+Internet-Draft          IP Traffic Flow Security              March 2019
+
 
 Appendix B.  Acknowledgements
 
@@ -1117,4 +1217,16 @@ Author's Address
 
 
 
-Hopps                  Expires September 11, 2019              [Page 20]
+
+
+
+
+
+
+
+
+
+
+
+
+Hopps                  Expires September 12, 2019              [Page 22]

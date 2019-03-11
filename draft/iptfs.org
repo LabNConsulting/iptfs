@@ -16,6 +16,7 @@
 # Don't: prop:no-prop-drawers \n:preserve-linebreaks ':use-smart-quotes
 #+OPTIONS: prop:nil title:t toc:t \n:nil ::t |:t ^:{} -:t *:t ':nil
 
+
 #+begin_abstract
 This document describes a mechanism that improves IPsec traffic
 flow security by adding traffic flow confidentiality to encrypted IP
@@ -715,33 +716,53 @@ the Inner Payload Size. So:
 
 ** Overhead Comparison
 
-The following 2 tables collect the overhead values for some common
+The following tables collect the overhead values for some common L3
 MTU sizes in order to compare them. The first table is the number of
-octets of overhead for a given MTU sized packet. The second table is
-the percentage of overhead in the same MTU sized packet.
+octets of overhead for a given L3 MTU sized packet. The second table
+is the percentage of overhead in the same MTU sized packet.
 
-#+CONSTANTS: etho=26 ipo=20 espoh=16 ipso=36 tfso=40
+#+CONSTANTS: etho=38 ipo=20 espoh=16 ipso=36 tfso=40
 
 #+BEGIN_CENTER
+
+#+BEGIN_NOEXPORT
+# We need the number of packets for adding in L2 overhead later.
+# No need to export this to the published document
+#+CAPTION: Required Outer Packets
+#+TBLNAME:reqdpackets
+|   Type | ESP+Pad | ESP+Pad | ESP+Pad |      IP-TFS |      IP-TFS |       IP-TFS |
+| L3 MTU |     576 |    1500 |    9000 |         576 |        1500 |         9000 |
+|  PSize |     540 |    1464 |    8964 |         536 |        1460 |         8960 |
+|--------+---------+---------+---------+-------------+-------------+--------------|
+|     40 |       1 |       1 |       1 | 0.074626866 | 0.027397260 | 4.4642857e-3 |
+|    128 |       1 |       1 |       1 |  0.23880597 | 0.087671233 |  0.014285714 |
+|    256 |       1 |       1 |       1 |  0.47761194 |  0.17534247 |  0.028571429 |
+|    536 |       1 |       1 |       1 |           1 |  0.36712329 |  0.059821429 |
+|    576 |       2 |       1 |       1 |   1.0746269 |  0.39452055 |  0.064285714 |
+|   1460 |       3 |       1 |       1 |   2.7238806 |           1 |   0.16294643 |
+|   1500 |       3 |       2 |       1 |   2.7985075 |   1.0273973 |   0.16741071 |
+|   8960 |      18 |       7 |       1 |   16.716418 |   6.1369863 |            1 |
+|   9000 |      18 |       7 |       2 |   16.791045 |   6.1643836 |    1.0044643 |
+#+TBLFM: @3$2..@3$4=@2-$ipso;p40::@3$5..@3$7=@2-$tfso;p40::@4$2..@>$4=if($1<=@3, ceil($1/@3), 1 + ceil(($1-@3)/(@3-$ipo)));p40::@4$5..@>$7=$1/@3;p40
+#+END_NOEXPORT
+
 #+CAPTION: Overhead comparison in octets
 #+TBLNAME:obytes
-|  Type | ESP+Pad | ESP+Pad | ESP+Pad | IP-TFS | IP-TFS | IP-TFS |
-|   MTU |     576 |    1500 |    9000 |    576 |   1500 |   9000 |
-| PSize |     540 |    1464 |    8964 |    536 |   1460 |   8960 |
-|-------+---------+---------+---------+--------+--------+--------|
-|    40 |     500 |    1424 |    8924 |    3.0 |    1.1 |    0.2 |
-|   128 |     412 |    1336 |    8836 |    9.6 |    3.5 |    0.6 |
-|   256 |     284 |    1208 |    8708 |   19.1 |    7.0 |    1.1 |
-|   536 |       4 |     928 |    8428 |   40.0 |   14.7 |    2.4 |
-|   576 |     576 |     888 |    8388 |   43.0 |   15.8 |    2.6 |
-|  1460 |     268 |       4 |    7504 |  109.0 |   40.0 |    6.5 |
-|  1500 |     228 |    1500 |    7464 |  111.9 |   41.1 |    6.7 |
-|  8960 |    1408 |    1540 |       4 |  668.7 |  245.5 |   40.0 |
-|  9000 |    1368 |    1500 |    9000 |  671.6 |  246.6 |   40.2 |
+|   Type | ESP+Pad | ESP+Pad | ESP+Pad | IP-TFS | IP-TFS | IP-TFS |
+| L3 MTU |     576 |    1500 |    9000 |    576 |   1500 |   9000 |
+|  PSize |     540 |    1464 |    8964 |    536 |   1460 |   8960 |
+|--------+---------+---------+---------+--------+--------+--------|
+|     40 |     500 |    1424 |    8924 |    3.0 |    1.1 |    0.2 |
+|    128 |     412 |    1336 |    8836 |    9.6 |    3.5 |    0.6 |
+|    256 |     284 |    1208 |    8708 |   19.1 |    7.0 |    1.1 |
+|    536 |       4 |     928 |    8428 |   40.0 |   14.7 |    2.4 |
+|    576 |     576 |     888 |    8388 |   43.0 |   15.8 |    2.6 |
+|   1460 |     268 |       4 |    7504 |  109.0 |   40.0 |    6.5 |
+|   1500 |     228 |    1500 |    7464 |  111.9 |   41.1 |    6.7 |
+|   8960 |    1408 |    1540 |       4 |  668.7 |  245.5 |   40.0 |
+|   9000 |    1368 |    1500 |    9000 |  671.6 |  246.6 |   40.2 |
 #+TBLFM: @3$2..@3$4=@2-$ipso::@3$5..@3$7=@2-$tfso::@4$2..@>$4=if(@3 > $1, @3-$1, ceil(($1-$ipo)/(@3-$ipo)) * ($ipso + @3) - $1::@4$5..@>$7=$tfso/(@3/$1);%.1f
-#+END_CENTER
 
-#+BEGIN_CENTER
 #+CAPTION: Overhead as Percentage of Inner Packet Size
 #+TBLNAME:avail-pct
 |  Type | ESP+Pad | ESP+Pad |  ESP+Pad | IP-TFS | IP-TFS | IP-TFS |
@@ -765,9 +786,8 @@ the percentage of overhead in the same MTU sized packet.
 Another way to compare the two solutions is to look at the amount of
 available bandwidth each solution provides. The following sections
 consider and compare the percentage of available bandwidth. For the
-sake of comparison we will also consider a 10G Ethernet link and
-normal ESP. For each solution we subtract the required outer framing
-overhead.
+sake of comparison we will also consider normal Ethernet as well as
+normal ESP use.
 
 *** Ethernet
 
@@ -780,40 +800,127 @@ Additionally the minimum payload is 46 octets.
 # *** IP-TFS Bandwidth
 # *** ESP with Padding Bandwidth
 
-#+CAPTION: Packets Per Second on 10G Ethernet Link
+#+BEGIN_CENTER
+#+BEGIN_NOEXPORT
+
+#+TBLNAME: reqdbytes
+| Size |   E+P |   E+P |   E+P |     IPTFS |     IPTFS |     IPTFS | Enet |  ESP |
+|  MTU |   590 |  1514 |  9014 |       590 |      1514 |      9014 |  any |  any |
+|   OH |    74 |    74 |    74 |        78 |        78 |        78 |   38 |   74 |
+|------+-------+-------+-------+-----------+-----------+-----------+------+------|
+|   40 |   614 |  1538 |  9038 | 45.820896 | 42.136986 | 40.348214 |   84 |  114 |
+|  128 |   614 |  1538 |  9038 | 146.62687 | 134.83836 | 129.11428 |  166 |  202 |
+|  256 |   614 |  1538 |  9038 | 293.25373 | 269.67672 | 258.22858 |  294 |  330 |
+|  536 |   614 |  1538 |  9038 |       614 | 564.63562 | 540.66608 |  574 |  610 |
+|  576 |  1228 |  1538 |  9038 | 659.82092 | 606.77261 | 581.01428 |  614 |  650 |
+| 1460 |  1842 |  1538 |  9038 | 1672.4627 |      1538 | 1472.7098 | 1498 | 1534 |
+| 1500 |  1842 |  3076 |  9038 | 1718.2836 | 1580.1370 | 1513.0580 | 1538 | 1574 |
+| 8960 | 11052 | 10766 |  9038 | 10263.881 | 9438.6849 |      9038 | 8998 | 9034 |
+| 9000 | 11052 | 10766 | 18076 | 10309.702 | 9480.8220 | 9078.3483 | 9038 | 9074 |
+#+TBLFM: @2$2..@2$7=remote(obytes,@2$$#)+14::@3$2..@3$4=$etho + $ipso::@3$5..@3$7=$etho + $tfso::@4$2..@>$7=remote(reqdpackets,@@#$$#)*(@2+24);p40::@4$8..@>$>=max(84,$1+@I-1);p40
+#+END_NOEXPORT
+
+#+CAPTION: L2 Octets Per Packet
+| Size | E + P | E + P | E + P | IPTFS | IPTFS | IPTFS | Enet |  ESP |
+|  MTU |   590 |  1514 |  9014 |   590 |  1514 |  9014 |  any |  any |
+|   OH |    74 |    74 |    74 |    78 |    78 |    78 |   38 |   74 |
+|------+-------+-------+-------+-------+-------+-------+------+------|
+|   40 |   614 |  1538 |  9038 |    45 |    42 |    40 |   84 |  114 |
+|  128 |   614 |  1538 |  9038 |   146 |   134 |   129 |  166 |  202 |
+|  256 |   614 |  1538 |  9038 |   293 |   269 |   258 |  294 |  330 |
+|  536 |   614 |  1538 |  9038 |   614 |   564 |   540 |  574 |  610 |
+|  576 |  1228 |  1538 |  9038 |   659 |   606 |   581 |  614 |  650 |
+| 1460 |  1842 |  1538 |  9038 |  1672 |  1538 |  1472 | 1498 | 1534 |
+| 1500 |  1842 |  3076 |  9038 |  1718 |  1580 |  1513 | 1538 | 1574 |
+| 8960 | 11052 | 10766 |  9038 | 10263 |  9438 |  9038 | 8998 | 9034 |
+| 9000 | 11052 | 10766 | 18076 | 10309 |  9480 |  9078 | 9038 | 9074 |
+#+TBLFM: $1=remote(reqdbytes,$1)::@1$2..@3$>=remote(reqdbytes,@@#$$#)::@4$2..@>$4=remote(reqdbytes,@@#$$#)::@4$5..@>$7=remote(reqdbytes,@@#$$#);%d
+
+#+BEGIN_NOEXPORT
 #+TBLNAME: pps
-|  IP Size |   ESP+Pad |   ESP+Pad |   ESP+Pad |  Ethernet |       ESP |
-|      MTU |       576 |      1500 |      9000 |      var. |      var. |
-| Fixed OH |           |           |           |        38 |        74 |
-|----------+-----------+-----------+-----------+-----------+-----------|
-|       40 | 2140411.0 | 828912.47 | 138765.54 | 14880952. | 10964912. |
-|      128 | 2162629.8 | 832223.70 | 138858.03 | 7530120.5 | 6188118.8 |
-|      256 | 2162629.8 | 832223.70 | 138858.03 | 4251700.7 | 3787878.8 |
-|      536 | 2162629.8 | 832223.70 | 138858.03 | 2177700.3 | 2049180.3 |
-|      576 | 1050420.2 | 832223.70 | 138858.03 | 2035830.6 | 1923076.9 |
-|     1460 | 707814.27 | 832223.70 | 138858.03 | 834445.93 | 814863.10 |
-|     1500 | 707814.27 | 411454.90 | 138858.03 | 812743.82 | 794155.02 |
-|     8960 |           |           |           | 138919.76 | 138366.17 |
-|     9000 | 120123.01 | 118618.33 | 69298.148 | 138304.93 | 137756.23 |
-#+TBLFM: $5=(1e10/8)/(max(46,$1)+38)::$6=(1e10/8)/($1+74)
+| Size |     E + P |     E + P |     E + P |     IPTFS |     IPTFS |     IPTFS |      Enet |       ESP |
+|  MTU |       590 |      1514 |      9014 |       590 |      1514 |      9014 |       any |       any |
+|   OH |        74 |        74 |        74 |        78 |        78 |        78 |        38 |        74 |
+|------+-----------+-----------+-----------+-----------+-----------+-----------+-----------+-----------|
+|   40 | 2035830.6 | 812743.82 | 138304.93 | 27280130. | 29665150. | 30980306. | 14880952. | 10964912. |
+|  128 | 2035830.6 | 812743.82 | 138304.93 | 8525040.5 | 9270359.0 | 9681345.9 | 7530120.5 | 6188118.8 |
+|  256 | 2035830.6 | 812743.82 | 138304.93 | 4262520.4 | 4635179.5 | 4840672.6 | 4251700.7 | 3787878.8 |
+|  536 | 2035830.6 | 812743.82 | 138304.93 | 2035830.6 | 2213817.1 | 2311963.1 | 2177700.3 | 2049180.3 |
+|  576 | 1017915.3 | 812743.82 | 138304.93 | 1894453.4 | 2060079.8 | 2151410.1 | 2035830.6 | 1923076.9 |
+| 1460 | 678610.21 | 812743.82 | 138304.93 | 747400.82 | 812743.82 | 848775.50 | 834445.93 | 814863.10 |
+| 1500 | 678610.21 | 406371.91 | 138304.93 | 727470.13 | 791070.65 | 826141.50 | 812743.82 | 794155.02 |
+| 8960 | 113101.70 | 116106.26 | 138304.93 | 121786.29 | 132433.70 | 138304.93 | 138919.76 | 138366.17 |
+| 9000 | 113101.70 | 116106.26 | 69152.467 | 121245.02 | 131845.11 | 137690.24 | 138304.93 | 137756.23 |
+#+TBLFM: @1$1..@>$1=remote(reqdbytes,@@#$$#)::@1$2..@3$>=remote(reqdbytes,@@#$$#)::@4$2..@>$>=(1e10/8)/remote(reqdbytes,@@#$$#)
+#+END_NOEXPORT
 
-# ::@4$2..@>$4=(1e10/8)/(max(46,$1)+remote(obytes,@@#$$#)+@3$5)
+# $8 = (1e10/8)/(max(46,$1)+38)
+# $9 = (1e10/8)/($1+74)
 
-#+CAPTION: Percentage of bandwidth on 10G Ethernet Link
+#+CAPTION: Packets Per Second on 10G Ethernet
+| Size | E + P | E + P | E + P | IPTFS | IPTFS | IPTFS | Enet  | ESP   |
+|  MTU | 590   | 1514  | 9014  | 590   | 1514  | 9014  | any   | any   |
+|   OH | 74    | 74    | 74    | 78    | 78    | 78    | 38    | 74    |
+|------+-------+-------+-------+-------+-------+-------+-------+-------|
+|   40 | 2.0M  | 0.8M  | 0.1M  | 27.3M | 29.7M | 31.0M | 14.9M | 11.0M |
+|  128 | 2.0M  | 0.8M  | 0.1M  | 8.5M  | 9.3M  | 9.7M  | 7.5M  | 6.2M  |
+|  256 | 2.0M  | 0.8M  | 0.1M  | 4.3M  | 4.6M  | 4.8M  | 4.3M  | 3.8M  |
+|  536 | 2.0M  | 0.8M  | 0.1M  | 2.0M  | 2.2M  | 2.3M  | 2.2M  | 2.0M  |
+|  576 | 1.0M  | 0.8M  | 0.1M  | 1.9M  | 2.1M  | 2.2M  | 2.0M  | 1.9M  |
+| 1460 | 678K  | 812K  | 138K  | 747K  | 812K  | 848K  | 834K  | 814K  |
+| 1500 | 678K  | 406K  | 138K  | 727K  | 791K  | 826K  | 812K  | 794K  |
+| 8960 | 113K  | 116K  | 138K  | 121K  | 132K  | 138K  | 138K  | 138K  |
+| 9000 | 113K  | 116K  | 69K   | 121K  | 131K  | 137K  | 138K  | 137K  |
+#+TBLFM: $1=remote(pps,$1)::@1$2..@3$>=remote(pps,@@#$$#)::@4$2..@8$>=remote(pps,@@#$$#)/1000000;%.1fM::@9$2..@>$>=remote(pps,@@#$$#)/1000;%dK
+
+#+CAPTION: Percentage of Bandwidth on 10G Ethernet
 #+TBLNAME: bwpercent
-| IP Size | E+P 576 | E+P 1500 | E+P 9000 | Ethernet |     ESP |
-|---------+---------+----------+----------+----------+---------|
-|      40 |   6.41% |    2.58% |    0.44% |   47.62% |  86.96% |
-|     128 |  18.13% |    7.85% |    1.40% |   77.11% | 100.00% |
-|     256 |  43.84% |   16.98% |    2.84% |  304.76% | 224.56% |
-|     536 |  92.73% |   35.69% |    5.95% |  322.89% | 265.35% |
-|     576 |  99.65% |   38.35% |    6.40% |  195.92% | 174.55% |
-|    1460 | 252.60% |   97.20% |   16.22% |  254.36% | 239.34% |
-|    1500 | 126.05% |   99.87% |   16.66% |  244.30% | 230.77% |
-|    8960 | 507.36% |  596.54% |   99.53% |  598.13% | 584.09% |
-|    9000 | 509.63% |  296.25% |   99.98% |  585.18% | 571.79% |
-#+TBLFM: @4$5..@>$6=100*($1*remote(pps,@@#$$#))/(1e10/8);%.2f%%
+| Size |  E + P |  E + P |  E + P |  IPTFS |  IPTFS |  IPTFS |   Enet |    ESP |
+|      |    590 |   1514 |   9014 |    590 |   1514 |   9014 |    any |    any |
+|      |     74 |     74 |     74 |     78 |     78 |     78 |     38 |     74 |
+|------+--------+--------+--------+--------+--------+--------+--------+--------|
+|   40 |  6.51% |  2.60% |  0.44% | 87.30% | 94.93% | 99.14% | 47.62% | 35.09% |
+|  128 | 20.85% |  8.32% |  1.42% | 87.30% | 94.93% | 99.14% | 77.11% | 63.37% |
+|  256 | 41.69% | 16.64% |  2.83% | 87.30% | 94.93% | 99.14% | 87.07% | 77.58% |
+|  536 | 87.30% | 34.85% |  5.93% | 87.30% | 94.93% | 99.14% | 93.38% | 87.87% |
+|  576 | 46.91% | 37.45% |  6.37% | 87.30% | 94.93% | 99.14% | 93.81% | 88.62% |
+| 1460 | 79.26% | 94.93% | 16.15% | 87.30% | 94.93% | 99.14% | 97.46% | 95.18% |
+| 1500 | 81.43% | 48.76% | 16.60% | 87.30% | 94.93% | 99.14% | 97.53% | 95.30% |
+| 8960 | 81.07% | 83.22% | 99.14% | 87.30% | 94.93% | 99.14% | 99.58% | 99.18% |
+| 9000 | 81.43% | 83.60% | 49.79% | 87.30% | 94.93% | 99.14% | 99.58% | 99.18% |
+#+TBLFM: $1=remote(pps,$1)::@1$2..@3$>=remote(pps,@@#$$#)::@4$2..@>$9=(100*$1*remote(pps,@@#$$#))/(1e10/8);%.2f%%
+#+END_CENTER
 
+A sometimes unexpected result of using IP-TFS (or any packet
+aggregating tunnel) is that, for small to medium sized packets, the
+available bandwidth is actually greater than native Ethernet. This is
+due to the reduction in Ethernet framing overhead. This increased
+bandwidth is paid for with an increase in latency. This latency is
+the time to send the unrelated octets in the outer tunnel frame. The
+following table illustrates the latency for some common values on a
+10G Ethernet link. The table also includes latency introduced by
+padding if using ESP with padding.
+
+#+BEGIN_CENTER
+#+CAPTION: Added Latency
+|      | ESP+Pad | ESP+Pad | IP-TFS  | IP-TFS  |
+|      | 1500    | 9000    | 1500    | 9000    |
+|      |         |         |         |         |
+|------+---------+---------+---------+---------|
+|   40 | 1.14 us | 7.14 us | 1.17 us | 7.17 us |
+|  128 | 1.07 us | 7.07 us | 1.10 us | 7.10 us |
+|  256 | 0.97 us | 6.97 us | 1.00 us | 7.00 us |
+|  536 | 0.74 us | 6.74 us | 0.77 us | 6.77 us |
+|  576 | 0.71 us | 6.71 us | 0.74 us | 6.74 us |
+| 1460 | 0.00 us | 6.00 us | 0.04 us | 6.04 us |
+| 1500 | 1.20 us | 5.97 us | 0.00 us | 6.00 us |
+#+TBLFM: $2=(remote(obytes,@@#$3)*8)/10000;%.2f us::$3=(remote(obytes,@@#$4)*8)/10000;%.2f us::@4$4..@>$>=(((@2+4-$1)*8)/10000);%.2f us
+#+END_CENTER
+
+Notice that the latency values are very similar between the two
+solutions; however, whereas IP-TFS provides for constant high
+bandwidth, in some cases even exceeding native Ethernet, ESP with
+padding often greatly reduces available bandwidth.
 
 * Acknowledgements
 We would like to thank Don Fedyk for help in reviewing this work.
