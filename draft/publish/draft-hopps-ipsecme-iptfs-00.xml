@@ -13,11 +13,12 @@
      docName="draft-hopps-ipsecme-iptfs-00"     submissionType="IETF">
   <front>
     <title abbrev="IP Traffic Flow Security">IP Traffic Flow Security</title>
-<author initials='C.' surname='Hopps' fullname='Christian Hopps'><organization>LabN Consulting, L.L.C.</organization><address><email>chopps@chopps.org</email></address></author>  <date/><abstract><t>This document describes a mechanism that improves IPsec traffic
-flow security by adding traffic flow confidentiality to encrypted IP
+<author initials='C.' surname='Hopps' fullname='Christian Hopps'><organization>LabN Consulting, L.L.C.</organization><address><email>chopps@chopps.org</email></address></author>  <date/><abstract><t>This document describes a mechanism to enhance IPsec traffic flow
+security by adding traffic flow confidentiality to encrypted IP
 encapsulated traffic. Traffic flow confidentiality is provided by
-obscuring the size and frequency of IP traffic using a constant sized
-and constant send rate IPsec tunnel.</t></abstract>  </front>  <middle>
+obscuring the size and frequency of IP traffic using a constant
+sized, constant send rate IPsec tunnel. The solution allows for
+congestion control as well.</t></abstract>  </front>  <middle>
 
 
 <section title="Introduction" anchor="sec-introduction">
@@ -27,11 +28,11 @@ directly obscure the data through the use of encryption <xref target="RFC4303"/>
 the traffic pattern itself exposes information due to variations in
 it's shape and timing (<xref target="I-D.iab-wire-image"/>, <xref target="AppCrypt"/>).
 Hiding the size and frequency of traffic is referred to as Traffic
-Flow Confidentiality (TFC) <xref target="RFC4303"/>.</t>
+Flow Confidentiality (TFC) per <xref target="RFC4303"/>.</t>
 
-<t><xref target="RFC4303"/> provides for TFC by allowing padding to be added to the
-encrypted IP packets and allowing for sending all-pad packets
-(protocol 59). This method has the major limitation that it can
+<t><xref target="RFC4303"/> provides for TFC by allowing padding to be added to encrypted
+IP packets and allowing for sending all-pad packets (indicated using
+protocol 59). This method has the major limitation that it can
 significantly under-utilize the available bandwidth.</t>
 
 <t>The IP-TFS solution provides for full TFC without the aforementioned
@@ -67,25 +68,25 @@ tunnel as it's transport. To provide for full TFC we send fixed sized
 encapsulating packets at a constant rate on the tunnel.</t>
 
 <t>The primary input to the tunnel algorithm is the requested bandwidth
-of the tunnel. From this we must determine the size and rate of the
-fixed sized packets we will send on the tunnel.</t>
+of the tunnel. Two values are then required to provide for this
+bandwidth, the fixed size of the encapsulating packets, and rate at
+which to send them.</t>
 
-<t>The fixed-packet-size may either be specified manually or can be
-determined optimally through the use of Path MTU discovery <xref target="RFC1191"/>
-and <xref target="RFC8201"/>.</t>
+<t>The fixed packet size may either be specified manually or can be
+determined through the use of Path MTU discovery <xref target="RFC1191"/> and <xref target="RFC8201"/>.</t>
 
 <t>Given the encapsulating packet size and the requested tunnel
-bandwidth we determine the correct packet send rate. The packet send
-rate is the requested bandwidth divided by the payload size of the
-fixed-packet-size encapsulating packet.</t>
+bandwidth, the correct packet send rate can be calculated. The packet
+send rate is the requested bandwidth divided by the payload size of
+the encapsulating packet.</t>
 
 <t>The egress of the IP-TFS tunnel SHOULD NOT impose any restrictions on
 tunnel packet size or arrival rate. Packet size and send rate is
 entirely the function of the ingress (sending) side of the IP-TFS
 tunnel. Indeed, the ingress (sending) side of the IP-TFS tunnel MUST
-be allowed to vary the size and rate at which it sends encapsulating
-packets, including sending them larger, smaller, faster or slower
-than the requested size and rate.</t>
+be allowed by the egress side to vary the size and rate at which it
+sends encapsulating packets, including sending them larger, smaller,
+faster or slower than the requested size and rate.</t>
 
 <section title="Tunnel Content">
 <t>As previously mentioned, one issue with the TFC padding solution in
@@ -94,9 +95,9 @@ packet can be sent per encapsulating packet. In order to maximize
 bandwidth IP-TFS breaks this one-to-one association.</t>
 
 <t>With IP-TFS we fragment as well as aggregate the inner IP traffic
-flow into the encapsulating IP tunnel packets. We only pad the tunnel
-packets if there is no data available to be sent at the time of
-tunnel packet transmission.</t>
+flow into fixed sized encapsulating IP tunnel packets. We only pad
+the tunnel packets if there is no data available to be sent at the
+time of tunnel packet transmission.</t>
 
 <t>In order to do this we create a new payload data type identified with
 a new IP protocol number IPTFS_PROTOCOL (TBD). A payload of
@@ -110,9 +111,10 @@ either a partial, a full or multiple partial or full data-blocks.</t>
  . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
  . ESP Header...                                                   .
  +-----------------------------------------------------------------+
- |V|          Reserved           |          BlockOffset            |
+ |               ...            :           BlockOffset            |
  +-----------------------------------------------------------------+
  |       Data Blocks Payload ...                                   ~
+ ~                                                                 ~
  ~                                                                 |
  +-----------------------------------------------------------------|
  . ESP Trailer...                                                  .
@@ -122,15 +124,12 @@ either a partial, a full or multiple partial or full data-blocks.</t>
 <t>The BlockOffset value is either zero or some offset into or past the
 end of the data blocks payload data. If the value is zero it means
 that a new data-block immediately follows the fixed header (i.e., the
-BlockOffset value). Conversely if the BlockOffset value is non-zero
-it points at the start of the next data block. It can be the case
-that the BlockOffset points past the end of the data block payload
-data. This simply means that the next data-block occurs in a
-subsequent encapsulating packet. When the BlockOffset is non-zero the
-data immediately following the header belongs to the previous
-data-block that is still being re-assembled.</t>
-
-<t>The V (version) bit is included for future compatibility.</t>
+BlockOffset value). Conversely, if the BlockOffset value is non-zero
+it points at the start of the next data block. The BlockOffset can
+point past the end of the data block payload data, this means that
+the next data-block occurs in a subsequent encapsulating packet. When
+the BlockOffset is non-zero the data immediately following the header
+belongs to the previous data-block that is still being re-assembled.</t>
 
 </section>
 
@@ -142,7 +141,7 @@ data-block that is still being re-assembled.</t>
 ]]></artwork></figure>
 
 <t>A data-block is defined by a 4-bit type code followed by the data
-block data. The types values have been carefully chosen to coincide
+block data. The type values have been carefully chosen to coincide
 with the IPv4/IPv6 version field values so that no per-data-block
 type overhead is required to encapsulate an IP packet. Likewise, the
 length of the data block is extracted from the encapsulated IPv4 or
@@ -176,8 +175,8 @@ packets and the inner packets will not affect the fragmentation of
 the outer encapsulation packets. Likewise, the ECN value need not be
 mapped as any congestion related to the constant send rate IP-TFS
 tunnel is unrelated (by design!) to the inner traffic flow. Finally,
-by default the DS field should not be copied although an
-implementation may choose to allow for configuration to override this
+by default the DS field SHOULD NOT be copied although an
+implementation MAY choose to allow for configuration to override this
 behavior. An implementation SHOULD also allow the DS value to be set
 by configuration.</t>
 
@@ -189,12 +188,12 @@ by configuration.</t>
 <t>It is not the intention of this specification to allow for mixed use
 of an IPsec SA. In other words, an SA that is created for IP-TFS is
 exclusively for IP-TFS use and MUST NOT have non-IP-TFS payloads such
-as IP (IP protocol 4) or TCP transport (IP protocol 6) intermixed
-with IP-TFS (IP protocol TBD) payloads. While it's possible to
-envision making the algorithm work in the presence of sequence number
-skips in the IP-TFS payload stream, the added complexity is not
-deemed worthwhile. Other IPsec uses can configure and use their own
-SAs.</t>
+as IP (IP protocol 4), TCP transport (IP protocol 6), or ESP pad
+packets (protocol 59) intermixed with IP-TFS (IP protocol TBD)
+payloads. While it's possible to envision making the algorithm work
+in the presence of sequence number skips in the IP-TFS payload
+stream, the added complexity is not deemed worthwhile. Other IPsec
+uses can configure and use their own SAs.</t>
 
 </section>
 
@@ -270,31 +269,34 @@ failures due to a lack of bandwidth can be corrected.</t>
 <section title="Congestion Controlled Mode" anchor="sec-congestion-controlled-mode">
 <t>With the congestion controlled mode, IP-TFS adapts to network
 congestion by lowering the packet send rate to accommodate the
-congestion. If congestion were handled in the network on a octet level
-we might consider lowering the IPsec (encapsulation) packet size to
-adapt; however, as congestion is normally handled in the network by
-dropping packets we instead choose to lower the frequency we send our
-fixed sized packets. This choice also minimizes transport overhead.</t>
+congestion, as well as raising the rate when congestion subsides.</t>
+
+<t>If congestion were handled in the network on a octet level we might
+consider lowering the IPsec (encapsulation) packet size to adapt;
+however, as congestion is normally handled in the network by dropping
+packets we instead choose to lower the frequency we send our fixed
+sized packets. This choice also minimizes transport overhead.</t>
 
 <t>The output of a congestion control algorithm SHOULD adjust the
-frequency that we send our packets until the congestion is
-accommodated. We do not standardize the congestion control algorithm,
-although the algorithm SHOULD conform to guidelines in <xref target="RFC2914"/>.</t>
+frequency that ingress sends packets until the congestion is
+accommodated. While this document does not standardize the congestion
+control algorithm, the algorithm used by an implementation SHOULD
+conform to the guidelines in <xref target="RFC2914"/>.</t>
 
 <t>When an implementation is choosing a congestion control algorithm it
 is worth noting that IP-TFS is not providing for reliable delivery of
 IP traffic and so per packet ACKs are not required, and are not
 provided.</t>
 
-<t>It's perhaps important to note that the adjustable rate of sending
-over the congestion controlled IP-TFS tunnel is being controlled by
-the network congestion. As long as the encapsulated traffic flow
-shape and timing are not directly affecting the network congestion,
-the variations in the tunnel rate will not break the traffic flow
-confidentiality.</t>
+<t>It's worth noting that the adjustable rate of sending over the
+congestion controlled IP-TFS tunnel is being controlled by the
+network congestion. As long as the encapsulated traffic flow shape
+and timing are not directly affecting the network congestion, the
+variations in the tunnel rate will not weaken the provided traffic
+flow confidentiality.</t>
 
 <section title="Circuit Breakers">
-<t>In additional to congestion control, implementations may choose to
+<t>In additional to congestion control, implementations MAY choose to
 define and implement circuit breakers <xref target="RFC8084"/> as a recovery method
 of last resort. Enabling circuit breakers is also a reason a user may
 wish to enable congestion information reports even when using the
@@ -310,13 +312,14 @@ circuit breakers are outside the scope of this document.</t>
 </section>
 
 <section title="Congestion Information">
-<t>In order to support the congestion control mode, we send regular
-packet drop reports from the receiver (egress tunnel endpoint) to the
-sender. These reports indicate the number of packet drops during a
-sequence of packets. The sequence or range of packets is identified
-using the start and end ESP sequence numbers of the packet range.</t>
+<t>In order to support the congestion control mode, the receiver (egress
+tunnel endpoint) MUST send regular packet drop reports to the
+sender (ingress tunnel endpoint). These reports indicate the number
+of packet drops during a sequence of packets. The sequence or range
+of packets is identified using the start and end ESP sequence numbers
+of the packet range.</t>
 
-<t>These congestion information reports can also be sent when in the
+<t>These congestion information reports MAY also be sent when in the
 non-congestion controlled mode to allow for reporting from the
 sending device or to implement Circuit Breakers <xref target="RFC8084"/>.</t>
 
