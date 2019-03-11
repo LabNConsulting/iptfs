@@ -998,8 +998,8 @@ is the percentage of overhead in the same MTU sized packet.</t>
 <t>Another way to compare the two solutions is to look at the amount of
 available bandwidth each solution provides. The following sections
 consider and compare the percentage of available bandwidth. For the
-sake of comparison we will also consider normal Ethernet as well as
-normal ESP use.</t>
+sake of providing a well understood baseline we will also include
+normal (unencrypted) Ethernet as well as normal ESP values.</t>
 
 <section title="Ethernet">
 <t>In order to calculate the available bandwidth we first calculate the
