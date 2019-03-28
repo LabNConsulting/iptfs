@@ -10,7 +10,7 @@
 <?rfc strict="yes"?>
 <rfc ipr="trust200902"
      category="std"
-     docName="draft-hopps-ipsecme-iptfs-00"     submissionType="IETF">
+     docName="draft-hopps-ipsecme-iptfs-01"     submissionType="IETF">
   <front>
     <title abbrev="IP Traffic Flow Security">IP Traffic Flow Security</title>
 <author initials='C.' surname='Hopps' fullname='Christian Hopps'><organization>LabN Consulting, L.L.C.</organization><address><email>chopps@chopps.org</email></address></author>  <date/><abstract><t>This document describes a mechanism to enhance IPsec traffic flow
@@ -277,23 +277,31 @@ however, as congestion is normally handled in the network by dropping
 packets we instead choose to lower the frequency we send our fixed
 sized packets. This choice also minimizes transport overhead.</t>
 
-<t>The output of a congestion control algorithm SHOULD adjust the
-frequency that ingress sends packets until the congestion is
-accommodated. While this document does not standardize the congestion
-control algorithm, the algorithm used by an implementation SHOULD
-conform to the guidelines in <xref target="RFC2914"/>.</t>
+<t>The output of the congestion control algorithm will adjust the rate
+at which that ingress sends packets. While this document does not
+require a specific congestion control algorithm, best current
+practice RECOMMENDS that the algorithm conform to <xref target="RFC3448"/>. Congestion
+control principles are documented in <xref target="RFC2914"/> as well. One algorithm
+that is well suited for IP-TFS (i.e., designed for fixed-size packet
+and send rate varied based on congestion) is documented in <xref target="RFC4342"/>.</t>
 
-<t>When an implementation is choosing a congestion control algorithm it
-is worth noting that IP-TFS is not providing for reliable delivery of
-IP traffic and so per packet ACKs are not required, and are not
-provided.</t>
+<t>Generally, the input required for a TCP friendly rate control
+algorithm is the loss rate and the round-trip time (RTT). These
+values are provided by IP-TFS using the congestion information
+reports described in <xref target="sec-congestion-information"></xref>. In particular these
+values are sufficient to implement <xref target="RFC4342"/>.</t>
 
-<t>It's worth noting that the adjustable rate of sending over the
-congestion controlled IP-TFS tunnel is being controlled by the
-network congestion. As long as the encapsulated traffic flow shape
-and timing are not directly affecting the network congestion, the
-variations in the tunnel rate will not weaken the provided traffic
-flow confidentiality.</t>
+<t>When an implementation is choosing a congestion control algorithm (or
+a selection of algorithms) one should remember that IP-TFS is not
+providing for reliable delivery of IP traffic, and so per packet ACKs
+are not required and are not provided.</t>
+
+<t>It's worth noting that the variable send-rate of a congestion
+controlled IP-TFS tunnel, is not private; however, this send-rate is
+being driven by network congestion, and as long as the encapsulated
+(inner) traffic flow shape and timing are not directly affecting the
+(outer) network congestion, the variations in the tunnel rate will
+not weaken the provided inner traffic flow confidentiality.</t>
 
 <section title="Circuit Breakers">
 <t>In additional to congestion control, implementations MAY choose to
@@ -311,17 +319,32 @@ circuit breakers are outside the scope of this document.</t>
 
 </section>
 
-<section title="Congestion Information">
-<t>In order to support the congestion control mode, the receiver (egress
-tunnel endpoint) MUST send regular packet drop reports to the
-sender (ingress tunnel endpoint). These reports indicate the number
-of packet drops during a sequence of packets. The sequence or range
-of packets is identified using the start and end ESP sequence numbers
-of the packet range.</t>
+<section title="Congestion Information" anchor="sec-congestion-information">
+<t>In order to support the congestion control mode, the sender, in
+general, needs to know the loss rate and also be able to approximate
+the RTT (<xref target="RFC3448"/>). To provide the sender with these values the
+receiver (egress tunnel endpoint) sends congestion information (CI)
+reports using a fixed interval timer.</t>
+
+<t>The congestion information consists of packet drop reports indicating
+the number of packet drops that have occurred over a sequence of
+packets. The sequence of sent packets is identified by the start and
+end ESP sequence numbers.</t>
+
+<t>The loss rate is the number of packet drops divided by the time
+interval between sending the start and end packets as indicated by
+the provided sequence number range. The time interval is simply the
+number of packets in the range multiplied by the current packet send
+rate.</t>
+
+<t>The sender can also approximate the packet RTT based on when it
+receives the congestion information for the end packet sequence
+number contained within said CI report.</t>
 
 <t>These congestion information reports MAY also be sent when in the
-non-congestion controlled mode to allow for reporting from the
-sending device or to implement Circuit Breakers <xref target="RFC8084"/>.</t>
+non-congestion controlled mode to allow for reporting loss and RTT
+from the ingress sender as well as to allow implementing Circuit
+Breakers <xref target="RFC8084"/>.</t>
 
 <t>The congestion information is sent using an IKEv2 INFORMATION
 notifications <xref target="RFC7296"/>. These notifications are sent at a configured
@@ -575,9 +598,9 @@ payload. The following diagram defines the notification payload data.</t>
  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  |                          Timestamp                              |
  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- |                          AckSeqStart                            |
+ |                          RcvSeqStart                            |
  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- |                          AckSeqEnd                              |
+ |                          RcvSeqEnd                              |
  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 ]]></artwork></figure>
 
@@ -587,21 +610,20 @@ Congestion Experienced (CE) ECN bits set were received and
 used in calculating the DropCount value.</t>
 <t hangText="Reserved:"><vspace/>A 7 bit field set to 0 ignored on receipt.</t>
 <t hangText="DropCount:"><vspace/>A 24 bit unsigned integer count of the drops that
-occurred between AckSeqStart and AckSeqEnd. If the
+occurred between RcvSeqStart and RcvSeqEnd. If the
 drops exceed the resolution of the counter then set to
 the maximum value (i.e., 0xFFFFFF).</t>
-<t hangText="AckSeqStart:"><vspace/>A 32 bit unsigned integer containing the first ESP
+<t hangText="RcvSeqStart:"><vspace/>A 32 bit unsigned integer containing the first ESP
 sequence number (as defined in <xref target="RFC4303"/>) of the
 packet range that this information relates to.</t>
-<t hangText="AckSeqEnd:"><vspace/>A 32 bit unsigned integer containing the last ESP
+<t hangText="RcvSeqEnd:"><vspace/>A 32 bit unsigned integer containing the last ESP
 sequence number (as defined in <xref target="RFC4303"/>) of the
 packet range that this information relates to.</t>
-<t hangText="Timestamp:"><vspace/>A 32 bit unsigned integer containing the lower 32
-bits of a running monotonic millisecond timer of when
-this notification data was created/sent. This value is
-used to determine duplicates and drop counts of this
-information. Implementations should deal with wrapping
-of this timer value.</t>
+<t hangText="Timestamp:"><vspace/>A 32 bit unsigned integer containing the lower 32 bits
+of a running monotonic millisecond timer of when the
+RcvSeqEnd packet was received. This value is used to
+determine the packet transit time. Implementations
+should deal with wrapping of this timer value.</t>
 </list></t>
 
 </section>
@@ -790,6 +812,21 @@ then non-congestion controlled mode use should be considered instead.</t>
 </reference>
 
 
+<reference  anchor='RFC3448' target='https://www.rfc-editor.org/info/rfc3448'>
+<front>
+<title>TCP Friendly Rate Control (TFRC): Protocol Specification</title>
+<author initials='M.' surname='Handley' fullname='M. Handley'><organization /></author>
+<author initials='S.' surname='Floyd' fullname='S. Floyd'><organization /></author>
+<author initials='J.' surname='Padhye' fullname='J. Padhye'><organization /></author>
+<author initials='J.' surname='Widmer' fullname='J. Widmer'><organization /></author>
+<date year='2003' month='January' />
+<abstract><t>This document specifies TCP-Friendly Rate Control (TFRC).  TFRC is a congestion control mechanism for unicast flows operating in a best- effort Internet environment.  It is reasonably fair when competing for bandwidth with TCP flows, but has a much lower variation of throughput over time compared with TCP, making it more suitable for applications such as telephony or streaming media where a relatively smooth sending rate is of importance.  [STANDARDS-TRACK]</t></abstract>
+</front>
+<seriesInfo name='RFC' value='3448'/>
+<seriesInfo name='DOI' value='10.17487/RFC3448'/>
+</reference>
+
+
 <reference  anchor='RFC4301' target='https://www.rfc-editor.org/info/rfc4301'>
 <front>
 <title>Security Architecture for the Internet Protocol</title>
@@ -800,6 +837,20 @@ then non-congestion controlled mode use should be considered instead.</t>
 </front>
 <seriesInfo name='RFC' value='4301'/>
 <seriesInfo name='DOI' value='10.17487/RFC4301'/>
+</reference>
+
+
+<reference  anchor='RFC4342' target='https://www.rfc-editor.org/info/rfc4342'>
+<front>
+<title>Profile for Datagram Congestion Control Protocol (DCCP) Congestion Control ID 3: TCP-Friendly Rate Control (TFRC)</title>
+<author initials='S.' surname='Floyd' fullname='S. Floyd'><organization /></author>
+<author initials='E.' surname='Kohler' fullname='E. Kohler'><organization /></author>
+<author initials='J.' surname='Padhye' fullname='J. Padhye'><organization /></author>
+<date year='2006' month='March' />
+<abstract><t>This document contains the profile for Congestion Control Identifier 3, TCP-Friendly Rate Control (TFRC), in the Datagram Congestion Control Protocol (DCCP).  CCID 3 should be used by senders that want a TCP-friendly sending rate, possibly with Explicit Congestion Notification (ECN), while minimizing abrupt rate changes.  [STANDARDS-TRACK]</t></abstract>
+</front>
+<seriesInfo name='RFC' value='4342'/>
+<seriesInfo name='DOI' value='10.17487/RFC4342'/>
 </reference>
 
 
