@@ -114,19 +114,19 @@ either a partial, a full or multiple partial or full data-blocks.
 
 #+CAPTION: Layout of IP-TFS IPSec Packet
 #+begin_example
- . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
- . Outer Encapsulating Header ...                                  .
- . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
- . ESP Header...                                                   .
- +-----------------------------------------------------------------+
- |               ...            :           BlockOffset            |
- +-----------------------------------------------------------------+
- |       Data Blocks Payload ...                                   ~
- ~                                                                 ~
- ~                                                                 |
- +-----------------------------------------------------------------|
- . ESP Trailer...                                                  .
- . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+ . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+ . Outer Encapsulating Header ...                                .
+ . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+ . ESP Header...                                                 .
+ +---------------------------------------------------------------+
+ |               ...            :           BlockOffset          |
+ +---------------------------------------------------------------+
+ |       Data Blocks Payload ...                                 ~
+ ~                                                               ~
+ ~                                                               |
+ +---------------------------------------------------------------|
+ . ESP Trailer...                                                .
+ . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
 #+end_example
 
 The BlockOffset value is either zero or some offset into or past the
@@ -143,7 +143,7 @@ belongs to the previous data-block that is still being re-assembled.
 
 #+CAPTION: Layout of IP-TFS data block
 #+begin_example
- +-----------------------------------------------------------------+
+ +---------------------------------------------------------------+
  | Type  | rest of IPv4, IPv6 or pad.
  +--------
 #+end_example
@@ -246,8 +246,10 @@ presence of outer encapsulating packet loss.
 
 ** Modes of operation
 
-Just as with normal IPsec tunnels IP-TFS tunnels are unidirectional.
-Bidirectional functionality is achieved by setting up 2 tunnels, one
+Just as with normal IPsec/ESP tunnels, IP-TFS tunnels are
+unidirectional; however, unless statically configured they will
+utilize an associated bidirectional IKE connection. Bidirectional
+IP-TFS functionality is achieved by setting up 2 IP-TFS tunnels, one
 in either direction.
 
 An IP-TFS tunnel can operate in 2 modes, a non-congestion controlled
@@ -290,8 +292,8 @@ that is well suited for IP-TFS (i.e., designed for fixed-size packet
 and send rate varied based on congestion) is documented in [[RFC4342]].
 
 Generally, the input required for a TCP friendly rate control
-algorithm is the loss rate and the round-trip time (RTT). These
-values are provided by IP-TFS using the congestion information
+algorithm is the loss rate and an estimated round-trip time (RTT).
+These values are provided by IP-TFS using the congestion information
 reports described in [[Congestion Information]]. In particular these
 values are sufficient to implement [[RFC4342]].
 
@@ -320,36 +322,35 @@ circuit breakers are outside the scope of this document.
 
 In order to support the congestion control mode, the sender, in
 general, needs to know the loss rate and also be able to approximate
-the RTT ([[RFC3448]]). To provide the sender with these values the
-receiver (egress tunnel endpoint) sends congestion information (CI)
-reports using a fixed interval timer.
+the RTT ([[RFC3448]]). In order to obtain these values the sender
+periodically requests congestion information from the receiver using
+an IKEv2 information exchange [[RFC7296]].
 
-The congestion information consists of packet drop reports indicating
-the number of packet drops that have occurred over a sequence of
-packets. The sequence of sent packets is identified by the start and
-end ESP sequence numbers.
+In order to calculate the loss rate, the congestion information from
+the receiver includes a packet drop count indicating the number of
+packet drops that have occurred over a sequence of packets. The
+sequence of packets is identified by the start and end ESP sequence
+numbers. The reported sequence start is either an initial value (1)
+or 1 beyond the end sequence number of the prior congestion
+information report the sender supplied. The loss rate then is the
+number of packet drops divided by the time interval between sending
+the start and end packets as indicated by the provided sequence
+number range. The time interval is simply the number of packets in
+the range multiplied by the current packet send rate.
 
-The loss rate is the number of packet drops divided by the time
-interval between sending the start and end packets as indicated by
-the provided sequence number range. The time interval is simply the
-number of packets in the range multiplied by the current packet send
-rate.
-
-# XXX Expand on the following.
-
-The sender can also approximate the packet RTT based on when it
-receives the congestion information for the end packet sequence
-number contained within said CI report.
-
-These congestion information reports MAY also be sent when in the
-non-congestion controlled mode to allow for reporting loss and RTT
-from the ingress sender as well as to allow implementing Circuit
-Breakers [[RFC8084]].
-
-The congestion information is sent using an IKEv2 INFORMATION
-notifications [[RFC7296]]. These notifications are sent at a configured
-interval (which can be configured to 0 to disable the sending of the
-reports).
+The sender must also be able to approximate a round-trip time. To do
+this the sender utilizes the IKEv2 information exchange. In order to
+account for possible retransmissions of the IKEv2 information
+request, the sender includes a send count in its request. The
+receiver echo's this value and in it's reply. Additionally the
+receiver supplies an estimate of it's control plane overhead. This
+overhead estimate should be the as amount of time between receipt of
+the IKEv2 information request and the reply being sent (i.e., the
+amount of time it took the receiver to process the request), This
+estimate SHOULD be as close to but never longer than the actual time.
+The sender then subtracts this estimate from the real-world
+round-trip time of the exchange to arrive at the actual round-trip
+time estimate for the tunnel.
 
 ** ECN Support
 
@@ -375,8 +376,9 @@ NOT be enabled by default.
 IP-TFS is meant to be deployable with a minimal amount of
 configuration. All IP-TFS specific configuration (i.e., in addition
 to the underlying IPsec tunnel configuration) should be able to be
-specified at the tunnel ingress (sending) side alone (i.e.,
-single-ended provisioning).
+specified at the (unidirectional) tunnel ingress (sending) side. It
+is intended that non-IKEv2 operation is supported with local static
+configuration.
 
 ** Bandwidth
 
@@ -394,57 +396,20 @@ can be configured manually or can be automatically determined using
 Path MTU discovery (see [[RFC1191]] and [[RFC8201]]). No standardized
 configuration method is required.
 
-** Congestion Information Configuration
+** Congestion Control
 
-If congestion control mode is to be used, or if the user wishes to
-receive congestion information on the sender for circuit breaking or
-other operational notifications in the non-congestion controlled
-mode, IP-TFS will need to configure the egress tunnel endpoint to
-send congestion information periodically.
-
-In order to configure the sending interval of periodic congestion
-information on the egress tunnel endpoint, we utilize the IKEv2
-Configuration Payload (CP) [[RFC7296]]. Implementations MAY also allow
-for manual (or default) configuration of this interval; however,
-implementations of IP-TFS MUST support configuration using the IKEv2
-exchange described below.
-
-We utilize a new IKEv2 configuration attribute TFS_INFO_INTERVAL
-(TBD) to configure the sending interval from the egress endpoint of
-the tunnel. This value is configured using a CFG_REQUEST payload and
-is acknowledge by the receiver using a CFG_REPLY payload. This
-configuration exchange SHOULD be sent during the IKEv2 configuration
-exchanges occurring as the tunnel is first brought up. The sending
-interval value MAY also be changed at any time afterwards using a
-similar CFG_REQUEST/CFG_REPLY payload inside an IKEv2 INFORMATIONAL
-exchange.
-
-In the absence of a congestion information configuration exchange
-the sending interval is up to the receiving device configuration.
-
-The sending interval value is given in milliseconds and is 16 bits
-wide; however, it is not recommended that values below 1/10th of a
-second are used as this could lead to early exhaustion of the Message
-ID field used in the IKEv2 INFORMATIONAL exchange to send the
-congestion information.
-
-{{question: Could we get away with sending the info using the same
-message ID each time? We have a timestamp that would allow for
-duplicate detection, and the payload will be authenticated by IKEv2.
-}}
-
-A sending interval value of 0 disables sending of the congestion
-information.
+Congestion control is a local configuration option. No standardized
+configuration method is required.
 
 * Packet and Data Formats
 ** IPSec
 *** Payload Format
 #+begin_example
                       1                   2                   3
-  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
- +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- |V|          Reserved           |          BlockOffset            |
- +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ |V|          Reserved           |          BlockOffset          |
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  |       DataBlocks ...
  +-+-+-+-+-+-+-+-+-+-+-
 #+end_example
@@ -465,8 +430,8 @@ information.
 *** Data Blocks
 #+begin_example
                       1                   2                   3
-  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
- +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  | Type  | IPv4, IPv6 or pad...
  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 #+end_example
@@ -478,10 +443,10 @@ information.
 **** IPv4 Data Block
 #+begin_example
                       1                   2                   3
-  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
- +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- |  0x4  |  IHL  |  TypeOfService  |         TotalLength           |
- +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ |  0x4  |  IHL  |  TypeOfService  |         TotalLength         |
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  | Rest of the inner packet ...
  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 #+end_example
@@ -498,10 +463,10 @@ the encapsulated IP packet.
 **** IPv6 Data Block
 #+begin_example
                       1                   2                   3
-  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
- +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- |  0x6  | TrafficClass  |               FlowLabel                 |
- +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ |  0x6  | TrafficClass  |               FlowLabel               |
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  |          TotalLength          | Rest of the inner packet ...
  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 #+end_example
@@ -518,8 +483,8 @@ the encapsulated IP packet.
 **** Pad Data Block
 #+begin_example
                       1                   2                   3
-  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
- +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  |  0x0  | Padding ...
  +-+-+-+-+-+-+-+-+-+-+-
 #+end_example
@@ -528,70 +493,103 @@ the encapsulated IP packet.
 - Padding :: extends to end of the encapsulating packet.
 
 ** IKEv2
-*** IKEv2 Congestion Information Configuration Attribute
 
-The following defines the configuration attribute structure used in
-the IKEv2 [[RFC7296]] configuration exchange to set the congestion
-information report sending interval.
+*** IKEv2 IP-TFS Supported Payload Type (TBD)
+
+The following defines the IP-TFS supported payload IPTFS_SUPPORT.
+The presence of this payload indicates that the node is capable of
+receiving IP-TFS format ESP payloads (IPTFS_PROTOCOL). It should be
+included during the IKEv2 [[RFC7296]] IKE_AUTH exchange.
+
+The first 4 octets are the standard generic payload header fields
+defined in [[RFC7296]]. The Payload Type value is TBD.
 
 #+begin_example
                       1                   2                   3
-  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
- +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- |R|       Attribute Type        |             Length              |
- +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- |            Interval           |
- +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ | Next Payload  |C|  RESERVED   |         Payload Length        |
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ |D|  ResvFlags  |
+ +-+-+-+-+-+-+-+-+
 #+end_example
 
-- R :: 1 bit set to 0.
-- Attribute Type :: 15 bit value set to TFS_INFO_INTERVAL (TBD).
-- Length :: 2 octet length set to 2.
-- SendInterval :: A 2 octet unsigned integer. The sending interval in
-                  milliseconds.
+- Payload Length :: 2 octet length set to 5.
+- D :: 1 bit value that if set indicates fragmentation is not
+       supported by the receiver.
+- ResvFlags :: 7 bits set to 0.
 
-***  IKEv2 Congestion Information Notification Data
+***  IKEv2 Information Request Congestion Information Payload (TBD).
 
-We utilize a send only (i.e., no response expected) IKEv2
-INFORMATIONAL exchange (37) to transmit the congestion information
-using a notification payload of type TFS_CONGEST_INFO (TBD). The The
-Response bit should be set to 0. As no response is expected the only
-payload should be the congestion information in the notification
-payload. The following diagram defines the notification payload data.
+The following defines the information exchange payload type
+IPTFS_CONGEST_INFO used in the IKEv2 [[RFC7296]] to request a congestion
+information report. This is sent by the sender to the receiver to
+request a new congestion information report.
+
+The first 4 octets are the standard generic payload header fields
+defined in [[RFC7296]]. The IPTFS_CONGEST_INFO Payload Type value is
+TBD.
 
 #+begin_example
                       1                   2                   3
-  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
- +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- |E|  Reserved   |                  DropCount                      |
- +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- |                          Timestamp                              |
- +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- |                          RcvSeqStart                            |
- +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- |                          RcvSeqEnd                              |
- +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ | Next Payload  |C|  RESERVED   |         Payload Length        |
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ |0| ResendCount |
+ +-+-+-+-+-+-+-+-+
+#+end_example
+
+- Payload Length :: 2 octet length set to 5.
+- ResendCount :: An 7 bit value, set to 1 on the initial sending of
+                 this information request, and incremented by 1 for
+                 each time the request is retransmitted (i.e., b/c it
+                 has not be responded to yet).
+
+***  IKEv2 Information Response Congestion Information Payload
+
+When the receiver receives an IKEv2 information exchange request with
+the IPTFS_CONGEST_INFO payload it replies with the following data in
+response.
+
+#+begin_example
+                      1                   2                   3
+  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ | Next Payload  |C|  RESERVED   |         Payload Length        |
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ |E| ResendCount |                  DropCount                    |
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ |                          RcvSeqStart                          |
+ |                                                               |
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ |                           RcvSeqEnd                           |
+ |                                                               |
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ |                         OverheadTime                          |
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 #+end_example
 
 - E :: A 1 bit value that if set indicates that packet[s] with
        Congestion Experienced (CE) ECN bits set were received and
        used in calculating the DropCount value.
-- Reserved :: A 7 bit field set to 0 ignored on receipt.
+- ResendCount :: A 7 bit field containing the value from the
+                information request field of the same name for which
+                this data is a response to.
 - DropCount :: A 24 bit unsigned integer count of the drops that
                occurred between RcvSeqStart and RcvSeqEnd. If the
                drops exceed the resolution of the counter then set to
                the maximum value (i.e., 0xFFFFFF).
-- RcvSeqStart :: A 32 bit unsigned integer containing the first ESP
+- RcvSeqStart :: A 64 bit unsigned integer containing the first ESP
                  sequence number (as defined in [[RFC4303]]) of the
                  packet range that this information relates to.
-- RcvSeqEnd :: A 32 bit unsigned integer containing the last ESP
+- RcvSeqEnd :: A 64 bit unsigned integer containing the last ESP
                sequence number (as defined in [[RFC4303]]) of the
                packet range that this information relates to.
-- Timestamp :: A 32 bit unsigned integer containing the lower 32 bits
-               of a running monotonic millisecond timer of when the
-               RcvSeqEnd packet was received. This value is used to
-               determine the packet transit time. Implementations
-               should deal with wrapping of this timer value.
+- OverheadTime :: A 32 bit unsigned integer containing an estimate in
+                  microseconds of the time between the receipt of the
+                  IKEv2 information request, and the sending of this
+                  response.
 
 * IANA Considerations
 
@@ -599,32 +597,33 @@ This document requests a protocol number IPTFS_PROTOCOL be allocated
 by IANA from "Assigned Internet Protocol Numbers" registry for
 identifying the IP-TFS ESP payload format.
 
-  Type: TBD
-  Description: IP-TFS ESP payload format.
-  Reference: This document
+  - Type :: TBD
+  - Description :: IP-TFS ESP payload format.
+  - Reference :: This document
 
 # ^IANA-PN^ https://www.iana.org/assignments/protocol-numbers
 
-Additionally this document requests an attribute value
-TFS_INFO_INTERVAL (TBD) be allocated by IANA from "IKEv2
-Configuration Payload Attribute Types" registry.
+Additionally this document requests an IKEv2 payload type
+IPTFS_SUPPORT (TBD) be allocated by IANA from "IKEv2 Payload Types"
+registry.
 
-  Type: TBD
-  Description: The sending rate of congestion information from egress
-               tunnel endpoint.
-  Reference: This document
+  - Type :: TBD
+  - Description :: Indicates support for being an IPTFS receiving
+                   tunnel endpoint.
+  - Reference :: This document
 
 # ^IANA-IKECA^
 # https://www.iana.org/assignments/ikev2-parameters/ikev2-parameters.xhtml#ikev2-parameters-21
 
-Additionally this document requests a notify message status type
-TFS_CONGEST_INFO (TBD) be allocated by IANA from "IKEv2 Notify
-Message Types - Status Types" registry.
+Additionally this document requests an IKEv2 payload type
+TFS_CONGEST_INFO (TBD) be allocated by IANA from "IKEv2 Payload
+Types" registry.
 
-  Type: TBD
-  Description: The sending rate of congestion information from egress
-               tunnel endpoint.
-  Reference: This document
+  - Type :: TBD
+  - Description :: The IKEv2 information exchange payload for
+                   requesting and delivering congestion control
+                   information.
+  - Reference :: This document
 
 # ^IANA-IKECA^
 # https://www.iana.org/assignments/ikev2-parameters/ikev2-parameters.xhtml#ikev2-parameters-16
