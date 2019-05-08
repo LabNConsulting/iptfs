@@ -191,7 +191,7 @@ main(int argc, char **argv)
 			break;
 		case 'C':
 			/* congest-rate */
-			congest = (uint64_t)atoi(optarg) * 1000000ULL;
+			congest = (uint64_t)atoi(optarg) * 1000ULL;
 			printf("Congest Rate: %lu\n", congest);
 			break;
 		case 'c':
@@ -217,7 +217,7 @@ main(int argc, char **argv)
 			break;
 		case 'r':
 			/* port */
-			txrate = (uint64_t)atoi(optarg) * 1000000ULL;
+			txrate = (uint64_t)atoi(optarg) * 1000ULL;
 			printf("Tx Rate: %lu\n", txrate);
 			break;
 		case 'v':

@@ -111,7 +111,7 @@ def checked_main(*margs):
         "-a", "--ack-rate", type=float, default=1.0, help="Rate in float seconds to send ACK info")
     parser.add_argument("-c", "--connect", help="Connect to server")
     parser.add_argument(
-        "--congest-rate", type=int, default=0, help="Forced maximum egress rate in Megabits")
+        "--congest-rate", type=float, default=0, help="Forced maximum egress rate in Kilobits")
     parser.add_argument("-d", "--dev", default="vtun%d", help="Name of tun interface.")
     parser.add_argument("--debug", action="store_true", help="Debug logging and checks.")
     parser.add_argument(
@@ -121,7 +121,7 @@ def checked_main(*margs):
     parser.add_argument("-l", "--listen", default="::", help="Server listen on this address")
     parser.add_argument("-p", "--port", default="8001", help="TCP port to use.")
     # parser.add_argument("-u", "--udp", action="store_true", help="Use UDP instead of TCP")
-    parser.add_argument("-r", "--rate", type=int, default=0, help="Tunnel rate in Megabits")
+    parser.add_argument("-r", "--rate", type=float, default=0, help="Tunnel rate in Kilobits")
     parser.add_argument("--trace", action="store_true", help="Trace logging.")
     parser.add_argument("-v", "--verbose", action="store_true", help="Verbose logging.")
     args = parser.parse_args(*margs)
@@ -153,10 +153,10 @@ def checked_main(*margs):
 
     threads = []
     if not args.no_ingress:
-        threads.extend(iptfs.tunnel_ingress(riffd, s, send_lock, args.rate * 1000000))
+        threads.extend(iptfs.tunnel_ingress(riffd, s, send_lock, int(args.rate * 1000)))
     if not args.no_egress:
         threads.extend(
-            iptfs.tunnel_egress(s, send_lock, wiffd, args.ack_rate, args.congest_rate * 1000000))
+            iptfs.tunnel_egress(s, send_lock, wiffd, args.ack_rate, int(args.congest_rate * 1000)))
     for thread in threads:
         thread.join()
 

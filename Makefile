@@ -56,3 +56,6 @@ $(OBJ): $(SRC)
 
 $(OBJDIR)/%.o: src/%.c src/iptfs.h
 	gcc -c -o $@ $<
+
+docker-build:
+	docker build -t iptfs .

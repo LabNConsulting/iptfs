@@ -204,7 +204,8 @@ add_to_inner_packet(struct mbuf *tbuf, bool new, struct miov *m,
 		m = miovq_pop(freeq);
 
 	if (MBUF_LEN(tbuf) != tlen)
-		errx(1, "XXX6 MBUF_LEN(tbuf) %d tlen %d", MBUF_LEN(tbuf), tlen);
+		errx(1, "XXX6 MBUF_LEN(tbuf) %ld tlen %d", MBUF_LEN(tbuf),
+		     tlen);
 
 	if (m->len == 0) {
 		if (!new)
@@ -252,7 +253,7 @@ add_to_inner_packet(struct mbuf *tbuf, bool new, struct miov *m,
 
 		/* FALLTHROUGH*/
 		if (MBUF_LEN(tbuf) != tlen)
-			errx(1, "XXX7 MBUF_LEN(tbuf) %d tlen %d",
+			errx(1, "XXX7 MBUF_LEN(tbuf) %ld tlen %d",
 			     MBUF_LEN(tbuf), tlen);
 	} else if (offset > tlen) {
 		/* This is us logging here what we didn't in in get outer */
@@ -337,7 +338,7 @@ add_to_inner_packet(struct mbuf *tbuf, bool new, struct miov *m,
 		return NULL;
 
 	if (MBUF_LEN(tbuf) != tlen)
-		errx(1, "MBUF_LEN(tbuf) %d tlen %d", MBUF_LEN(tbuf), tlen);
+		errx(1, "MBUF_LEN(tbuf) %ld tlen %d", MBUF_LEN(tbuf), tlen);
 
 	// Recurse!
 	DBG("recurse: new %d\n", new);
@@ -615,7 +616,7 @@ write_tfs_pkts(int s, struct mqueue *outq, struct mqueue *freeq,
 	st_reset(&sectimer, NSECS_IN_SEC);
 
 	g_pps = pps_new(pps);
-	LOG("Writing TFS %d pps for %d Mbps\n", pps, pps * mtub / 1000000);
+	LOG("Writing TFS %ld pps for %ld Mbps\n", pps, pps * mtub / 1000000);
 
 	/* Allocate globals for writing to TFS */
 	g_max_inner_pkt = MAXBUF / 20;
@@ -678,8 +679,8 @@ recv_ack(struct mbuf *m)
 	if (g_avgdrops->average == 0) {
 		// Not degraded, increase rate
 		uint64_t pps = pps_change_pps(g_pps, 1);
-		LOG("recv_ack: upgrading ndrop %d pcount %d: inc %d to %d pps "
-		    "%dMbps\n",
+		LOG("recv_ack: upgrading ndrop %d pcount %d: inc %d to %ld pps "
+		    "%ldMbps\n",
 		    ndrop, end - start, 1, pps, pps * mtub / 1000000);
 	} else {
 		// Degraded, slow rate byte 1/4 of the droppct.
@@ -687,7 +688,8 @@ recv_ack(struct mbuf *m)
 		if (droppct < 1)
 			droppct = 1;
 		uint64_t pps = pps_change_pps(g_pps, -g_avgdrops->average);
-		LOG("recv_ack: ndrop %d avg %d pcount %d: reduce to %d pps %d "
+		LOG("recv_ack: ndrop %d avg %d pcount %d: reduce to %ld pps "
+		    "%ld "
 		    "Mbps\n",
 		    ndrop, g_avgdrops->average, end - start, pps,
 		    (pps * mtub) / 1000000);

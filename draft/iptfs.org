@@ -121,6 +121,8 @@ either a partial, a full or multiple partial or full data-blocks.
  +---------------------------------------------------------------+
  |               ...            :           BlockOffset          |
  +---------------------------------------------------------------+
+ :                  [Optional Congestion Info]                   :
+ +---------------------------------------------------------------+
  |       Data Blocks Payload ...                                 ~
  ~                                                               ~
  ~                                                               |
@@ -284,18 +286,21 @@ packets we instead choose to lower the frequency we send our fixed
 sized packets. This choice also minimizes transport overhead.
 
 The output of the congestion control algorithm will adjust the rate
-at which that ingress sends packets. While this document does not
+at which the ingress sends packets. While this document does not
 require a specific congestion control algorithm, best current
-practice RECOMMENDS that the algorithm conform to [[RFC3448]]. Congestion
+practice RECOMMENDS that the algorithm conform to [[RFC5348]]. Congestion
 control principles are documented in [[RFC2914]] as well. One algorithm
 that is well suited for IP-TFS (i.e., designed for fixed-size packet
 and send rate varied based on congestion) is documented in [[RFC4342]].
 
 Generally, the input required for a TCP friendly rate control
-algorithm is the loss rate and an estimated round-trip time (RTT).
-These values are provided by IP-TFS using the congestion information
-reports described in [[Congestion Information]]. In particular these
-values are sufficient to implement [[RFC4342]].
+algorithm ([[RFC5348]]) is the loss event rate and an estimated
+round-trip time (RTT). These values are provided by IP-TFS using the
+congestion information reports described in [[Congestion Information]].
+In particular these values are sufficient to implement the algorithm
+described in [[RFC5348]]. [[Deriving TFRC Parameters]] describes how the data
+provided by IP-TFS congestion information may be used to derive the
+values required in [[RFC5348]].
 
 When an implementation is choosing a congestion control algorithm (or
 a selection of algorithms) one should remember that IP-TFS is not
@@ -321,10 +326,10 @@ circuit breakers are outside the scope of this document.
 * Congestion Information
 
 In order to support the congestion control mode, the sender, in
-general, needs to know the loss rate and also be able to approximate
-the RTT ([[RFC3448]]). In order to obtain these values the sender
-periodically requests congestion information from the receiver using
-an IKEv2 information exchange [[RFC7296]].
+general, needs to know the loss event rate and also be able to
+approximate the RTT ([[RFC5348]]). In order to obtain these values the
+sender periodically requests congestion information from the receiver
+using an IKEv2 information exchange [[RFC7296]].
 
 In order to calculate the loss rate, the congestion information from
 the receiver includes a packet drop count indicating the number of
@@ -408,7 +413,13 @@ configuration method is required.
                       1                   2                   3
   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- |V|          Reserved           |          BlockOffset          |
+ |V|C|E|      Reserved           |          BlockOffset          |
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ :              RTT              :             Delay             :
+ :...............................................................:
+ :                          LossEventRate                        :
+ :...............................................................:
+ :                           LastSeqNum                          :
  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  |       DataBlocks ...
  +-+-+-+-+-+-+-+-+-+-+-
@@ -416,16 +427,44 @@ configuration method is required.
 
 - V :: A 1 bit version field that MUST be set to zero. If received as
        one the packet MUST be dropped.
-- Reserved :: A 15 bit field set to 0 and ignored on receipt.
+- C :: A 1 bit value if set indicates the inclusion of the optional
+       congestion information values ~RTT~, ~LossEventRate~ and
+       ~LastSeqNum~.
+- E :: A 1 bit value if set indicates that Congestion Experienced
+       (CE) ECN bits were received and used to determine the loss
+       intervals which the receiver used to calculate the
+       reported ~LossEventRate~.
+- Reserved :: A 13 bit field set to 0 and ignored on receipt.
 - BlockOffset :: A 16 bit unsigned integer counting the number of
-                 octets following this 32 bit header before the next
+                 octets following the header fields before the next
                  data block. It can also point past the end of the
                  containing packet in which case the data entirely
                  belongs to the previous data block. If the offset
-                 extends into subsequent packets the subsequent 32
-                 bit IP-TFS headers are not counted by this value.
-- DataBlocks :: Variable number of octets that constitute the start
-                 or continuation of a previous data block.
+                 extends into subsequent packets the subsequent
+                 IP-TFS headers are not counted by this value.
+- RTT :: An optional 16 bit value specifying the sender's current
+         round-trip time estimate in milliseconds. The value MAY be
+         zero prior to the sender having calculated a round-trip time
+         estimate.
+- Delay :: An optional 16 bit value specifying the delay in
+           milliseconds incurred between the receiver receiving the
+           ~LastSeqNum~ packet and the sending of this acknowledgement
+           of it. This value is used by the sender to calculate it's
+           round-trip time estimate.
+- LossEventRate :: An optional 32 bit value specifying the inverse of
+                   the current loss event rate as calculated by the
+                   receiver. A value of zero indicates no loss.
+                   Otherwise the loss event rate is 1 / ~LossEventRate~.
+- LastSeqNum :: An optional 32 bit value containing the lower 32 bits
+                of the largest sequence number last received. This is
+                the latest in the sequence not necessarily the most
+                recent (in the case of re-ordering of packets it may
+                be less recent). When determining largest when 64 bit
+                extended sequence numbers are in use, the upper 32
+                bits should be used during the comparison.
+- DataBlocks :: Variable number of octets that begin with the start
+                or continuation of a previous data block followed by
+                zero or more additional data blocks.
 
 *** Data Blocks
 #+begin_example
@@ -510,86 +549,16 @@ defined in [[RFC7296]]. The Payload Type value is TBD.
  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  | Next Payload  |C|  RESERVED   |         Payload Length        |
  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- |D|  ResvFlags  |
+ |D|N| ResvFlags |
  +-+-+-+-+-+-+-+-+
 #+end_example
 
 - Payload Length :: 2 octet length set to 5.
 - D :: 1 bit value that if set indicates fragmentation is not
        supported by the receiver.
-- ResvFlags :: 7 bits set to 0.
-
-***  IKEv2 Information Request Congestion Information Payload (TBD).
-
-The following defines the information exchange payload type
-IPTFS_CONGEST_INFO used in the IKEv2 [[RFC7296]] to request a congestion
-information report. This is sent by the sender to the receiver to
-request a new congestion information report.
-
-The first 4 octets are the standard generic payload header fields
-defined in [[RFC7296]]. The IPTFS_CONGEST_INFO Payload Type value is
-TBD.
-
-#+begin_example
-                      1                   2                   3
-  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
- +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- | Next Payload  |C|  RESERVED   |         Payload Length        |
- +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- |0| ResendCount |
- +-+-+-+-+-+-+-+-+
-#+end_example
-
-- Payload Length :: 2 octet length set to 5.
-- ResendCount :: An 7 bit value, set to 1 on the initial sending of
-                 this information request, and incremented by 1 for
-                 each time the request is retransmitted (i.e., b/c it
-                 has not be responded to yet).
-
-***  IKEv2 Information Response Congestion Information Payload
-
-When the receiver receives an IKEv2 information exchange request with
-the IPTFS_CONGEST_INFO payload it replies with the following data in
-response.
-
-#+begin_example
-                      1                   2                   3
-  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
- +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- | Next Payload  |C|  RESERVED   |         Payload Length        |
- +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- |E| ResendCount |                  DropCount                    |
- +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- |                          RcvSeqStart                          |
- |                                                               |
- +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- |                           RcvSeqEnd                           |
- |                                                               |
- +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- |                         OverheadTime                          |
- +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-#+end_example
-
-- E :: A 1 bit value that if set indicates that packet[s] with
-       Congestion Experienced (CE) ECN bits set were received and
-       used in calculating the DropCount value.
-- ResendCount :: A 7 bit field containing the value from the
-                information request field of the same name for which
-                this data is a response to.
-- DropCount :: A 24 bit unsigned integer count of the drops that
-               occurred between RcvSeqStart and RcvSeqEnd. If the
-               drops exceed the resolution of the counter then set to
-               the maximum value (i.e., 0xFFFFFF).
-- RcvSeqStart :: A 64 bit unsigned integer containing the first ESP
-                 sequence number (as defined in [[RFC4303]]) of the
-                 packet range that this information relates to.
-- RcvSeqEnd :: A 64 bit unsigned integer containing the last ESP
-               sequence number (as defined in [[RFC4303]]) of the
-               packet range that this information relates to.
-- OverheadTime :: A 32 bit unsigned integer containing an estimate in
-                  microseconds of the time between the receipt of the
-                  IKEv2 information request, and the sending of this
-                  response.
+- N :: 1 bit value that if set indicates congestion control is
+       not supported by the receiver.
+- ResvFlags :: 6 bits set to 0.
 
 * IANA Considerations
 
@@ -614,19 +583,6 @@ registry.
 
 # ^IANA-IKECA^
 # https://www.iana.org/assignments/ikev2-parameters/ikev2-parameters.xhtml#ikev2-parameters-21
-
-Additionally this document requests an IKEv2 payload type
-TFS_CONGEST_INFO (TBD) be allocated by IANA from "IKEv2 Payload
-Types" registry.
-
-  - Type :: TBD
-  - Description :: The IKEv2 information exchange payload for
-                   requesting and delivering congestion control
-                   information.
-  - Reference :: This document
-
-# ^IANA-IKECA^
-# https://www.iana.org/assignments/ikev2-parameters/ikev2-parameters.xhtml#ikev2-parameters-16
 
 * Security Considerations
 
@@ -659,9 +615,9 @@ then non-congestion controlled mode use should be considered instead.
 ** RFC2474
 ** RFC2914
 ** RFC3168
-** RFC3448
 ** RFC4301
 ** RFC4342
+** RFC5348
 ** RFC7510
 ** RFC8084
 ** RFC8200
@@ -946,6 +902,149 @@ Notice that the latency values are very similar between the two
 solutions; however, whereas IP-TFS provides for constant high
 bandwidth, in some cases even exceeding native Ethernet, ESP with
 padding often greatly reduces available bandwidth.
+
+* Deriving TFRC Parameters
+
+The parameters required to implement the algorithm defined in
+[[RFC5348]] are: ~s~, ~R~, ~p~, ~t_RTO~ and ~b~. These values are used in
+the following formula to calculate the sending rate.
+
+#+begin_example
+                                s
+   X_Bps = ----------------------------------------------------------
+           R*sqrt(2*b*p/3) + (t_RTO * (3*sqrt(3*b*p/8)*p*(1+32*p^2)))
+#+end_example
+
+Per [[RFC5348]] ~b~ can be set to ~1~ and t_RTO to ~4*R~ and the formula
+reduces to:
+
+#+begin_example
+                                s
+   X_Bps = -----------------------------------------------
+           R * (sqrt(2*p/3) + 12*sqrt(3*p/8)*p*(1+32*p^2))
+#+end_example
+
+Per [[RFC5348]] also indicates that ~X_Bps~ can be specified as ~X_pps *
+s~ which then yields
+
+#+begin_example
+                                1
+   X_Pps = -----------------------------------------------
+           R * (sqrt(2*p/3) + 12*sqrt(3*p/8)*p*(1+32*p^2))
+#+end_example
+
+The following sections describe how to derive the remaining values
+from the information provided by IP-TFS.
+
+** ~R~: Round-trip Time (4.3)
+   This value is in seconds.
+
+#+begin_example
+   1)  Calculate a new round-trip sample:
+
+      R_sample = (t_now - t_recvdata) - t_delay.
+
+   As described in Section 3.2.2, t_delay gives the elapsed time at the
+   receiver.
+
+   2)  Update the round-trip time estimate:
+
+      If no feedback has been received before {
+          R = R_sample;
+      } Else {
+          R = q*R + (1-q)*R_sample;
+      }
+#+end_example
+
+
+** ~p~: Loss Event Rate (5)
+   Section 5 of [[RFC5348]] defines the calculation of the Loss Event
+   Rate ~p~.
+
+
+** Example using minimum round-trip time
+
+The minimum round-trip time (~R~) for a link is 2 times the
+transmission time for a packet plus some possible small but non-zero
+processing time. Let's consider 1500B (12000 bit) packets. If we can
+transmit ~X~ bits per second, then we can transmit ~X/12000~ pps, and
+so ~1/(X/12000)~ or ~12000/X~ is the transmit time of one packet and
+the min ~R~ is twice that (~24000/X~).
+
+| Link Speed |     pps |      R | pprtt |
+|------------+---------+--------+-------|
+| 10M        |  833.33 |  .0024 |       |
+| 100M       | 8333.33 | .00024 |       |
+| 1GE        |         | 2.4e-5 |       |
+| 10GE       |         | 2.4e-6 |       |
+| 100GE      |         | 2.4e-7 |       |
+
+
+Now let's consider a loss rate of 1 packet every second on a 10M link.
+
+p = 1/832
+
+#+begin_src python :results output :var linkspeed=100000 :var psize=1500 :var lossint=4294967295
+    from math import sqrt
+    linkspeed *= 1000000
+    psize *= 8.
+    print("psize:", psize)
+    prate = linkspeed / psize
+    print("prate:", prate)
+    # R = 10 * 2. * psize / linkspeed
+    R = .003
+    print("R:", R)
+    p = 1. / lossint
+    print("p:", p)
+    denom = R * (sqrt(2*p/3) + 12*sqrt(3*p/8)*p*(1+32*(p**2)))
+    print("denom:", denom)
+    pps = 1. / denom
+    print(pps)
+    # return pps
+#+end_src
+
+#+RESULTS:
+: psize: 12000.0
+: prate: 8333333.333333333
+: R: 0.003
+: p: 2.3283064370807974e-10
+: denom: 3.737624737855809e-08
+: 26754959.90466067
+
+
+                                1
+   X_Pps = -----------------------------------------------
+           R * (sqrt(2*.5/3) + 12*sqrt(3*.5/8)*.5*(1+32*.5^2))
+
+                                1
+   X_Pps = -----------------------------------------------
+           R * (sqrt(1/3) + 12*sqrt(.1875) * .5 * (9) )
+
+                           1
+   X_Pps = ----------------------------------
+            R * (sqrt(1/3) + 54*sqrt(.1875))
+
+                                1
+   X_Pps = -------------------------------------
+             R * (0.577350269189+23.3826859022)
+
+            23.9600361714
+                                1
+   X_Pps = -----------------------------------------------
+           R * (sqrt(2*2/3) + 12*sqrt(3*2/8)*2*(1+32*2^2))
+
+2682.369351.15470053838065
+
+
+R * (1.15470053838 + 12*0.866025403784*2*(1+128))
+(1.15470053838 + 12*0.866025403784*2*(1+128))
+
+2682.36935065 * .0024
+6.43768644156
+
+                  1
+   X_Pps = ----------------
+           R * (sqrt(2*0/3)
 
 * Acknowledgements
 We would like to thank Don Fedyk for help in reviewing this work.

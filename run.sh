@@ -44,9 +44,10 @@ mtu=1470
 rate=10
 listen=
 debug=
-while getopts "c:dlm:p:r:t:v" o; do
+while getopts "Cdlm:p:r:t:v" o; do
     case "${o}" in
-        c)
+        C)
+            runc=1
             ;;
         d)
             debug="--debug"
@@ -104,6 +105,7 @@ if [[ -d venv ]]; then
     . venv/bin/activate
 fi
 
+
 if [[ -z $listen ]]; then
     PFX=${IP%.*}
     PFX=${PFX//\./\\.}
@@ -115,15 +117,25 @@ else
     COMMON="$COMMON --listen $IP"
 fi
 
-build/iptfs $COMMON &
-#iptfs $COMMON &
+set -x
+
+if (( runc )); then
+    build/iptfs $COMMON &
+else
+    iptfs $COMMON &
+fi
 tfspid=$!
 
 sleep 1
-sysctl -w net.ipv6.conf.tfs0.disable_ipv6=1
+if [ -e /proc/sys/net/ipv6/conf/tfs0/disable_ipv6 ]; then
+    sysctl -w net.ipv6.conf.tfs0.disable_ipv6=1
+fi
 ip addr add $TUNPFX.$IPID/24 dev tfs0
 ip link set tfs0 mtu ${mtu}
 ip link set tfs0 up
 
+if [[ -n "$listen" ]]; then
+    iperf -s &
+fi
 #tcpdump -vvv -i tfs0
 wait $tfspid
