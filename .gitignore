@@ -13,6 +13,7 @@ __pycache__/
 avenv
 draft/idnits
 draft/ox-rfc.el
+draft/*.xml
 draft/publish/*-chopps-*
 draft/publish/*.html
 draft/publish/*.pdf

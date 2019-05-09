@@ -132,18 +132,19 @@ either a partial, a full or multiple partial or full data-blocks.
  . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
 #+end_example
 
-The BlockOffset value is either zero or some offset into or past the
+The ~BlockOffset~ value is either zero or some offset into or past the
 end of the data blocks payload data. If the value is zero it means
 that a new data-block immediately follows the IP-TFS header (i.e.,
-the BlockOffset and any optional congestion info values). Conversely,
-if the BlockOffset value is non-zero it points at the start of the
-next data block. The BlockOffset can point past the end of the data
+the ~BlockOffset~ and any optional congestion info values). Conversely,
+if the ~BlockOffset~ value is non-zero it points at the start of the
+next data block. The ~BlockOffset~ can point past the end of the data
 block payload data, this means that the next data-block occurs in a
-subsequent encapsulating packet. When the BlockOffset is non-zero the
+subsequent encapsulating packet. When the ~BlockOffset~ is non-zero the
 data immediately following the header belongs to the previous
 data-block that is still being re-assembled.
 
 **** Empty Payload
+
 In order to support reporting of congestion control information
 (described later) on a non-IP-TFS IPsec SA, IP-TFS allows for the
 sending of an IP-TFS payload with no data blocks (i.e., the ESP
@@ -245,18 +246,18 @@ The encapsulated IP packet flow (lengths include IP header and
 payload) is as follows: an 800 octet packet, an 800 octet packet, a 60
 octet packet, a 240 octet packet, a 4000 octet packet.
 
-The BlockOffset values in the 4 IP-TFS payload headers for this
+The ~BlockOffset~ values in the 4 IP-TFS payload headers for this
 packet flow would thus be: 0, 100, 2900, 1400 respectively. The first
-encapsulating packet ESP1 has a zero BlockOffset which points at the
+encapsulating packet ESP1 has a zero ~BlockOffset~ which points at the
 IP data block immediately following the IP-TFS header. The following
-packet ESP2s BlockOffset points inward 100 octets to the start of the
+packet ESP2s ~BlockOffset~ points inward 100 octets to the start of the
 60 octet data block. The third encapsulating packet ESP3 contains the
 middle portion of the 4000 octet data block so the offset points past
 its end and into the forth encapsulating packet. The fourth packet
 ESP4s offset is 1400 pointing at the padding which follows the
 completion of the continued 4000 octet packet.
 
-Having the BlockOffset always point at the next available data block
+Having the ~BlockOffset~ always point at the next available data block
 allows for quick recovery with minimal inner packet loss in the
 presence of outer encapsulating packet loss.
 
@@ -313,6 +314,23 @@ IP-TFS using the congestion information header fields described in
 [[Congestion Information]]. In particular these values are sufficient to
 implement the algorithm described in [[RFC5348]].
 
+At minimum the congestion information must be sent, from the receiver
+as well as from the sender, at least once per RTT. Prior to
+establishing an RTT the information SHOULD be sent constantly from
+the sender and the receiver so that an RTT estimate can be
+established. The lack of receiving this information over multiple
+consecutive RTT intervals should be considered a congestion event
+that causes the sender to adjust it's sending rate lower. For
+example, [[RFC4342]] calls this the "no feedback timeout" and it is equal
+to 4 RTT intervals. When a "no feedback timeout" has occurred [[RFC4342]]
+halves the sending rate.
+
+An implementation could choose to always include the congestion
+information in it's IP-TFS payload header if sending on an IP-TFS
+enabled SA. Since IP-TFS normally will operate with a large packet
+size, the congestion information should represent a small portion of
+the available tunnel bandwidth.
+
 # XXX [[Deriving TFRC Parameters]] describes how the data provided by
 # IP-TFS congestion information may be used to derive the values
 # required in [[RFC5348]].
@@ -368,14 +386,10 @@ The receiver also calculates, and communicates in the ~LossEventRate~
 header field, the loss event rate for use by the sender. This is
 slightly different from [[RFC4342]] which periodically sends all the loss
 interval data back to the sender so that it can do the calculation.
-See [[Calculating The Loss Event Rate]] for a suggested way to calculate
+See [[A Send and Loss Event Rate]] for a suggested way to calculate
 the loss event rate value. Initially this value will be zero
 (indicating no loss) until enough data has been collected by the
 receiver to update it.
-
-*** Calculating The Loss Event Rate
-
-    XXX Complete.
 
 ** ECN Support
 
@@ -674,6 +688,36 @@ then non-congestion controlled mode use should be considered instead.
 ** RFC8201
 ** I-D.iab-wire-image
 
+* A Send and Loss Event Rate
+
+The current best practice indicates that congestion control should be
+done in a TCP friendly way. A TCP friendly congestion control
+algorithm is described in [[RFC5348]]. For our use case (as with [[RFC4342]])
+we consider our (fixed) packet size the segment size for the
+algorithm. The formula for the send rate is then as follows:
+
+#+begin_example
+                                1
+   X_Pps = -----------------------------------------------
+           R * (sqrt(2*p/3) + 12*sqrt(3*p/8)*p*(1+32*p^2))
+#+end_example
+
+Where ~X_Pps~ is the send rate in packets per second, ~R~ is the
+round trip time estimate (provided by the sender) and ~p~ is the loss
+event rate.
+
+The IP-TFS receiver, having the RTT estimate from the sender MAY use
+the same method as described in [[RFC4342]] to collect the loss intervals
+and calculate the loss event rate value using the weighted average as
+indicated. The receiver communicates the inverse of this value back
+to the sender in the IPTFS_PROTOCOL payload header field
+~LossEventRate~.
+
+The IP-TFS sender now has both the ~R~ and ~p~ values and can
+calculate the correct sending rate (~X_Pps~). If following [[RFC5348]]
+the sender SHOULD also use the slow start mechanism described therein
+when the IP-TFS SA is first established.
+
 * Comparisons of IP-TFS
   :PROPERTIES:
   :EXPORT_RFC_ASCII_TABLE: t
@@ -953,141 +997,6 @@ solutions; however, whereas IP-TFS provides for constant high
 bandwidth, in some cases even exceeding native Ethernet, ESP with
 padding often greatly reduces available bandwidth.
 
-* Deriving TFRC Parameters
-
-The parameters required to implement the algorithm defined in
-[[RFC5348]] are: ~s~, ~R~, ~p~, ~t_RTO~ and ~b~. These values are used in
-the following formula to calculate the sending rate.
-
-#+begin_example
-                                s
-   X_Bps = ----------------------------------------------------------
-           R*sqrt(2*b*p/3) + (t_RTO * (3*sqrt(3*b*p/8)*p*(1+32*p^2)))
-#+end_example
-
-Per [[RFC5348]] ~b~ can be set to ~1~ and t_RTO to ~4*R~ and the formula
-reduces to:
-
-#+begin_example
-                                s
-   X_Bps = -----------------------------------------------
-           R * (sqrt(2*p/3) + 12*sqrt(3*p/8)*p*(1+32*p^2))
-#+end_example
-
-Per [[RFC5348]] also indicates that ~X_Bps~ can be specified as ~X_pps *
-s~ which then yields
-
-#+begin_example
-                                1
-   X_Pps = -----------------------------------------------
-           R * (sqrt(2*p/3) + 12*sqrt(3*p/8)*p*(1+32*p^2))
-#+end_example
-
-The following sections describe how to derive the remaining values
-from the information provided by IP-TFS.
-
-** Round-Trip Time
-
-   This value is in seconds. As described in Section 3.2.2, t_delay
-   gives the elapsed time at the receiver.
-
-   - Calculate a new round-trip sample:
-#+begin_example
-     R_sample = (t_now - t_recvdata) - t_delay.
-#+end_example
-   - Update the round-trip time estimate:
-#+begin_example
-      If no feedback has been received before {
-          R = R_sample;
-      } Else {
-          R = q*R + (1-q)*R_sample;
-      }
-#+end_example
-
-
-** Loss Event Rate
-
-   Section 5 of [[RFC5348]] defines the calculation of the Loss Event
-   Rate ~p~.
-
-** Example using minimum round-trip time
-
-The minimum round-trip time (~R~) for a link is 2 times the
-transmission time for a packet plus some possible small but non-zero
-processing time. Let's consider 1500B (12000 bit) packets. If we can
-transmit ~X~ bits per second, then we can transmit ~X/12000~ pps, and
-so ~1/(X/12000)~ or ~12000/X~ is the transmit time of one packet and
-the min ~R~ is twice that (~24000/X~).
-
-#+BEGIN_CENTER
-| Link Speed |     pps |      R | pprtt |
-|------------+---------+--------+-------|
-| 10M        |  833.33 |  .0024 |       |
-| 100M       | 8333.33 | .00024 |       |
-| 1GE        |         | 2.4e-5 |       |
-| 10GE       |         | 2.4e-6 |       |
-| 100GE      |         | 2.4e-7 |       |
-#+END_CENTER
-
-# Now let's consider a loss rate of 1 packet every second on a 10M link.
-# p = 1/832
-
-#+begin_src python :results output :var linkspeed=100000 :var psize=1500 :var lossint=4294967295
-    from math import sqrt
-    linkspeed *= 1000000
-    psize *= 8.
-    print("psize:", psize)
-    prate = linkspeed / psize
-    print("prate:", prate)
-    # R = 10 * 2. * psize / linkspeed
-    R = .003
-    print("R:", R)
-    p = 1. / lossint
-    print("p:", p)
-    denom = R * (sqrt(2*p/3) + 12*sqrt(3*p/8)*p*(1+32*(p**2)))
-    print("denom:", denom)
-    pps = 1. / denom
-    print(pps)
-    # return pps
-#+end_src
-
-#+begin_example
-                                1
-   X_Pps = -----------------------------------------------
-           R * (sqrt(2*.5/3) + 12*sqrt(3*.5/8)*.5*(1+32*.5^2))
-
-                                1
-   X_Pps = -----------------------------------------------
-           R * (sqrt(1/3) + 12*sqrt(.1875) * .5 * (9) )
-
-                           1
-   X_Pps = ----------------------------------
-            R * (sqrt(1/3) + 54*sqrt(.1875))
-
-                                1
-   X_Pps = -------------------------------------
-             R * (0.577350269189+23.3826859022)
-
-            23.9600361714
-                                1
-   X_Pps = -----------------------------------------------
-           R * (sqrt(2*2/3) + 12*sqrt(3*2/8)*2*(1+32*2^2))
-
-2682.369351.15470053838065
-
-
-R * (1.15470053838 + 12*0.866025403784*2*(1+128))
-(1.15470053838 + 12*0.866025403784*2*(1+128))
-
-2682.36935065 * .0024
-6.43768644156
-
-                  1
-   X_Pps = ----------------
-           R * (sqrt(2*0/3)
-
-#+end_example
-
 * Acknowledgements
 We would like to thank Don Fedyk for help in reviewing this work.
 
@@ -1100,3 +1009,139 @@ The following people made significant contributions to this document.
 
    Email: lberger@labn.net
 #+end_example
+
+
+# * Deriving TFRC Parameters
+
+# The parameters required to implement the algorithm defined in
+# [[RFC5348]] are: ~s~, ~R~, ~p~, ~t_RTO~ and ~b~. These values are used in
+# the following formula to calculate the sending rate.
+
+# #+begin_example
+#                                 s
+#    X_Bps = ----------------------------------------------------------
+#            R*sqrt(2*b*p/3) + (t_RTO * (3*sqrt(3*b*p/8)*p*(1+32*p^2)))
+# #+end_example
+
+# Per [[RFC5348]] ~b~ can be set to ~1~ and t_RTO to ~4*R~ and the formula
+# reduces to:
+
+# #+begin_example
+#                                 s
+#    X_Bps = -----------------------------------------------
+#            R * (sqrt(2*p/3) + 12*sqrt(3*p/8)*p*(1+32*p^2))
+# #+end_example
+
+# Per [[RFC5348]] also indicates that ~X_Bps~ can be specified as ~X_pps *
+# s~ which then yields
+
+# #+begin_example
+#                                 1
+#    X_Pps = -----------------------------------------------
+#            R * (sqrt(2*p/3) + 12*sqrt(3*p/8)*p*(1+32*p^2))
+# #+end_example
+
+# The following sections describe how to derive the remaining values
+# from the information provided by IP-TFS.
+
+# ** Round-Trip Time
+
+#    This value is in seconds. As described in Section 3.2.2, t_delay
+#    gives the elapsed time at the receiver.
+
+#    - Calculate a new round-trip sample:
+# #+begin_example
+#      R_sample = (t_now - t_recvdata) - t_delay.
+# #+end_example
+#    - Update the round-trip time estimate:
+# #+begin_example
+#       If no feedback has been received before {
+#           R = R_sample;
+#       } Else {
+#           R = q*R + (1-q)*R_sample;
+#       }
+# #+end_example
+
+
+# ** Loss Event Rate
+
+#    Section 5 of [[RFC5348]] defines the calculation of the Loss Event
+#    Rate ~p~.
+
+# ** Example using minimum round-trip time
+
+# The minimum round-trip time (~R~) for a link is 2 times the
+# transmission time for a packet plus some possible small but non-zero
+# processing time. Let's consider 1500B (12000 bit) packets. If we can
+# transmit ~X~ bits per second, then we can transmit ~X/12000~ pps, and
+# so ~1/(X/12000)~ or ~12000/X~ is the transmit time of one packet and
+# the min ~R~ is twice that (~24000/X~).
+
+# #+BEGIN_CENTER
+# | Link Speed |     pps |      R | pprtt |
+# |------------+---------+--------+-------|
+# | 10M        |  833.33 |  .0024 |       |
+# | 100M       | 8333.33 | .00024 |       |
+# | 1GE        |         | 2.4e-5 |       |
+# | 10GE       |         | 2.4e-6 |       |
+# | 100GE      |         | 2.4e-7 |       |
+# #+END_CENTER
+
+# # Now let's consider a loss rate of 1 packet every second on a 10M link.
+# # p = 1/832
+
+# #+begin_src python :results output :var linkspeed=100000 :var psize=1500 :var lossint=4294967295
+#     from math import sqrt
+#     linkspeed *= 1000000
+#     psize *= 8.
+#     print("psize:", psize)
+#     prate = linkspeed / psize
+#     print("prate:", prate)
+#     # R = 10 * 2. * psize / linkspeed
+#     R = .003
+#     print("R:", R)
+#     p = 1. / lossint
+#     print("p:", p)
+#     denom = R * (sqrt(2*p/3) + 12*sqrt(3*p/8)*p*(1+32*(p**2)))
+#     print("denom:", denom)
+#     pps = 1. / denom
+#     print(pps)
+#     # return pps
+# #+end_src
+
+# #+begin_example
+#                                 1
+#    X_Pps = -----------------------------------------------
+#            R * (sqrt(2*.5/3) + 12*sqrt(3*.5/8)*.5*(1+32*.5^2))
+
+#                                 1
+#    X_Pps = -----------------------------------------------
+#            R * (sqrt(1/3) + 12*sqrt(.1875) * .5 * (9) )
+
+#                            1
+#    X_Pps = ----------------------------------
+#             R * (sqrt(1/3) + 54*sqrt(.1875))
+
+#                                 1
+#    X_Pps = -------------------------------------
+#              R * (0.577350269189+23.3826859022)
+
+#             23.9600361714
+#                                 1
+#    X_Pps = -----------------------------------------------
+#            R * (sqrt(2*2/3) + 12*sqrt(3*2/8)*2*(1+32*2^2))
+
+# 2682.369351.15470053838065
+
+
+# R * (1.15470053838 + 12*0.866025403784*2*(1+128))
+# (1.15470053838 + 12*0.866025403784*2*(1+128))
+
+# 2682.36935065 * .0024
+# 6.43768644156
+
+#                   1
+#    X_Pps = ----------------
+#            R * (sqrt(2*0/3)
+
+# #+end_example
