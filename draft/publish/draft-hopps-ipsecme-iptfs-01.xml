@@ -135,6 +135,12 @@ subsequent encapsulating packet. When the <spanx style='verb'>BlockOffset</spanx
 data immediately following the header belongs to the previous
 data-block that is still being re-assembled.</t>
 
+<t>Having the <spanx style='verb'>BlockOffset</spanx> always point at the next available data block
+allows for quick recovery with minimal inner packet loss in the
+presence of outer encapsulating packet loss.</t>
+
+<t>An example IP-TFS packet flow can be found in <xref target="sec-example-of-an-encapsulated-ip-packet-flow"></xref>.</t>
+
 <section title="Empty Payload">
 <t>In order to support reporting of congestion control information
 (described later) on a non-IP-TFS IPsec SA, IP-TFS allows for the
@@ -222,40 +228,6 @@ the receipt of an empty IPTFS_PROTOCOL payload (i.e., one without any
 data blocks) is used to communicate congestion control information
 from the receiver back to the sender on a non-IP-TFS enabled SA, and
 MUST NOT cause IP-TFS to be enabled on that SA.</t>
-
-</section>
-
-<section title="Example of an encapsulated IP packet flow">
-<t>Below we show an example inner IP packet flow within the
-encapsulating tunnel packet stream. Notice how encapsulated IP
-packets can start and end anywhere, and more than one or less than 1
-may occur in a single encapsulating packet.</t>
-
-<figure title="Inner and Outer Packet Flow" anchor="sec-inner-and-outer-packet-flow"><artwork><![CDATA[
-  Offset: 0        Offset: 100    Offset: 2900    Offset: 1400
- [ ESP1  (1500) ][ ESP2  (1500) ][ ESP3  (1500) ][ ESP4  (1500) ]
- [--800--][--800--][60][-240-][--4000----------------------][pad]
-]]></artwork></figure>
-
-
-<t>The encapsulated IP packet flow (lengths include IP header and
-payload) is as follows: an 800 octet packet, an 800 octet packet, a 60
-octet packet, a 240 octet packet, a 4000 octet packet.</t>
-
-<t>The <spanx style='verb'>BlockOffset</spanx> values in the 4 IP-TFS payload headers for this
-packet flow would thus be: 0, 100, 2900, 1400 respectively. The first
-encapsulating packet ESP1 has a zero <spanx style='verb'>BlockOffset</spanx> which points at the
-IP data block immediately following the IP-TFS header. The following
-packet ESP2s <spanx style='verb'>BlockOffset</spanx> points inward 100 octets to the start of the
-60 octet data block. The third encapsulating packet ESP3 contains the
-middle portion of the 4000 octet data block so the offset points past
-its end and into the forth encapsulating packet. The fourth packet
-ESP4s offset is 1400 pointing at the padding which follows the
-completion of the continued 4000 octet packet.</t>
-
-<t>Having the <spanx style='verb'>BlockOffset</spanx> always point at the next available data block
-allows for quick recovery with minimal inner packet loss in the
-presence of outer encapsulating packet loss.</t>
 
 </section>
 
@@ -385,9 +357,9 @@ field along with the <spanx style='verb'>LastSeqNum</spanx>.</t>
 header field, the loss event rate for use by the sender. This is
 slightly different from <xref target="RFC4342"/> which periodically sends all the loss
 interval data back to the sender so that it can do the calculation.
-See <xref target="sec-a-send-and-loss-event-rate"></xref> for a suggested way to calculate
-the loss event rate value. Initially this value will be zero
-(indicating no loss) until enough data has been collected by the
+See <xref target="sec-a-send-and-loss-event-rate-calculation"></xref> for a suggested way to
+calculate the loss event rate value. Initially this value will be
+zero (indicating no loss) until enough data has been collected by the
 receiver to update it.</t>
 
 <section title="ECN Support">
@@ -955,7 +927,36 @@ then non-congestion controlled mode use should be considered instead.</t>
 </reference>
 </references>
 
-<section title="A Send and Loss Event Rate" anchor="sec-a-send-and-loss-event-rate">
+<section title="Example Of An Encapsulated IP Packet Flow" anchor="sec-example-of-an-encapsulated-ip-packet-flow">
+<t>Below we show an example inner IP packet flow within the
+encapsulating tunnel packet stream. Notice how encapsulated IP
+packets can start and end anywhere, and more than one or less than 1
+may occur in a single encapsulating packet.</t>
+
+<figure title="Inner and Outer Packet Flow" anchor="sec-inner-and-outer-packet-flow"><artwork><![CDATA[
+  Offset: 0        Offset: 100    Offset: 2900    Offset: 1400
+ [ ESP1  (1500) ][ ESP2  (1500) ][ ESP3  (1500) ][ ESP4  (1500) ]
+ [--800--][--800--][60][-240-][--4000----------------------][pad]
+]]></artwork></figure>
+
+<t>The encapsulated IP packet flow (lengths include IP header and
+payload) is as follows: an 800 octet packet, an 800 octet packet, a 60
+octet packet, a 240 octet packet, a 4000 octet packet.</t>
+
+<t>The <spanx style='verb'>BlockOffset</spanx> values in the 4 IP-TFS payload headers for this
+packet flow would thus be: 0, 100, 2900, 1400 respectively. The first
+encapsulating packet ESP1 has a zero <spanx style='verb'>BlockOffset</spanx> which points at the
+IP data block immediately following the IP-TFS header. The following
+packet ESP2s <spanx style='verb'>BlockOffset</spanx> points inward 100 octets to the start of the
+60 octet data block. The third encapsulating packet ESP3 contains the
+middle portion of the 4000 octet data block so the offset points past
+its end and into the forth encapsulating packet. The fourth packet
+ESP4s offset is 1400 pointing at the padding which follows the
+completion of the continued 4000 octet packet.</t>
+
+</section>
+
+<section title="A Send and Loss Event Rate Calculation" anchor="sec-a-send-and-loss-event-rate-calculation">
 <t>The current best practice indicates that congestion control should be
 done in a TCP friendly way. A TCP friendly congestion control
 algorithm is described in <xref target="RFC5348"/>. For our use case (as with <xref target="RFC4342"/>)
@@ -969,8 +970,8 @@ algorithm. The formula for the send rate is then as follows:</t>
 ]]></artwork></figure>
 
 <t>Where <spanx style='verb'>X_Pps</spanx> is the send rate in packets per second, <spanx style='verb'>R</spanx> is the
-round trip time estimate (provided by the sender) and <spanx style='verb'>p</spanx> is the loss
-event rate.</t>
+round trip time estimate and <spanx style='verb'>p</spanx> is the loss event rate (the inverse
+of which is provided by the receiver).</t>
 
 <t>The IP-TFS receiver, having the RTT estimate from the sender MAY use
 the same method as described in <xref target="RFC4342"/> to collect the loss intervals
