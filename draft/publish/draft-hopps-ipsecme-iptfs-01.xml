@@ -472,8 +472,7 @@ one the packet MUST be dropped.</t>
 presence of the congestion information header fields <spanx style='verb'>RTT</spanx>,
 <spanx style='verb'>Delay</spanx>, <spanx style='verb'>LossEventRate</spanx> and <spanx style='verb'>LastSeqNum</spanx>.</t>
 <t hangText="E:"><vspace/>A 1 bit value if set indicates that Congestion Experienced
-(CE) ECN bits were received and used to determine the loss
-intervals which the receiver used to calculate the
+(CE) ECN bits were received and used in deriving the
 reported <spanx style='verb'>LossEventRate</spanx>.</t>
 <t hangText="Reserved:"><vspace/>A 13 bit field set to 0 and ignored on receipt.</t>
 <t hangText="BlockOffset:"><vspace/>The same as the non-congestion controlled payload

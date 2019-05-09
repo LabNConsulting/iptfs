@@ -645,8 +645,8 @@ Internet-Draft          IP Traffic Flow Security                May 2019
 
    E:
       A 1 bit value if set indicates that Congestion Experienced (CE)
-      ECN bits were received and used to determine the loss intervals
-      which the receiver used to calculate the reported "LossEventRate".
+      ECN bits were received and used in deriving the reported
+      "LossEventRate".
 
    Reserved:
       A 13 bit field set to 0 and ignored on receipt.

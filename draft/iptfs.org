@@ -466,8 +466,7 @@ configuration method is required.
        presence of the congestion information header fields ~RTT~,
        ~Delay~, ~LossEventRate~ and ~LastSeqNum~.
 - E :: A 1 bit value if set indicates that Congestion Experienced
-       (CE) ECN bits were received and used to determine the loss
-       intervals which the receiver used to calculate the
+       (CE) ECN bits were received and used in deriving the
        reported ~LossEventRate~.
 - Reserved :: A 13 bit field set to 0 and ignored on receipt.
 - BlockOffset :: The same as the non-congestion controlled payload
