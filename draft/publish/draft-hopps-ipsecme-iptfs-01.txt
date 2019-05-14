@@ -80,14 +80,14 @@ Table of Contents
      3.1.  ECN Support . . . . . . . . . . . . . . . . . . . . . . .  10
    4.  Configuration . . . . . . . . . . . . . . . . . . . . . . . .  10
      4.1.  Bandwidth . . . . . . . . . . . . . . . . . . . . . . . .  10
-     4.2.  Fixed Packet Size . . . . . . . . . . . . . . . . . . . .  11
+     4.2.  Fixed Packet Size . . . . . . . . . . . . . . . . . . . .  10
      4.3.  Congestion Control  . . . . . . . . . . . . . . . . . . .  11
    5.  Packet and Data Formats . . . . . . . . . . . . . . . . . . .  11
      5.1.  IPSec Payload Formats . . . . . . . . . . . . . . . . . .  11
        5.1.1.  Non-Congestion Control Payload  . . . . . . . . . . .  11
        5.1.2.  Congestion Control Info Payload . . . . . . . . . . .  12
        5.1.3.  Data Blocks . . . . . . . . . . . . . . . . . . . . .  13
-     5.2.  IKEv2 . . . . . . . . . . . . . . . . . . . . . . . . . .  15
+     5.2.  IKEv2 . . . . . . . . . . . . . . . . . . . . . . . . . .  14
        5.2.1.  IKEv2 IP-TFS Supported Payload Type (TBD) . . . . . .  15
    6.  IANA Considerations . . . . . . . . . . . . . . . . . . . . .  15
    7.  Security Considerations . . . . . . . . . . . . . . . . . . .  16
@@ -402,13 +402,8 @@ Internet-Draft          IP Traffic Flow Security                May 2019
    With the congestion controlled mode, IP-TFS adapts to network
    congestion by lowering the packet send rate to accommodate the
    congestion, as well as raising the rate when congestion subsides.
-
-   If congestion were handled in the network at an octet level we might
-   consider lowering the IPsec (encapsulation) packet size to adapt the
-   bandwidth; however, as congestion is normally handled in the network
-   by dropping packets we instead choose to lower the frequency we send
-   our fixed sized packets.  This choice also minimizes transport
-   overhead.
+   Since overhead is per packet, by allowing for maximal fixed-size
+   packets and varying the send rate we minimize transport overhead.
 
    The output of the congestion control algorithm will adjust the rate
    at which the ingress sends packets.  While this document does not
@@ -441,6 +436,11 @@ Internet-Draft          IP Traffic Flow Security                May 2019
    An implementation could choose to always include the congestion
    information in it's IP-TFS payload header if sending on an IP-TFS
    enabled SA.  Since IP-TFS normally will operate with a large packet
+   size, the congestion information should represent a small portion of
+   the available tunnel bandwidth.
+
+   When an implementation is choosing a congestion control algorithm (or
+   a selection of algorithms) one should remember that IP-TFS is not
 
 
 
@@ -450,11 +450,6 @@ Hopps                   Expires November 15, 2019               [Page 8]
 Internet-Draft          IP Traffic Flow Security                May 2019
 
 
-   size, the congestion information should represent a small portion of
-   the available tunnel bandwidth.
-
-   When an implementation is choosing a congestion control algorithm (or
-   a selection of algorithms) one should remember that IP-TFS is not
    providing for reliable delivery of IP traffic, and so per packet ACKs
    are not required and are not provided.
 
@@ -497,7 +492,12 @@ Internet-Draft          IP Traffic Flow Security                May 2019
    "LastSeqNum" value, the receiver sends an estimate of the amount of
    time between receiving the "LastSeqNum" packet and transmitting the
    "LastSeqNum" value back to the sender in the congestion information.
+   It places this time estimate in the "Delay" header field along with
+   the "LastSeqNum".
 
+   The receiver also calculates, and communicates in the "LossEventRate"
+   header field, the loss event rate for use by the sender.  This is
+   slightly different from [RFC4342] which periodically sends all the
 
 
 
@@ -506,12 +506,6 @@ Hopps                   Expires November 15, 2019               [Page 9]
 Internet-Draft          IP Traffic Flow Security                May 2019
 
 
-   It places this time estimate in the "Delay" header field along with
-   the "LastSeqNum".
-
-   The receiver also calculates, and communicates in the "LossEventRate"
-   header field, the loss event rate for use by the sender.  This is
-   slightly different from [RFC4342] which periodically sends all the
    loss interval data back to the sender so that it can do the
    calculation.  See Appendix B for a suggested way to calculate the
    loss event rate value.  Initially this value will be zero (indicating
@@ -550,6 +544,12 @@ Internet-Draft          IP Traffic Flow Security                May 2019
    bandwidth available.  No standardized configuration method is
    required.
 
+4.2.  Fixed Packet Size
+
+   The fixed packet size to be used for the tunnel encapsulation packets
+   can be configured manually or can be automatically determined using
+   Path MTU discovery (see [RFC1191] and [RFC8201]).  No standardized
+   configuration method is required.
 
 
 
@@ -561,13 +561,6 @@ Hopps                   Expires November 15, 2019              [Page 10]
 
 Internet-Draft          IP Traffic Flow Security                May 2019
 
-
-4.2.  Fixed Packet Size
-
-   The fixed packet size to be used for the tunnel encapsulation packets
-   can be configured manually or can be automatically determined using
-   Path MTU discovery (see [RFC1191] and [RFC8201]).  No standardized
-   configuration method is required.
 
 4.3.  Congestion Control
 
@@ -610,6 +603,13 @@ Internet-Draft          IP Traffic Flow Security                May 2019
       counted by this value.
 
    DataBlocks:
+      Variable number of octets that begin with the start or
+      continuation of a previous data block followed by zero or more
+      additional data blocks.
+
+
+
+
 
 
 
@@ -617,10 +617,6 @@ Hopps                   Expires November 15, 2019              [Page 11]
 
 Internet-Draft          IP Traffic Flow Security                May 2019
 
-
-      Variable number of octets that begin with the start or
-      continuation of a previous data block followed by zero or more
-      additional data blocks.
 
 5.1.2.  Congestion Control Info Payload
 
@@ -666,6 +662,10 @@ Internet-Draft          IP Traffic Flow Security                May 2019
       sender having calculated a round-trip time estimate.  The value
       SHOULD be set to zero on non-IP-TFS tunnel SAs.
 
+   Delay:
+      A 16 bit value specifying the delay in milliseconds incurred
+      between the receiver receiving the "LastSeqNum" packet and the
+      sending of this acknowledgement of it.
 
 
 
@@ -673,11 +673,6 @@ Hopps                   Expires November 15, 2019              [Page 12]
 
 Internet-Draft          IP Traffic Flow Security                May 2019
 
-
-   Delay:
-      A 16 bit value specifying the delay in milliseconds incurred
-      between the receiver receiving the "LastSeqNum" packet and the
-      sending of this acknowledgement of it.
 
    LossEventRate:
       A 32 bit value specifying the inverse of the current loss event
@@ -721,6 +716,11 @@ Internet-Draft          IP Traffic Flow Security                May 2019
     | Rest of the inner packet ...
     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 
+   These values are the actual values within the encapsulated IPv4
+   header.  In other words, the start of this data block is the start of
+   the encapsulated IP packet.
+
+   Type:
 
 
 
@@ -730,11 +730,6 @@ Hopps                   Expires November 15, 2019              [Page 13]
 Internet-Draft          IP Traffic Flow Security                May 2019
 
 
-   These values are the actual values within the encapsulated IPv4
-   header.  In other words, the start of this data block is the start of
-   the encapsulated IP packet.
-
-   Type:
       A 4 bit value of 0x4 indicating IPv4 (i.e., first nibble of the
       IPv4 packet).
 
@@ -777,6 +772,11 @@ Internet-Draft          IP Traffic Flow Security                May 2019
    Padding:
       extends to end of the encapsulating packet.
 
+5.2.  IKEv2
+
+
+
+
 
 
 
@@ -785,8 +785,6 @@ Hopps                   Expires November 15, 2019              [Page 14]
 
 Internet-Draft          IP Traffic Flow Security                May 2019
 
-
-5.2.  IKEv2
 
 5.2.1.  IKEv2 IP-TFS Supported Payload Type (TBD)
 
@@ -834,6 +832,8 @@ Internet-Draft          IP Traffic Flow Security                May 2019
 
    Reference:
       This document
+
+
 
 
 

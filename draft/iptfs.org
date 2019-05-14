@@ -257,13 +257,8 @@ failures due to a lack of bandwidth can be corrected.
 With the congestion controlled mode, IP-TFS adapts to network
 congestion by lowering the packet send rate to accommodate the
 congestion, as well as raising the rate when congestion subsides.
-
-If congestion were handled in the network at an octet level we might
-consider lowering the IPsec (encapsulation) packet size to adapt the
-bandwidth; however, as congestion is normally handled in the network
-by dropping packets we instead choose to lower the frequency we send
-our fixed sized packets. This choice also minimizes transport
-overhead.
+Since overhead is per packet, by allowing for maximal fixed-size
+packets and varying the send rate we minimize transport overhead.
 
 The output of the congestion control algorithm will adjust the rate
 at which the ingress sends packets. While this document does not
