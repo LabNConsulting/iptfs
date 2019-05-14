@@ -38,14 +38,14 @@ Hiding the size and frequency of traffic is referred to as Traffic
 Flow Confidentiality (TFC) per [[RFC4303]].
 
 [[RFC4303]] provides for TFC by allowing padding to be added to encrypted
-IP packets and allowing for sending all-pad packets (indicated using
-protocol 59). This method has the major limitation that it can
-significantly under-utilize the available bandwidth.
+IP packets and allowing for transmission of all-pad packets
+(indicated using protocol 59). This method has the major limitation
+that it can significantly under-utilize the available bandwidth.
 
 The IP-TFS solution provides for full TFC without the aforementioned
-bandwidth limitation. To do this we use a constant-send-rate IPsec
+bandwidth limitation. To do this, we use a constant-send-rate IPsec
 [[RFC4303]] tunnel with fixed-sized encapsulating packets; however,
-these fixed-sized packets can contain partial, full or multiple IP
+these fixed-sized packets can contain partial, whole or multiple IP
 packets to maximize the bandwidth of the tunnel.
 
 For a comparison of the overhead of IP-TFS with the RFC4303
@@ -81,17 +81,13 @@ The fixed packet size may either be specified manually or can be
 determined through the use of Path MTU discovery [[RFC1191]] and [[RFC8201]].
 
 Given the encapsulating packet size and the requested tunnel
-bandwidth, the correct packet send rate can be calculated. The packet
-send rate is the requested bandwidth divided by the payload size of
-the encapsulating packet.
+bandwidth, the corresponding packet send rate can be calculated. The
+packet send rate is the requested bandwidth divided by the payload
+size of the encapsulating packet.
 
-The egress of the IP-TFS tunnel SHOULD NOT impose any restrictions on
-tunnel packet size or arrival rate. Packet size and send rate is
-entirely the function of the ingress (sending) side of the IP-TFS
-tunnel. Indeed, the ingress (sending) side of the IP-TFS tunnel MUST
-be allowed by the egress side to vary the size and rate at which it
-sends encapsulating packets, including sending them larger, smaller,
-faster or slower than the requested size and rate.
+The egress of the IP-TFS tunnel MUST allow for, and expect the ingress
+(sending) side of the IP-TFS tunnel to vary the size and rate of
+sent encapsulating packets, unless constrained by other policy.
 
 ** Tunnel Content
 
@@ -195,7 +191,7 @@ Congestion Notification (ECN) field [[RFC3168]]. Unlike [[RFC4301]] with
 IP-TFS we may and often will be encapsulating more than 1 IP packet
 per ESP packet. To deal with this we further restrict these mappings.
 In particular we never map the inner DF bit as it is unrelated to the
-IP-TFS tunnel functionality; we never directly fragment the inner
+IP-TFS tunnel functionality; we never IP fragment the inner
 packets and the inner packets will not affect the fragmentation of
 the outer encapsulation packets. Likewise, the ECN value need not be
 mapped as any congestion related to the constant-send-rate IP-TFS
@@ -219,11 +215,11 @@ IPsec uses can configure and use their own SAs.
 
 ** Initiation of TFS mode
 
-While normally a user will configure their IPsec tunnel (SA) to
+While a user will normally configure their IPsec tunnel (SA) to
 operate in IP-TFS mode to start, we also allow IP-TFS mode to be
 enabled post-SA creation. This late-enabling may be useful for
 debugging or other purposes. To support this late-enabled mode the
-receiver simply switches to IP-TFS mode on receipt of the first ESP
+receiver implicitly switches to IP-TFS mode on receipt of the first ESP
 payload with the IPTFS_PROTOCOL indicated as the payload type which
 also contains a data block (i.e., a non-empty IP-TFS payload). The
 the receipt of an empty IPTFS_PROTOCOL payload (i.e., one without any
@@ -262,11 +258,12 @@ With the congestion controlled mode, IP-TFS adapts to network
 congestion by lowering the packet send rate to accommodate the
 congestion, as well as raising the rate when congestion subsides.
 
-If congestion were handled in the network on a octet level we might
-consider lowering the IPsec (encapsulation) packet size to adapt;
-however, as congestion is normally handled in the network by dropping
-packets we instead choose to lower the frequency we send our fixed
-sized packets. This choice also minimizes transport overhead.
+If congestion were handled in the network at an octet level we might
+consider lowering the IPsec (encapsulation) packet size to adapt the
+bandwidth; however, as congestion is normally handled in the network
+by dropping packets we instead choose to lower the frequency we send
+our fixed sized packets. This choice also minimizes transport
+overhead.
 
 The output of the congestion control algorithm will adjust the rate
 at which the ingress sends packets. While this document does not
@@ -284,8 +281,8 @@ IP-TFS using the congestion information header fields described in
 [[Congestion Information]]. In particular these values are sufficient to
 implement the algorithm described in [[RFC5348]].
 
-At minimum the congestion information must be sent, from the receiver
-as well as from the sender, at least once per RTT. Prior to
+At a minimum, the congestion information must be sent, from the
+receiver as well as from the sender, at least once per RTT. Prior to
 establishing an RTT the information SHOULD be sent constantly from
 the sender and the receiver so that an RTT estimate can be
 established. The lack of receiving this information over multiple
@@ -766,7 +763,7 @@ to carry the fragmented inner packet times both the inner IP overhead
 overhead plus any required tail padding in the last encapsulation
 packet. The required tail padding is the number of required packets
 times the difference of the Outer Payload Size and the IP Overhead
-minus the the Inner Payload Size. So:
+minus the Inner Payload Size. So:
 
 #+begin_example
   Inner Paylaod Size = IP Packet Size - IP Overhead
