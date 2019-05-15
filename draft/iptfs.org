@@ -97,19 +97,23 @@ packet can be sent per encapsulating packet. In order to maximize
 bandwidth IP-TFS breaks this one-to-one association.
 
 With IP-TFS we aggregate as well as fragment the inner IP traffic
-flow into fixed-sized encapsulating IP tunnel packets. We only pad
+flow into fixed-sized encapsulating IPsec tunnel packets. We only pad
 the tunnel packets if there is no data available to be sent at the
 time of tunnel packet transmission, or if fragmentation has been
 disabled by the receiver.
 
-In order to do this we create a new payload data type identified with
-a new IP protocol number IPTFS_PROTOCOL (TBD). A payload of
-IPTFS_PROTOCOL type is comprised of a 32 bit header followed by
-either a partial, a full or multiple partial or full data-blocks.
+In order to do this we use a new IPsec ([[RFC4303]]) payload type
+identified using the IP protocol number IPTFS_PROTOCOL (TBD1).
 
-*** IPSec/ESP Payload
+** IPTFS_PROTOCOL Payload Content
 
-#+CAPTION: Layout of IP-TFS IPSec Packet
+The IPTFS_PROTOCOL IPsec payload is comprised a 4 or 16 octet header
+followed by either a partial, a full or multiple partial or full data
+blocks. The following diagram illustrates the IPTFS_PROTOCOL payload
+within the IPsec packet. See [[IPsec IP-TFS Payload]] for the exact
+formats of the IPTFS_PROTOCOL payload.
+
+#+CAPTION: Layout of an IP-TFS IPsec Packet
 #+begin_example
  . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
  . Outer Encapsulating Header ...                                .
@@ -120,7 +124,7 @@ either a partial, a full or multiple partial or full data-blocks.
  +---------------------------------------------------------------+
  :                  [Optional Congestion Info]                   :
  +---------------------------------------------------------------+
- |       Data Blocks Payload ...                                 ~
+ |       DataBlocks ...                                          ~
  ~                                                               ~
  ~                                                               |
  +---------------------------------------------------------------|
@@ -128,16 +132,19 @@ either a partial, a full or multiple partial or full data-blocks.
  . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
 #+end_example
 
-The ~BlockOffset~ value is either zero or some offset into or past the
-end of the data blocks payload data. If the value is zero it means
-that a new data-block immediately follows the IP-TFS header (i.e.,
-the ~BlockOffset~ and any optional congestion info values). Conversely,
-if the ~BlockOffset~ value is non-zero it points at the start of the
-next data block. The ~BlockOffset~ can point past the end of the data
-block payload data, this means that the next data-block occurs in a
-subsequent encapsulating packet. When the ~BlockOffset~ is non-zero the
-data immediately following the header belongs to the previous
-data-block that is still being re-assembled.
+The ~BlockOffset~ value is either zero or some offset into or past
+the end of the ~DataBlocks~ data.
+
+If the ~BlockOffset~ value is zero it means that the ~DataBlocks~
+data begins with a new data block.
+
+Conversely, if the ~BlockOffset~ value is non-zero it points to the
+start of the new data block, and the initial ~DataBlocks~ data
+belongs to a previous data block that is still being re-assembled.
+
+The ~BlockOffset~ can point past the end of the ~DataBlocks~ data
+which indicates that the next data block occurs in a subsequent
+encapsulating packet.
 
 Having the ~BlockOffset~ always point at the next available data block
 allows for quick recovery with minimal inner packet loss in the
@@ -146,15 +153,7 @@ presence of outer encapsulating packet loss.
 An example IP-TFS packet flow can be found in [[Example Of An
 Encapsulated IP Packet Flow]].
 
-**** Empty Payload
-
-In order to support reporting of congestion control information
-(described later) on a non-IP-TFS IPsec SA, IP-TFS allows for the
-sending of an IP-TFS payload with no data blocks (i.e., the ESP
-payload length is equal to the IP-TFS header length). This special
-payload is called an empty payload.
-
-*** Data-Blocks
+*** Data Blocks
 
 #+CAPTION: Layout of IP-TFS data block
 #+begin_example
@@ -163,23 +162,33 @@ payload is called an empty payload.
  +--------
 #+end_example
 
-A data-block is defined by a 4-bit type code followed by the data
+A data block is defined by a 4-bit type code followed by the data
 block data. The type values have been carefully chosen to coincide
-with the IPv4/IPv6 version field values so that no per-data-block
+with the IPv4/IPv6 version field values so that no per-data block
 type overhead is required to encapsulate an IP packet. Likewise, the
 length of the data block is extracted from the encapsulated IPv4 or
 IPv6 packet's length field.
 
 *** No Implicit Padding Required
 
-It's worth noting that there is no need for implicit pads at the end
-of an encapsulating packet. Even when the start of a data block
-occurs near the end of a encapsulating packet such that there is no
-room for the length field of the encapsulated header to be included
-in the current encapsulating packet, the fact that the length comes
-at a known location and is guaranteed to be present is enough to
-fetch the length field from the subsequent encapsulating packet
-payload.
+It's worth noting that there is never a need for an implicit pad at
+the end of an encapsulating packet. Even when the start of a data
+block occurs near the end of a encapsulating packet such that there
+is no room for the length field of the encapsulated header to be
+included in the current encapsulating packet, the fact that the
+length comes at a known location and is guaranteed to be present is
+enough to fetch the length field from the subsequent encapsulating
+packet payload. Only when there is no data to encapsulate is padding
+required, and then an explicit ~Pad Data Block~ would be used to
+identify the padding.
+
+*** Empty Payload
+
+In order to support reporting of congestion control information
+(described later) on a non-IP-TFS enabled SA, IP-TFS allows for the
+sending of an IP-TFS payload with no data blocks (i.e., the ESP
+payload length is equal to the IP-TFS header length). This special
+payload is called an empty payload.
 
 *** IP Header Value Mapping
 
@@ -208,7 +217,7 @@ of an IP-TFS enabled SA. In other words, an SA that has IP-TFS
 enabled is exclusively for IP-TFS use and MUST NOT have non-IP-TFS
 payloads such as IP (IP protocol 4), TCP transport (IP protocol 6),
 or ESP pad packets (protocol 59) intermixed with non-empty IP-TFS (IP
-protocol TBD) payloads. While it's possible to envision making the
+protocol TBD1) payloads. While it's possible to envision making the
 algorithm work in the presence of sequence number skips in the IP-TFS
 payload stream, the added complexity is not deemed worthwhile. Other
 IPsec uses can configure and use their own SAs.
@@ -327,8 +336,8 @@ congestion control information on it's SA back to the sender. Thus,
 in order to support congestion control the receiver must have a
 paired SA back to the sender (this is always the case when the tunnel
 was created using IKEv2). If the SA back to the sender is a
-non-IP-TFS SA then an IPTFS_PROTOCOL empty payload (i.e., header
-only) is used to convey the information.
+non-IP-TFS enabled SA then an IPTFS_PROTOCOL empty payload (i.e.,
+header only) is used to convey the information.
 
 In order to calculate a loss event rate compatible with [[RFC5348]] the
 receiver needs to have a round-trip time estimate. Thus the sender
@@ -405,8 +414,20 @@ Congestion control is a local configuration option. No standardized
 configuration method is required.
 
 * Packet and Data Formats
-** IPSec Payload Formats
-*** Non-Congestion Control Payload
+
+** IPsec IP-TFS Payload
+
+An IPsec IP-TFS payload is identified by the IP protocol number
+IPTFS_PROTOCOL (TBD1). This payload begins with a fixed 4 or 16 octet
+header followed by a variable amount of ~DataBlocks~ data. The exact
+payload format and fields are defined in the following sections.
+
+*** Non-Congestion Control IPTFS_PROTOCOL Payload Format
+
+The non-congestion control IPTFS_PROTOCOL payload is comprised of a 4
+octet header followed by a variable amount of ~DataBlocks~ data as
+shown below.
+
 #+begin_example
                       1                   2                   3
   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
@@ -423,19 +444,25 @@ configuration method is required.
        control information is present.
 - Reserved :: A 14 bit field set to 0 and ignored on receipt.
 - BlockOffset :: A 16 bit unsigned integer counting the number of
-                 octets following the IPTFS_PROTOCOL header before
-                 the next data block. Thus, for this payload format
-                 the offset value is from after the ~BlockOffset~
-                 field. It can also point past the end of the payload
-                 in which case the data entirely belongs to the
-                 previous data block. If the offset extends beyond
-                 the payload into subsequent packets the subsequent
-                 IP-TFS headers are also not counted by this value.
-- DataBlocks :: Variable number of octets that begin with the start
-                or continuation of a previous data block followed by
-                zero or more additional data blocks.
+                 octets of ~DataBlocks~ data before the start of a
+                 new data block. ~BlockOffset~ can count past the end
+                 of the ~DataBlocks~ data in which case all the
+                 ~DataBlocks~ data belongs to the previous data block
+                 being re-assembled. If the ~BlockOffset~ extends
+                 into subsequent packets it continues to only count
+                 subsequent ~DataBlocks~ data (i.e., it does not
+                 count subsequent packets non-~DataBlocks~ octets).
+- DataBlocks :: Variable number of octets that begins with the start
+                of a data block, or the continuation of a previous
+                data block, followed by zero or more additional data
+                blocks.
 
-*** Congestion Control Info Payload
+*** Congestion Control IPTFS_PROTOCOL Payload Format
+
+The congestion control IPTFS_PROTOCOL payload is comprised of a 16
+octet header followed by a variable amount of ~DataBlocks~ data as
+shown below.
+
 #+begin_example
                       1                   2                   3
   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
@@ -461,14 +488,12 @@ configuration method is required.
        (CE) ECN bits were received and used in deriving the
        reported ~LossEventRate~.
 - Reserved :: A 13 bit field set to 0 and ignored on receipt.
-- BlockOffset :: The same as the non-congestion controlled payload
-                 format value, except in this case the offset value
-                 counts from after the ~LastSeqNum~ field rather than the
-                 ~BlockOffset~ field.
+- BlockOffset :: The same value as the non-congestion controlled
+                 payload format value.
 - RTT :: A 16 bit value specifying the sender's current round-trip
          time estimate in milliseconds. The value MAY be zero prior
          to the sender having calculated a round-trip time estimate.
-         The value SHOULD be set to zero on non-IP-TFS tunnel SAs.
+         The value SHOULD be set to zero on non-IP-TFS enabled SAs.
 - Delay :: A 16 bit value specifying the delay in milliseconds
            incurred between the receiver receiving the ~LastSeqNum~
            packet and the sending of this acknowledgement of it.
@@ -484,12 +509,12 @@ configuration method is required.
                 be less recent). When determining largest and 64 bit
                 extended sequence numbers are in use, the upper 32
                 bits should be used during the comparison.
-- DataBlocks :: Variable number of octets that begin with the start
-                or continuation of a previous data block followed by
-                zero or more additional data blocks. For the special
-                case of sending congestion control information on an
-                non-IP-TFS enabled SA this value MUST be empty (i.e.,
-                be zero octets long).
+- DataBlocks :: Variable number of octets that begins with the start
+                of a data block, or the continuation of a previous
+                data block, followed by zero or more additional data
+                blocks. For the special case of sending congestion
+                control information on an non-IP-TFS enabled SA this
+                value MUST be empty (i.e., be zero octets long).
 
 *** Data Blocks
 #+begin_example
@@ -558,9 +583,9 @@ the encapsulated IP packet.
 
 ** IKEv2
 
-*** IKEv2 IP-TFS Supported Payload Type (TBD)
+*** IKEv2 IP-TFS Supported Payload Type (TBD2)
 
-The following defines the IP-TFS supported payload IPTFS_SUPPORT.
+The following defines the IP-TFS supported payload IPTFS_SUPPORT (TBD2).
 The presence of this payload indicates that the node is capable of
 receiving IP-TFS format ESP payloads (IPTFS_PROTOCOL). It should be
 included during the IKEv2 [[RFC7296]] IKE_AUTH exchange.
@@ -587,21 +612,25 @@ defined in [[RFC7296]]. The Payload Type value is TBD.
 
 * IANA Considerations
 
+** IPTFS_PROTOCOL Type
+
 This document requests a protocol number IPTFS_PROTOCOL be allocated
 by IANA from "Assigned Internet Protocol Numbers" registry for
 identifying the IP-TFS ESP payload format.
 
-  - Type :: TBD
+  - Type :: TBD1
   - Description :: IP-TFS ESP payload format.
   - Reference :: This document
 
 # ^IANA-PN^ https://www.iana.org/assignments/protocol-numbers
 
+** IPTFS_SUPPORT IKEv2 Payload Type
+
 Additionally this document requests an IKEv2 payload type
-IPTFS_SUPPORT (TBD) be allocated by IANA from "IKEv2 Payload Types"
+IPTFS_SUPPORT (TBD2) be allocated by IANA from "IKEv2 Payload Types"
 registry.
 
-  - Type :: TBD
+  - Type :: TBD2
   - Description :: Indicates support for being an IPTFS receiving
                    tunnel endpoint.
   - Reference :: This document
@@ -748,7 +777,7 @@ inner packet size is a constant based on the Outer MTU size.
 *** ESP with Padding Overhead
 
 The overhead per inner packet for constant-send-rate padded ESP
-(i.e., traditional IPSec TFC) is 36 octets plus any padding, unless
+(i.e., traditional IPsec TFC) is 36 octets plus any padding, unless
 fragmentation is required.
 
 When fragmentation of the inner packet is required to fit in the
@@ -762,7 +791,7 @@ minus the Inner Payload Size. So:
 
 #+begin_example
   Inner Paylaod Size = IP Packet Size - IP Overhead
-  Outer Payload Size = MTU - IPSec Overhead
+  Outer Payload Size = MTU - IPsec Overhead
 
                 Inner Payload Size
   NF0 = ----------------------------------
@@ -775,10 +804,10 @@ minus the Inner Payload Size. So:
        + NF * (Outer Payload Size - IP Overhead)
        - Inner Payload Size
 
-  OH = NF * (IPSec Overhead + Outer Payload Size)
+  OH = NF * (IPsec Overhead + Outer Payload Size)
        - (IP Overhead + Inner Payload Size)
 
-  OH = NF * (IPSec Overhead + Outer Payload Size)
+  OH = NF * (IPsec Overhead + Outer Payload Size)
        - Inner Packet Size
 #+end_example
 
