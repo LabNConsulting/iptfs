@@ -222,19 +222,20 @@ algorithm work in the presence of sequence number skips in the IP-TFS
 payload stream, the added complexity is not deemed worthwhile. Other
 IPsec uses can configure and use their own SAs.
 
-** Initiation of TFS mode
+** Initiating IP-TFS Operation On The SA.
 
 While a user will normally configure their IPsec tunnel (SA) to
-operate in IP-TFS mode to start, we also allow IP-TFS mode to be
-enabled post-SA creation. This late-enabling may be useful for
-debugging or other purposes. To support this late-enabled mode the
-receiver implicitly switches to IP-TFS mode on receipt of the first ESP
-payload with the IPTFS_PROTOCOL indicated as the payload type which
-also contains a data block (i.e., a non-empty IP-TFS payload). The
-the receipt of an empty IPTFS_PROTOCOL payload (i.e., one without any
-data blocks) is used to communicate congestion control information
-from the receiver back to the sender on a non-IP-TFS enabled SA, and
-MUST NOT cause IP-TFS to be enabled on that SA.
+operate using IP-TFS to start, we also allow IP-TFS operation to be
+enabled post-SA creation and use. This late-enabling may be useful
+for debugging or other purposes. To support this late-enabled
+operation the receiver switches to IP-TFS operation on receipt of the
+first ESP payload with the IPTFS_PROTOCOL indicated as the payload
+type which also contains a data block (i.e., a non-empty IP-TFS
+payload). The the receipt of an empty IPTFS_PROTOCOL payload (i.e.,
+one without any data blocks) is used to communicate congestion
+control information from the receiver back to the sender on a
+non-IP-TFS enabled SA, and MUST NOT cause IP-TFS to be enabled on
+that SA.
 
 ** Modes of operation
 
@@ -413,6 +414,107 @@ configuration method is required.
 Congestion control is a local configuration option. No standardized
 configuration method is required.
 
+* IKEv2
+
+** TFS Type Transform Type
+
+When IP-TFS is used with IKEv2 a new "TFS Type" Transform Type (TBD2)
+is used to negotiate the possible operation of IP-TFS on the child SA
+pair. This document defines 3 "TFS Type" values: None (0), TFS_IPTFS_CC
+(1) for congestion-controlled IP-TFS mode or TFS_IPTFS_NOCC (2) for
+non-congestion controlled IP-TFS mode. The selection of a proposal
+with a "TFS Type" value TFS_IPTFS_CC or TFS_IPTFS_NOCC does not mandate
+the use of IP-TFS, rather it indicates a willingness or intent to use
+IP-TFS on the SA pair. A new status notification IPTFS_REQUIREMENTS
+(TBD3) is then used by the initiator and responder to further refine
+what will and will not be supported.
+
+** IPTFS_REQUIREMENTS Status Notification
+
+As mentioned in the previous section, a new status notification
+IPTFS_REQUIREMENTS (TBD3) is used by the initiator and responder to
+further refine what will and will not be supported during child SA
+creation. This notification is sent during IKE_AUTH and new
+CREATE_CHILD_SA exchanges; however, it MUST NOT be sent during a
+CREATE_CHILD_SA rekeying exchange as the values are not allowed to
+change during rekeying.
+
+The IPTFS_REQUIREMENTS notification contains a 1 octet payload of
+flags that specify extra requirements from the sender of the message.
+The flag values are defined below. The initiator and responder MAY
+both include this notification. If the IPTFS_REQUIREMENTS
+notification is not sent then it implies that no requirements or
+restrictions are placed on IP-TFS use.
+
+#+begin_example
+ +-+-+-+-+-+-+-+-+
+ |T|R|0|A|S|0|0|D|
+ +-+-+-+-+-+-+-+-+
+#+end_example
+
+- 0 :: MUST be zero on send and ignored on receive.
+- D :: Don't Fragment bit, if set indicates the sender does not
+       support receiving packet fragments (i.e., inner packets MUST
+       be sent using a single Datablock). This value only applies to
+       what the sender is capable of receiving; the sender MAY still
+       send packet fragments unless similarly restricted by the
+       receiver in it's IPTFS_REQUIREMENTS notification.
+- T :: Transmit Required bit, if set indicates the sender requires the
+       receiver to send IPTFS_PROTOCOL payloads.
+- R :: Receive Only bit, if set indicates the sender is not willing to
+       send non-empty IPTFS_PROTOCOL payloads.
+- A :: Accept Required bit, if set indicates the sender requires the
+       receiver to receive IPTFS_PROTOCOL payloads.
+- S :: Send Only bit, if set indicates the sender is not willing to
+       receive non-empty IPTFS_PROTOCOL payloads.
+
+The following combinations of the R, T, S and A flags are not
+allowed, and if received cause the child SA creation to fail.
+
+- S and R :: A sender can set none or one of the S and R bits, but
+             MUST NOT set both.
+- T and S :: A sender can set none or one of the T and S bits, but
+             MUST NOT set both.
+- A and R :: A sender can set none or one of the A and R bits, but
+             MUST NOT set both.
+
+The following table describes the remaining valid combinations of the
+R, T, S and A flags.
+
+| Set Bits | Operational Description                           |
+|----------+---------------------------------------------------|
+| T        | Bidirectional or Unidirectional from the receiver |
+| R        | None or Unidirectional from the receiver          |
+| A        | Bidirectional or Unidirectional from the sender   |
+| S        | None or Unidirectional from the sender            |
+| TR       | Unidirectional from the receiver                  |
+| TA       | Bidirectional                                     |
+| AS       | Unidirectional from the sender                    |
+
+The bit positions were chosen so that it is easy to check
+for compatible operation. A receiver can shift the received octet
+value right by 1 and bitwise AND the result with it's own transmitted
+value of R and S bits, if any bit remains set then operation is not
+compatible.
+
+A responder in an IKE_AUTH or CREATE_CHILD_SA exchange MUST consider
+the initiators IPTFS_REQUIREMENTS when choosing an SA proposal. In
+particular, the responder MUST NOT select a proposal with an IP-TFS
+transform (i.e., a "TFS Type" with either the value TFS_IPTFS_NOCC or
+the value TFS_IPTFS_CC) if the initiators IPTFS_REQUIREMENTS are not
+acceptable to the responder. If the responder receives at least one
+proposal for IP-TFS operation, but does not select it due to the
+initiators IPTFS_REQUIREMENTS, it SHOULD still include it's own
+IPTFS_REQUIREMENTS notification value in it's response. This will
+help the initiator determine why the responder did not choose the
+IP-TFS transform.
+
+If the initiator of the exchange detects the responder has
+incorrectly chosen an IP-TFS transform by comparing the responders
+IPTFS_REQUIREMENTS notification value to it's own, the child SA
+creation fails and an error notification of type IPTFS_UNACCEPTABLE
+(TBD4) SHOULD be sent to the responder to indicate this failure.
+
 * Packet and Data Formats
 
 ** IPsec IP-TFS Payload
@@ -581,35 +683,6 @@ the encapsulated IP packet.
 - Type :: A 4 bit value of 0x0 indicating a padding data block.
 - Padding :: extends to end of the encapsulating packet.
 
-** IKEv2
-
-*** IKEv2 IP-TFS Supported Payload Type (TBD2)
-
-The following defines the IP-TFS supported payload IPTFS_SUPPORT (TBD2).
-The presence of this payload indicates that the node is capable of
-receiving IP-TFS format ESP payloads (IPTFS_PROTOCOL). It should be
-included during the IKEv2 [[RFC7296]] IKE_AUTH exchange.
-
-The first 4 octets are the standard generic payload header fields
-defined in [[RFC7296]]. The Payload Type value is TBD.
-
-#+begin_example
-                      1                   2                   3
-  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
- +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- | Next Payload  |C|  RESERVED   |         Payload Length        |
- +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- |D|N| ResvFlags |
- +-+-+-+-+-+-+-+-+
-#+end_example
-
-- Payload Length :: 2 octet length set to 5.
-- D :: 1 bit value that if set indicates fragmentation is not
-       supported by the receiver.
-- N :: 1 bit value that if set indicates congestion control is
-       not supported by the receiver.
-- ResvFlags :: 6 bits set to 0.
-
 * IANA Considerations
 
 ** IPTFS_PROTOCOL Type
@@ -624,15 +697,36 @@ identifying the IP-TFS ESP payload format.
 
 # ^IANA-PN^ https://www.iana.org/assignments/protocol-numbers
 
-** IPTFS_SUPPORT IKEv2 Payload Type
+** IKEv2 Transform Type TFS Type
 
-Additionally this document requests an IKEv2 payload type
-IPTFS_SUPPORT (TBD2) be allocated by IANA from "IKEv2 Payload Types"
-registry.
+This document requests an IKEv2 Transform Type "TFS Type" be
+allocated by IANA from the "Transform Type Values" registry.
 
   - Type :: TBD2
-  - Description :: Indicates support for being an IPTFS receiving
-                   tunnel endpoint.
+  - Description :: TFS Type
+  - Used In :: (optional in ESP)
+  - Reference :: This document
+
+** TFS Type IDs Registry
+
+This document requests a "Transform Type TBD3 - TFS Type IDs"
+registry be created. The registration procedure is Expert Review. The
+initial values are as follows:
+
+|  Number | Name           | Reference     |
+|---------+----------------+---------------|
+|       0 | NONE           | This document |
+|       1 | TFS_IPTFS_CC   | This document |
+|       2 | TFS_IPTFS_NOCC | This document |
+| 3-65535 | Reserved       | This document |
+
+** IPTFS_REQUIREMENTS Notify Message Status Type
+
+This document requests a status type IPTFS_REQUIREMENTS be allocated
+from the "IKEv2 Notify Message Types - Status Types" registry.
+
+  - Value :: TBD3
+  - Name :: IPTFS_REQUIREMENTS
   - Reference :: This document
 
 # ^IANA-IKECA^
