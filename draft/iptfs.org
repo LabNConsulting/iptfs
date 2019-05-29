@@ -420,100 +420,61 @@ configuration method is required.
 
 When IP-TFS is used with IKEv2 a new "TFS Type" Transform Type (TBD2)
 is used to negotiate the possible operation of IP-TFS on the child SA
-pair. This document defines 3 "TFS Type" values: None (0), TFS_IPTFS_CC
-(1) for congestion-controlled IP-TFS mode or TFS_IPTFS_NOCC (2) for
-non-congestion controlled IP-TFS mode. The selection of a proposal
-with a "TFS Type" value TFS_IPTFS_CC or TFS_IPTFS_NOCC does not mandate
-the use of IP-TFS, rather it indicates a willingness or intent to use
-IP-TFS on the SA pair. A new status notification IPTFS_REQUIREMENTS
-(TBD3) is then used by the initiator and responder to further refine
-what will and will not be supported.
+pair. This document defines 3 "TFS Type" values: None (0),
+TFS_IPTFS_CC (1) for congestion-controlled IP-TFS mode or
+TFS_IPTFS_NOCC (2) for non-congestion controlled IP-TFS mode. The
+selection of a proposal with a "TFS Type" value TFS_IPTFS_CC or
+TFS_IPTFS_NOCC does not mandate the use of IP-TFS, rather it
+indicates a willingness or intent to use IP-TFS on the SA pair. A new
+Notify Message Status Type IPTFS_REQUIREMENTS (TBD3) is then used by
+the initiator and responder to further refine any operational
+requirements.
 
 ** IPTFS_REQUIREMENTS Status Notification
 
-As mentioned in the previous section, a new status notification
-IPTFS_REQUIREMENTS (TBD3) is used by the initiator and responder to
-further refine what will and will not be supported during child SA
-creation. This notification is sent during IKE_AUTH and new
-CREATE_CHILD_SA exchanges; however, it MUST NOT be sent during a
-CREATE_CHILD_SA rekeying exchange as the values are not allowed to
-change during rekeying.
+As mentioned in the previous section, a new Notify Message Status
+Type IPTFS_REQUIREMENTS (TBD3) is used by the initiator and responder
+to further refine what will be supported. This notification is sent
+during IKE_AUTH and new CREATE_CHILD_SA exchanges; however, it MUST
+NOT be sent, and MUST be ignored, during a CREATE_CHILD_SA rekeying
+exchange as the requirements are not allowed to change during
+rekeying.
 
 The IPTFS_REQUIREMENTS notification contains a 1 octet payload of
-flags that specify extra requirements from the sender of the message.
-The flag values are defined below. The initiator and responder MAY
-both include this notification. If the IPTFS_REQUIREMENTS
-notification is not sent then it implies that no requirements or
-restrictions are placed on IP-TFS use.
+flags that specify any extra requirements from the sender of the
+message. The flag values (currently a single flag) are defined below.
+The initiator and responder MAY both include this notification. If
+the IPTFS_REQUIREMENTS notification is not sent then it implies that
+all the flag bits are clear.
 
 #+begin_example
  +-+-+-+-+-+-+-+-+
- |T|R|0|A|S|0|0|D|
+ |0|0|0|0|0|0|0|D|
  +-+-+-+-+-+-+-+-+
 #+end_example
 
-- 0 :: MUST be zero on send and ignored on receive.
-- D :: Don't Fragment bit, if set indicates the sender does not
-       support receiving packet fragments (i.e., inner packets MUST
-       be sent using a single Datablock). This value only applies to
-       what the sender is capable of receiving; the sender MAY still
-       send packet fragments unless similarly restricted by the
-       receiver in it's IPTFS_REQUIREMENTS notification.
-- T :: Transmit Required bit, if set indicates the sender requires the
-       receiver to send IPTFS_PROTOCOL payloads.
-- R :: Receive Only bit, if set indicates the sender is not willing to
-       send non-empty IPTFS_PROTOCOL payloads.
-- A :: Accept Required bit, if set indicates the sender requires the
-       receiver to receive IPTFS_PROTOCOL payloads.
-- S :: Send Only bit, if set indicates the sender is not willing to
-       receive non-empty IPTFS_PROTOCOL payloads.
+- 0 :: Set to zero on send and checked for zero on receive.
+- D :: Don't Fragment bit, if set indicates the sender of the notify
+       message does not support receiving packet fragments (i.e.,
+       inner packets MUST be sent using a single Datablock). This
+       value only applies to what the sender is capable of receiving;
+       the sender MAY still send packet fragments unless similarly
+       restricted by the receiver in it's IPTFS_REQUIREMENTS
+       notification.
 
-The following combinations of the R, T, S and A flags are not
-allowed, and if received cause the child SA creation to fail.
-
-- S and R :: A sender can set none or one of the S and R bits, but
-             MUST NOT set both.
-- T and S :: A sender can set none or one of the T and S bits, but
-             MUST NOT set both.
-- A and R :: A sender can set none or one of the A and R bits, but
-             MUST NOT set both.
-
-The following table describes the remaining valid combinations of the
-R, T, S and A flags.
-
-| Set Bits | Operational Description                           |
-|----------+---------------------------------------------------|
-| T        | Bidirectional or Unidirectional from the receiver |
-| R        | None or Unidirectional from the receiver          |
-| A        | Bidirectional or Unidirectional from the sender   |
-| S        | None or Unidirectional from the sender            |
-| TR       | Unidirectional from the receiver                  |
-| TA       | Bidirectional                                     |
-| AS       | Unidirectional from the sender                    |
-
-The bit positions were chosen so that it is easy to check
-for compatible operation. A receiver can shift the received octet
-value right by 1 and bitwise AND the result with it's own transmitted
-value of R and S bits, if any bit remains set then operation is not
-compatible.
-
-A responder in an IKE_AUTH or CREATE_CHILD_SA exchange MUST consider
-the initiators IPTFS_REQUIREMENTS when choosing an SA proposal. In
-particular, the responder MUST NOT select a proposal with an IP-TFS
-transform (i.e., a "TFS Type" with either the value TFS_IPTFS_NOCC or
-the value TFS_IPTFS_CC) if the initiators IPTFS_REQUIREMENTS are not
-acceptable to the responder. If the responder receives at least one
-proposal for IP-TFS operation, but does not select it due to the
-initiators IPTFS_REQUIREMENTS, it SHOULD still include it's own
-IPTFS_REQUIREMENTS notification value in it's response. This will
-help the initiator determine why the responder did not choose the
-IP-TFS transform.
-
-If the initiator of the exchange detects the responder has
-incorrectly chosen an IP-TFS transform by comparing the responders
-IPTFS_REQUIREMENTS notification value to it's own, the child SA
-creation fails and an error notification of type IPTFS_UNACCEPTABLE
-(TBD4) SHOULD be sent to the responder to indicate this failure.
+If any unknown IPTFS_REQUIREMENTS flag bit are set, a receiving
+responder should not select any IPTFS proposal, and a receiving
+initiator should fail the child SA creation if an IPTFS proposal was
+selected by the responder. This is done to allow for adding future
+requirements in a backward compatible way. In both the responder and
+the initiator case the receiver should send a Notify Message with
+Error Type IPTFS_UNKNOWN_REQUIREMENTS (TBD4) back to the sender, and
+include with this notification an octet with the unknown bits set.
+For the responder this would be sent in the IKE_AUTH or
+CREATE_CHILD_SA response, and for the initiator it would be included
+in a new INFORMATIONAL exchange. This allows the sender of the
+IPTFS_REQUIREMENTS message to determine which requirements are not
+understood by the receiver.
 
 * Packet and Data Formats
 
@@ -727,6 +688,16 @@ from the "IKEv2 Notify Message Types - Status Types" registry.
 
   - Value :: TBD3
   - Name :: IPTFS_REQUIREMENTS
+  - Reference :: This document
+
+** IPTFS_UNKNOWN_REQUIREMENTS Notify Message Error Type
+
+This document requests a status type IPTFS_UNKNOWN_REQUIREMENTS be
+allocated from the "IKEv2 Notify Message Types - Error Types"
+registry.
+
+  - Value :: TBD4
+  - Name :: IPTFS_UNKNOWN_REQUIREMENTS
   - Reference :: This document
 
 # ^IANA-IKECA^
