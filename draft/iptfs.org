@@ -237,7 +237,7 @@ control information from the receiver back to the sender on a
 non-IP-TFS enabled SA, and MUST NOT cause IP-TFS to be enabled on
 that SA.
 
-** Modes of operation
+** Modes of Operation
 
 Just as with normal IPsec/ESP tunnels, IP-TFS tunnels are
 unidirectional. Bidirectional IP-TFS functionality is achieved by
@@ -340,7 +340,7 @@ was created using IKEv2). If the SA back to the sender is a
 non-IP-TFS enabled SA then an IPTFS_PROTOCOL empty payload (i.e.,
 header only) is used to convey the information.
 
-In order to calculate a loss event rate compatible with [[RFC5348]] the
+In order to calculate a loss event rate compatible with [[RFC5348]], the
 receiver needs to have a round-trip time estimate. Thus the sender
 communicates this estimate in the ~RTT~ header field. On startup this
 value will be zero as no RTT estimate is yet known.

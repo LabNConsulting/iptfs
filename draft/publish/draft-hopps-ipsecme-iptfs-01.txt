@@ -4,8 +4,8 @@
 
 Network Working Group                                           C. Hopps
 Internet-Draft                                   LabN Consulting, L.L.C.
-Intended status: Standards Track                            May 29, 2019
-Expires: November 30, 2019
+Intended status: Standards Track                            June 3, 2019
+Expires: December 5, 2019
 
 
                         IP Traffic Flow Security
@@ -35,7 +35,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on November 30, 2019.
+   This Internet-Draft will expire on December 5, 2019.
 
 Copyright Notice
 
@@ -53,9 +53,9 @@ Copyright Notice
 
 
 
-Hopps                   Expires November 30, 2019               [Page 1]
+Hopps                   Expires December 5, 2019                [Page 1]
 
-Internet-Draft          IP Traffic Flow Security                May 2019
+Internet-Draft          IP Traffic Flow Security               June 2019
 
 
    the Trust Legal Provisions and are provided without warranty as
@@ -74,7 +74,7 @@ Table of Contents
        2.2.4.  IP Header Value Mapping . . . . . . . . . . . . . . .   6
      2.3.  Exclusive SA Use  . . . . . . . . . . . . . . . . . . . .   7
      2.4.  Initiating IP-TFS Operation On The SA.  . . . . . . . . .   7
-     2.5.  Modes of operation  . . . . . . . . . . . . . . . . . . .   7
+     2.5.  Modes of Operation  . . . . . . . . . . . . . . . . . . .   7
        2.5.1.  Non-Congestion Controlled Mode  . . . . . . . . . . .   7
        2.5.2.  Congestion Controlled Mode  . . . . . . . . . . . . .   8
    3.  Congestion Information  . . . . . . . . . . . . . . . . . . .   9
@@ -109,9 +109,9 @@ Table of Contents
 
 
 
-Hopps                   Expires November 30, 2019               [Page 2]
+Hopps                   Expires December 5, 2019                [Page 2]
 
-Internet-Draft          IP Traffic Flow Security                May 2019
+Internet-Draft          IP Traffic Flow Security               June 2019
 
 
        C.1.2.  ESP with Padding Overhead . . . . . . . . . . . . . .  22
@@ -165,9 +165,9 @@ Internet-Draft          IP Traffic Flow Security                May 2019
 
 
 
-Hopps                   Expires November 30, 2019               [Page 3]
+Hopps                   Expires December 5, 2019                [Page 3]
 
-Internet-Draft          IP Traffic Flow Security                May 2019
+Internet-Draft          IP Traffic Flow Security               June 2019
 
 
 2.  The IP-TFS Tunnel
@@ -221,9 +221,9 @@ Internet-Draft          IP Traffic Flow Security                May 2019
 
 
 
-Hopps                   Expires November 30, 2019               [Page 4]
+Hopps                   Expires December 5, 2019                [Page 4]
 
-Internet-Draft          IP Traffic Flow Security                May 2019
+Internet-Draft          IP Traffic Flow Security               June 2019
 
 
     . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
@@ -277,9 +277,9 @@ Internet-Draft          IP Traffic Flow Security                May 2019
 
 
 
-Hopps                   Expires November 30, 2019               [Page 5]
+Hopps                   Expires December 5, 2019                [Page 5]
 
-Internet-Draft          IP Traffic Flow Security                May 2019
+Internet-Draft          IP Traffic Flow Security               June 2019
 
 
    with the IPv4/IPv6 version field values so that no per-data block
@@ -333,9 +333,9 @@ Internet-Draft          IP Traffic Flow Security                May 2019
 
 
 
-Hopps                   Expires November 30, 2019               [Page 6]
+Hopps                   Expires December 5, 2019                [Page 6]
 
-Internet-Draft          IP Traffic Flow Security                May 2019
+Internet-Draft          IP Traffic Flow Security               June 2019
 
 
 2.3.  Exclusive SA Use
@@ -364,7 +364,7 @@ Internet-Draft          IP Traffic Flow Security                May 2019
    control information from the receiver back to the sender on a non-IP-
    TFS enabled SA, and MUST NOT cause IP-TFS to be enabled on that SA.
 
-2.5.  Modes of operation
+2.5.  Modes of Operation
 
    Just as with normal IPsec/ESP tunnels, IP-TFS tunnels are
    unidirectional.  Bidirectional IP-TFS functionality is achieved by
@@ -389,9 +389,9 @@ Internet-Draft          IP Traffic Flow Security                May 2019
 
 
 
-Hopps                   Expires November 30, 2019               [Page 7]
+Hopps                   Expires December 5, 2019                [Page 7]
 
-Internet-Draft          IP Traffic Flow Security                May 2019
+Internet-Draft          IP Traffic Flow Security               June 2019
 
 
    syslog, YANG notification, SNMP traps, etc) so that any failures due
@@ -445,9 +445,9 @@ Internet-Draft          IP Traffic Flow Security                May 2019
 
 
 
-Hopps                   Expires November 30, 2019               [Page 8]
+Hopps                   Expires December 5, 2019                [Page 8]
 
-Internet-Draft          IP Traffic Flow Security                May 2019
+Internet-Draft          IP Traffic Flow Security               June 2019
 
 
    providing for reliable delivery of IP traffic, and so per packet ACKs
@@ -481,10 +481,10 @@ Internet-Draft          IP Traffic Flow Security                May 2019
    TFS enabled SA then an IPTFS_PROTOCOL empty payload (i.e., header
    only) is used to convey the information.
 
-   In order to calculate a loss event rate compatible with [RFC5348] the
-   receiver needs to have a round-trip time estimate.  Thus the sender
-   communicates this estimate in the "RTT" header field.  On startup
-   this value will be zero as no RTT estimate is yet known.
+   In order to calculate a loss event rate compatible with [RFC5348],
+   the receiver needs to have a round-trip time estimate.  Thus the
+   sender communicates this estimate in the "RTT" header field.  On
+   startup this value will be zero as no RTT estimate is yet known.
 
    In order to allow the sender to calculate the "RTT" value, the
    receiver communicates the last sequence number it has seen to the
@@ -501,9 +501,9 @@ Internet-Draft          IP Traffic Flow Security                May 2019
 
 
 
-Hopps                   Expires November 30, 2019               [Page 9]
+Hopps                   Expires December 5, 2019                [Page 9]
 
-Internet-Draft          IP Traffic Flow Security                May 2019
+Internet-Draft          IP Traffic Flow Security               June 2019
 
 
    loss interval data back to the sender so that it can do the
@@ -557,9 +557,9 @@ Internet-Draft          IP Traffic Flow Security                May 2019
 
 
 
-Hopps                   Expires November 30, 2019              [Page 10]
+Hopps                   Expires December 5, 2019               [Page 10]
 
-Internet-Draft          IP Traffic Flow Security                May 2019
+Internet-Draft          IP Traffic Flow Security               June 2019
 
 
 4.3.  Congestion Control
@@ -613,9 +613,9 @@ Internet-Draft          IP Traffic Flow Security                May 2019
 
 
 
-Hopps                   Expires November 30, 2019              [Page 11]
+Hopps                   Expires December 5, 2019               [Page 11]
 
-Internet-Draft          IP Traffic Flow Security                May 2019
+Internet-Draft          IP Traffic Flow Security               June 2019
 
 
       packets MUST be sent using a single Datablock).  This value only
@@ -669,9 +669,9 @@ Internet-Draft          IP Traffic Flow Security                May 2019
 
 
 
-Hopps                   Expires November 30, 2019              [Page 12]
+Hopps                   Expires December 5, 2019               [Page 12]
 
-Internet-Draft          IP Traffic Flow Security                May 2019
+Internet-Draft          IP Traffic Flow Security               June 2019
 
 
       A 1 bit value that MUST be set to 0 to indicate no congestion
@@ -725,9 +725,9 @@ Internet-Draft          IP Traffic Flow Security                May 2019
 
 
 
-Hopps                   Expires November 30, 2019              [Page 13]
+Hopps                   Expires December 5, 2019               [Page 13]
 
-Internet-Draft          IP Traffic Flow Security                May 2019
+Internet-Draft          IP Traffic Flow Security               June 2019
 
 
       A 1 bit value that MUST be set to 1 which indicates the presence
@@ -781,9 +781,9 @@ Internet-Draft          IP Traffic Flow Security                May 2019
 
 
 
-Hopps                   Expires November 30, 2019              [Page 14]
+Hopps                   Expires December 5, 2019               [Page 14]
 
-Internet-Draft          IP Traffic Flow Security                May 2019
+Internet-Draft          IP Traffic Flow Security               June 2019
 
 
 6.1.3.  Data Blocks
@@ -837,9 +837,9 @@ Internet-Draft          IP Traffic Flow Security                May 2019
 
 
 
-Hopps                   Expires November 30, 2019              [Page 15]
+Hopps                   Expires December 5, 2019               [Page 15]
 
-Internet-Draft          IP Traffic Flow Security                May 2019
+Internet-Draft          IP Traffic Flow Security               June 2019
 
 
       A 4 bit value of 0x6 indicating IPv6 (i.e., first nibble of the
@@ -893,9 +893,9 @@ Internet-Draft          IP Traffic Flow Security                May 2019
 
 
 
-Hopps                   Expires November 30, 2019              [Page 16]
+Hopps                   Expires December 5, 2019               [Page 16]
 
-Internet-Draft          IP Traffic Flow Security                May 2019
+Internet-Draft          IP Traffic Flow Security               June 2019
 
 
    Used In:
@@ -949,9 +949,9 @@ Internet-Draft          IP Traffic Flow Security                May 2019
 
 
 
-Hopps                   Expires November 30, 2019              [Page 17]
+Hopps                   Expires December 5, 2019               [Page 17]
 
-Internet-Draft          IP Traffic Flow Security                May 2019
+Internet-Draft          IP Traffic Flow Security               June 2019
 
 
 8.  Security Considerations
@@ -1005,9 +1005,9 @@ Internet-Draft          IP Traffic Flow Security                May 2019
 
 
 
-Hopps                   Expires November 30, 2019              [Page 18]
+Hopps                   Expires December 5, 2019               [Page 18]
 
-Internet-Draft          IP Traffic Flow Security                May 2019
+Internet-Draft          IP Traffic Flow Security               June 2019
 
 
    [RFC0791]  Postel, J., "Internet Protocol", STD 5, RFC 791,
@@ -1061,9 +1061,9 @@ Internet-Draft          IP Traffic Flow Security                May 2019
 
 
 
-Hopps                   Expires November 30, 2019              [Page 19]
+Hopps                   Expires December 5, 2019               [Page 19]
 
-Internet-Draft          IP Traffic Flow Security                May 2019
+Internet-Draft          IP Traffic Flow Security               June 2019
 
 
    [RFC8200]  Deering, S. and R. Hinden, "Internet Protocol, Version 6
@@ -1117,9 +1117,9 @@ Appendix B.  A Send and Loss Event Rate Calculation
 
 
 
-Hopps                   Expires November 30, 2019              [Page 20]
+Hopps                   Expires December 5, 2019               [Page 20]
 
-Internet-Draft          IP Traffic Flow Security                May 2019
+Internet-Draft          IP Traffic Flow Security               June 2019
 
 
                                    1
@@ -1173,9 +1173,9 @@ C.1.1.  IP-TFS Overhead
 
 
 
-Hopps                   Expires November 30, 2019              [Page 21]
+Hopps                   Expires December 5, 2019               [Page 21]
 
-Internet-Draft          IP Traffic Flow Security                May 2019
+Internet-Draft          IP Traffic Flow Security               June 2019
 
 
 C.1.2.  ESP with Padding Overhead
@@ -1229,9 +1229,9 @@ C.2.  Overhead Comparison
 
 
 
-Hopps                   Expires November 30, 2019              [Page 22]
+Hopps                   Expires December 5, 2019               [Page 22]
 
-Internet-Draft          IP Traffic Flow Security                May 2019
+Internet-Draft          IP Traffic Flow Security               June 2019
 
 
            Type  ESP+Pad  ESP+Pad  ESP+Pad  IP-TFS  IP-TFS  IP-TFS
@@ -1285,9 +1285,9 @@ C.3.1.  Ethernet
 
 
 
-Hopps                   Expires November 30, 2019              [Page 23]
+Hopps                   Expires December 5, 2019               [Page 23]
 
-Internet-Draft          IP Traffic Flow Security                May 2019
+Internet-Draft          IP Traffic Flow Security               June 2019
 
 
          Size  E + P  E + P  E + P  IPTFS  IPTFS  IPTFS  Enet   ESP
@@ -1341,9 +1341,9 @@ Internet-Draft          IP Traffic Flow Security                May 2019
 
 
 
-Hopps                   Expires November 30, 2019              [Page 24]
+Hopps                   Expires December 5, 2019               [Page 24]
 
-Internet-Draft          IP Traffic Flow Security                May 2019
+Internet-Draft          IP Traffic Flow Security               June 2019
 
 
    A sometimes unexpected result of using IP-TFS (or any packet
@@ -1397,4 +1397,4 @@ Author's Address
 
 
 
-Hopps                   Expires November 30, 2019              [Page 25]
+Hopps                   Expires December 5, 2019               [Page 25]
