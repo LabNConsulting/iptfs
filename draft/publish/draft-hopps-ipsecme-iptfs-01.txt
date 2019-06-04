@@ -4,8 +4,8 @@
 
 Network Working Group                                           C. Hopps
 Internet-Draft                                   LabN Consulting, L.L.C.
-Intended status: Standards Track                            June 3, 2019
-Expires: December 5, 2019
+Intended status: Standards Track                            June 4, 2019
+Expires: December 6, 2019
 
 
                         IP Traffic Flow Security
@@ -35,7 +35,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on December 5, 2019.
+   This Internet-Draft will expire on December 6, 2019.
 
 Copyright Notice
 
@@ -53,7 +53,7 @@ Copyright Notice
 
 
 
-Hopps                   Expires December 5, 2019                [Page 1]
+Hopps                   Expires December 6, 2019                [Page 1]
 
 Internet-Draft          IP Traffic Flow Security               June 2019
 
@@ -87,34 +87,33 @@ Table of Contents
      5.1.  TFS Type Transform Type . . . . . . . . . . . . . . . . .  11
      5.2.  IPTFS_REQUIREMENTS Status Notification  . . . . . . . . .  11
    6.  Packet and Data Formats . . . . . . . . . . . . . . . . . . .  12
-     6.1.  IPsec IP-TFS Payload  . . . . . . . . . . . . . . . . . .  12
+     6.1.  ESP IP-TFS Payload  . . . . . . . . . . . . . . . . . . .  12
        6.1.1.  Non-Congestion Control IPTFS_PROTOCOL Payload Format   12
        6.1.2.  Congestion Control IPTFS_PROTOCOL Payload Format  . .  13
-       6.1.3.  Data Blocks . . . . . . . . . . . . . . . . . . . . .  15
+       6.1.3.  Data Blocks . . . . . . . . . . . . . . . . . . . . .  14
    7.  IANA Considerations . . . . . . . . . . . . . . . . . . . . .  16
      7.1.  IPTFS_PROTOCOL Type . . . . . . . . . . . . . . . . . . .  16
      7.2.  IKEv2 Transform Type TFS Type . . . . . . . . . . . . . .  16
-     7.3.  TFS Type IDs Registry . . . . . . . . . . . . . . . . . .  17
+     7.3.  TFS Type IDs Registry . . . . . . . . . . . . . . . . . .  16
      7.4.  IPTFS_REQUIREMENTS Notify Message Status Type . . . . . .  17
-     7.5.  IPTFS_UNKNOWN_REQUIREMENTS Notify Message Error Type  . .  17
-   8.  Security Considerations . . . . . . . . . . . . . . . . . . .  18
-   9.  References  . . . . . . . . . . . . . . . . . . . . . . . . .  18
-     9.1.  Normative References  . . . . . . . . . . . . . . . . . .  18
+   8.  Security Considerations . . . . . . . . . . . . . . . . . . .  17
+   9.  References  . . . . . . . . . . . . . . . . . . . . . . . . .  17
+     9.1.  Normative References  . . . . . . . . . . . . . . . . . .  17
      9.2.  Informative References  . . . . . . . . . . . . . . . . .  18
-   Appendix A.  Example Of An Encapsulated IP Packet Flow  . . . . .  20
+   Appendix A.  Example Of An Encapsulated IP Packet Flow  . . . . .  19
    Appendix B.  A Send and Loss Event Rate Calculation . . . . . . .  20
-   Appendix C.  Comparisons of IP-TFS  . . . . . . . . . . . . . . .  21
-     C.1.  Comparing Overhead  . . . . . . . . . . . . . . . . . . .  21
-       C.1.1.  IP-TFS Overhead . . . . . . . . . . . . . . . . . . .  21
+   Appendix C.  Comparisons of IP-TFS  . . . . . . . . . . . . . . .  20
+     C.1.  Comparing Overhead  . . . . . . . . . . . . . . . . . . .  20
+       C.1.1.  IP-TFS Overhead . . . . . . . . . . . . . . . . . . .  20
+       C.1.2.  ESP with Padding Overhead . . . . . . . . . . . . . .  21
 
 
 
-Hopps                   Expires December 5, 2019                [Page 2]
+Hopps                   Expires December 6, 2019                [Page 2]
 
 Internet-Draft          IP Traffic Flow Security               June 2019
 
 
-       C.1.2.  ESP with Padding Overhead . . . . . . . . . . . . . .  22
      C.2.  Overhead Comparison . . . . . . . . . . . . . . . . . . .  22
      C.3.  Comparing Available Bandwidth . . . . . . . . . . . . . .  23
        C.3.1.  Ethernet  . . . . . . . . . . . . . . . . . . . . . .  23
@@ -165,7 +164,8 @@ Internet-Draft          IP Traffic Flow Security               June 2019
 
 
 
-Hopps                   Expires December 5, 2019                [Page 3]
+
+Hopps                   Expires December 6, 2019                [Page 3]
 
 Internet-Draft          IP Traffic Flow Security               June 2019
 
@@ -207,21 +207,21 @@ Internet-Draft          IP Traffic Flow Security               June 2019
    the time of tunnel packet transmission, or if fragmentation has been
    disabled by the receiver.
 
-   In order to do this we use a new IPsec ([RFC4303]) payload type
-   identified using the IP protocol number IPTFS_PROTOCOL (TBD1).
+   In order to do this we use a new Encapsulating Security Payload (ESP,
+   [RFC4303]) payload type which is the new IP protocol number
+   IPTFS_PROTOCOL (TBD1).
 
 2.2.  IPTFS_PROTOCOL Payload Content
 
-   The IPTFS_PROTOCOL IPsec payload is comprised a 4 or 16 octet header
+   The IPTFS_PROTOCOL ESP payload is comprised a 4 or 16 octet header
    followed by either a partial, a full or multiple partial or full data
-   blocks.  The following diagram illustrates the IPTFS_PROTOCOL payload
-   within the IPsec packet.  See Section 6.1 for the exact formats of
-   the IPTFS_PROTOCOL payload.
+   blocks.  The following diagram illustrates the IPTFS_PROTOCOL ESP
+   payload within the ESP packet.  See Section 6.1 for the exact formats
+   of the IPTFS_PROTOCOL payload.
 
 
 
-
-Hopps                   Expires December 5, 2019                [Page 4]
+Hopps                   Expires December 6, 2019                [Page 4]
 
 Internet-Draft          IP Traffic Flow Security               June 2019
 
@@ -277,7 +277,7 @@ Internet-Draft          IP Traffic Flow Security               June 2019
 
 
 
-Hopps                   Expires December 5, 2019                [Page 5]
+Hopps                   Expires December 6, 2019                [Page 5]
 
 Internet-Draft          IP Traffic Flow Security               June 2019
 
@@ -333,7 +333,7 @@ Internet-Draft          IP Traffic Flow Security               June 2019
 
 
 
-Hopps                   Expires December 5, 2019                [Page 6]
+Hopps                   Expires December 6, 2019                [Page 6]
 
 Internet-Draft          IP Traffic Flow Security               June 2019
 
@@ -389,7 +389,7 @@ Internet-Draft          IP Traffic Flow Security               June 2019
 
 
 
-Hopps                   Expires December 5, 2019                [Page 7]
+Hopps                   Expires December 6, 2019                [Page 7]
 
 Internet-Draft          IP Traffic Flow Security               June 2019
 
@@ -445,7 +445,7 @@ Internet-Draft          IP Traffic Flow Security               June 2019
 
 
 
-Hopps                   Expires December 5, 2019                [Page 8]
+Hopps                   Expires December 6, 2019                [Page 8]
 
 Internet-Draft          IP Traffic Flow Security               June 2019
 
@@ -501,7 +501,7 @@ Internet-Draft          IP Traffic Flow Security               June 2019
 
 
 
-Hopps                   Expires December 5, 2019                [Page 9]
+Hopps                   Expires December 6, 2019                [Page 9]
 
 Internet-Draft          IP Traffic Flow Security               June 2019
 
@@ -557,7 +557,7 @@ Internet-Draft          IP Traffic Flow Security               June 2019
 
 
 
-Hopps                   Expires December 5, 2019               [Page 10]
+Hopps                   Expires December 6, 2019               [Page 10]
 
 Internet-Draft          IP Traffic Flow Security               June 2019
 
@@ -572,76 +572,61 @@ Internet-Draft          IP Traffic Flow Security               June 2019
 5.1.  TFS Type Transform Type
 
    When IP-TFS is used with IKEv2 a new "TFS Type" Transform Type (TBD2)
-   is used to negotiate the possible operation of IP-TFS on the child SA
-   pair.  This document defines 3 "TFS Type" values: None (0),
-   TFS_IPTFS_CC (1) for congestion-controlled IP-TFS mode or
-   TFS_IPTFS_NOCC (2) for non-congestion controlled IP-TFS mode.  The
-   selection of a proposal with a "TFS Type" value TFS_IPTFS_CC or
-   TFS_IPTFS_NOCC does not mandate the use of IP-TFS, rather it
-   indicates a willingness or intent to use IP-TFS on the SA pair.  A
-   new Notify Message Status Type IPTFS_REQUIREMENTS (TBD3) is then used
-   by the initiator and responder to further refine any operational
-   requirements.
+   is used to negotiate (as defined in [RFC7296]) the possible operation
+   of IP-TFS on a child SA pair.  This document defines 3 values for the
+   new "TFS Type" Transform Type: None (0), TFS_IPTFS_CC (1) for
+   congestion-controlled IP-TFS mode or TFS_IPTFS_NOCC (2) for non-
+   congestion controlled IP-TFS mode.  The selection of a proposal with
+   a "TFS Type" value TFS_IPTFS_CC or TFS_IPTFS_NOCC does not mandate
+   the use of IP-TFS, rather it indicates a willingness or intent to use
+   IP-TFS on the SA pair.  In addition, a new Notify Message Status Type
+   IPTFS_REQUIREMENTS (TBD3) MAY be used by the initiator as well as the
+   responder to further refine any operational requirements.
 
 5.2.  IPTFS_REQUIREMENTS Status Notification
 
    As mentioned in the previous section, a new Notify Message Status
-   Type IPTFS_REQUIREMENTS (TBD3) is used by the initiator and responder
-   to further refine what will be supported.  This notification is sent
-   during IKE_AUTH and new CREATE_CHILD_SA exchanges; however, it MUST
-   NOT be sent, and MUST be ignored, during a CREATE_CHILD_SA rekeying
-   exchange as the requirements are not allowed to change during
-   rekeying.
+   Type IPTFS_REQUIREMENTS (TBD3) MAY be sent by the initiator and/or
+   the responder to further refine what will be supported.  This
+   notification is sent during IKE_AUTH and new CREATE_CHILD_SA
+   exchanges; however, it MUST NOT be sent, and MUST be ignored, during
+   a CREATE_CHILD_SA rekeying exchange as the requirements are not
+   allowed to change during rekeying.
 
    The IPTFS_REQUIREMENTS notification contains a 1 octet payload of
    flags that specify any extra requirements from the sender of the
    message.  The flag values (currently a single flag) are defined
-   below.  The initiator and responder MAY both include this
-   notification.  If the IPTFS_REQUIREMENTS notification is not sent
-   then it implies that all the flag bits are clear.
+   below.  If the IPTFS_REQUIREMENTS notification is not sent then it
+   implies that all the flag bits are clear.
 
     +-+-+-+-+-+-+-+-+
     |0|0|0|0|0|0|0|D|
     +-+-+-+-+-+-+-+-+
 
    0:
-      Set to zero on send and checked for zero on receive.
+      MUST be zero on send and MUST be ignored on receive.
 
    D:
       Don't Fragment bit, if set indicates the sender of the notify
       message does not support receiving packet fragments (i.e., inner
+      packets MUST be sent using a single Datablock).  This value only
 
 
 
-Hopps                   Expires December 5, 2019               [Page 11]
+Hopps                   Expires December 6, 2019               [Page 11]
 
 Internet-Draft          IP Traffic Flow Security               June 2019
 
 
-      packets MUST be sent using a single Datablock).  This value only
       applies to what the sender is capable of receiving; the sender MAY
       still send packet fragments unless similarly restricted by the
       receiver in it's IPTFS_REQUIREMENTS notification.
 
-   If any unknown IPTFS_REQUIREMENTS flag bit are set, a receiving
-   responder should not select any IPTFS proposal, and a receiving
-   initiator should fail the child SA creation if an IPTFS proposal was
-   selected by the responder.  This is done to allow for adding future
-   requirements in a backward compatible way.  In both the responder and
-   the initiator case the receiver should send a Notify Message with
-   Error Type IPTFS_UNKNOWN_REQUIREMENTS (TBD4) back to the sender, and
-   include with this notification an octet with the unknown bits set.
-   For the responder this would be sent in the IKE_AUTH or
-   CREATE_CHILD_SA response, and for the initiator it would be included
-   in a new INFORMATIONAL exchange.  This allows the sender of the
-   IPTFS_REQUIREMENTS message to determine which requirements are not
-   understood by the receiver.
-
 6.  Packet and Data Formats
 
-6.1.  IPsec IP-TFS Payload
+6.1.  ESP IP-TFS Payload
 
-   An IPsec IP-TFS payload is identified by the IP protocol number
+   An ESP IP-TFS payload is identified by the IP protocol number
    IPTFS_PROTOCOL (TBD1).  This payload begins with a fixed 4 or 16
    octet header followed by a variable amount of "DataBlocks" data.  The
    exact payload format and fields are defined in the following
@@ -666,14 +651,6 @@ Internet-Draft          IP Traffic Flow Security               June 2019
       one the packet MUST be dropped.
 
    C:
-
-
-
-Hopps                   Expires December 5, 2019               [Page 12]
-
-Internet-Draft          IP Traffic Flow Security               June 2019
-
-
       A 1 bit value that MUST be set to 0 to indicate no congestion
       control information is present.
 
@@ -689,6 +666,13 @@ Internet-Draft          IP Traffic Flow Security               June 2019
       subsequent packets it continues to only count subsequent
       "DataBlocks" data (i.e., it does not count subsequent packets
       non-"DataBlocks" octets).
+
+
+
+Hopps                   Expires December 6, 2019               [Page 12]
+
+Internet-Draft          IP Traffic Flow Security               June 2019
+
 
    DataBlocks:
       Variable number of octets that begins with the start of a data
@@ -720,16 +704,6 @@ Internet-Draft          IP Traffic Flow Security               June 2019
       one the packet MUST be dropped.
 
    C:
-
-
-
-
-
-Hopps                   Expires December 5, 2019               [Page 13]
-
-Internet-Draft          IP Traffic Flow Security               June 2019
-
-
       A 1 bit value that MUST be set to 1 which indicates the presence
       of the congestion information header fields "RTT", "Delay",
       "LossEventRate" and "LastSeqNum".
@@ -747,6 +721,15 @@ Internet-Draft          IP Traffic Flow Security               June 2019
       value.
 
    RTT:
+
+
+
+
+Hopps                   Expires December 6, 2019               [Page 13]
+
+Internet-Draft          IP Traffic Flow Security               June 2019
+
+
       A 16 bit value specifying the sender's current round-trip time
       estimate in milliseconds.  The value MAY be zero prior to the
       sender having calculated a round-trip time estimate.  The value
@@ -777,15 +760,6 @@ Internet-Draft          IP Traffic Flow Security               June 2019
       sending congestion control information on an non-IP-TFS enabled SA
       this value MUST be empty (i.e., be zero octets long).
 
-
-
-
-
-Hopps                   Expires December 5, 2019               [Page 14]
-
-Internet-Draft          IP Traffic Flow Security               June 2019
-
-
 6.1.3.  Data Blocks
 
                          1                   2                   3
@@ -799,6 +773,18 @@ Internet-Draft          IP Traffic Flow Security               June 2019
       an IPv4 data block, and 0x6 indicates an IPv6 data block.
 
 6.1.3.1.  IPv4 Data Block
+
+
+
+
+
+
+
+
+Hopps                   Expires December 6, 2019               [Page 14]
+
+Internet-Draft          IP Traffic Flow Security               June 2019
+
 
                          1                   2                   3
      0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
@@ -834,14 +820,6 @@ Internet-Draft          IP Traffic Flow Security               June 2019
    the encapsulated IP packet.
 
    Type:
-
-
-
-Hopps                   Expires December 5, 2019               [Page 15]
-
-Internet-Draft          IP Traffic Flow Security               June 2019
-
-
       A 4 bit value of 0x6 indicating IPv6 (i.e., first nibble of the
       IPv6 packet).
 
@@ -856,6 +834,13 @@ Internet-Draft          IP Traffic Flow Security               June 2019
     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
     |  0x0  | Padding ...
     +-+-+-+-+-+-+-+-+-+-+-
+
+
+
+Hopps                   Expires December 6, 2019               [Page 15]
+
+Internet-Draft          IP Traffic Flow Security               June 2019
+
 
    Type:
       A 4 bit value of 0x0 indicating a padding data block.
@@ -891,13 +876,6 @@ Internet-Draft          IP Traffic Flow Security               June 2019
    Description:
       TFS Type
 
-
-
-Hopps                   Expires December 5, 2019               [Page 16]
-
-Internet-Draft          IP Traffic Flow Security               June 2019
-
-
    Used In:
       (optional in ESP)
 
@@ -909,6 +887,16 @@ Internet-Draft          IP Traffic Flow Security               June 2019
    This document requests a "Transform Type TBD3 - TFS Type IDs"
    registry be created.  The registration procedure is Expert Review.
    The initial values are as follows:
+
+
+
+
+
+
+Hopps                   Expires December 6, 2019               [Page 16]
+
+Internet-Draft          IP Traffic Flow Security               June 2019
+
 
      Number  Name            Reference
    ----------------------------------------
@@ -930,29 +918,6 @@ Internet-Draft          IP Traffic Flow Security               June 2019
 
    Reference:
       This document
-
-7.5.  IPTFS_UNKNOWN_REQUIREMENTS Notify Message Error Type
-
-   This document requests a status type IPTFS_UNKNOWN_REQUIREMENTS be
-   allocated from the "IKEv2 Notify Message Types - Error Types"
-   registry.
-
-   Value:
-      TBD4
-
-   Name:
-      IPTFS_UNKNOWN_REQUIREMENTS
-
-   Reference:
-      This document
-
-
-
-
-Hopps                   Expires December 5, 2019               [Page 17]
-
-Internet-Draft          IP Traffic Flow Security               June 2019
-
 
 8.  Security Considerations
 
@@ -981,6 +946,14 @@ Internet-Draft          IP Traffic Flow Security               June 2019
               RFC 4303, DOI 10.17487/RFC4303, December 2005,
               <https://www.rfc-editor.org/info/rfc4303>.
 
+
+
+
+Hopps                   Expires December 6, 2019               [Page 17]
+
+Internet-Draft          IP Traffic Flow Security               June 2019
+
+
    [RFC7296]  Kaufman, C., Hoffman, P., Nir, Y., Eronen, P., and T.
               Kivinen, "Internet Key Exchange Protocol Version 2
               (IKEv2)", STD 79, RFC 7296, DOI 10.17487/RFC7296, October
@@ -1000,15 +973,6 @@ Internet-Draft          IP Traffic Flow Security               June 2019
               Trammell, B. and M. Kuehlewind, "The Wire Image of a
               Network Protocol", draft-iab-wire-image-01 (work in
               progress), November 2018.
-
-
-
-
-
-Hopps                   Expires December 5, 2019               [Page 18]
-
-Internet-Draft          IP Traffic Flow Security               June 2019
-
 
    [RFC0791]  Postel, J., "Internet Protocol", STD 5, RFC 791,
               DOI 10.17487/RFC0791, September 1981,
@@ -1037,6 +1001,15 @@ Internet-Draft          IP Traffic Flow Security               June 2019
               Internet Protocol", RFC 4301, DOI 10.17487/RFC4301,
               December 2005, <https://www.rfc-editor.org/info/rfc4301>.
 
+
+
+
+
+Hopps                   Expires December 6, 2019               [Page 18]
+
+Internet-Draft          IP Traffic Flow Security               June 2019
+
+
    [RFC4342]  Floyd, S., Kohler, E., and J. Padhye, "Profile for
               Datagram Congestion Control Protocol (DCCP) Congestion
               Control ID 3: TCP-Friendly Rate Control (TFRC)", RFC 4342,
@@ -1056,15 +1029,6 @@ Internet-Draft          IP Traffic Flow Security               June 2019
    [RFC8084]  Fairhurst, G., "Network Transport Circuit Breakers",
               BCP 208, RFC 8084, DOI 10.17487/RFC8084, March 2017,
               <https://www.rfc-editor.org/info/rfc8084>.
-
-
-
-
-
-Hopps                   Expires December 5, 2019               [Page 19]
-
-Internet-Draft          IP Traffic Flow Security               June 2019
-
 
    [RFC8200]  Deering, S. and R. Hinden, "Internet Protocol, Version 6
               (IPv6) Specification", STD 86, RFC 8200,
@@ -1093,6 +1057,15 @@ Appendix A.  Example Of An Encapsulated IP Packet Flow
    payload) is as follows: an 800 octet packet, an 800 octet packet, a
    60 octet packet, a 240 octet packet, a 4000 octet packet.
 
+
+
+
+
+Hopps                   Expires December 6, 2019               [Page 19]
+
+Internet-Draft          IP Traffic Flow Security               June 2019
+
+
    The "BlockOffset" values in the 4 IP-TFS payload headers for this
    packet flow would thus be: 0, 100, 2900, 1400 respectively.  The
    first encapsulating packet ESP1 has a zero "BlockOffset" which points
@@ -1111,16 +1084,6 @@ Appendix B.  A Send and Loss Event Rate Calculation
    algorithm is described in [RFC5348].  For our use case (as with
    [RFC4342]) we consider our (fixed) packet size the segment size for
    the algorithm.  The formula for the send rate is then as follows:
-
-
-
-
-
-
-Hopps                   Expires December 5, 2019               [Page 20]
-
-Internet-Draft          IP Traffic Flow Security               June 2019
-
 
                                    1
       X_Pps = -----------------------------------------------
@@ -1150,6 +1113,15 @@ C.1.1.  IP-TFS Overhead
 
    The overhead of IP-TFS is 40 bytes per outer packet.  Therefore the
    octet overhead per inner packet is 40 divided by the number of outer
+
+
+
+
+Hopps                   Expires December 6, 2019               [Page 20]
+
+Internet-Draft          IP Traffic Flow Security               June 2019
+
+
    packets required (fractional allowed).  The overhead as a percentage
    of inner packet size is a constant based on the Outer MTU size.
 
@@ -1168,16 +1140,6 @@ C.1.1.  IP-TFS Overhead
 
        Figure 4: IP-TFS Overhead as Percentage of Inner Packet Size
 
-
-
-
-
-
-Hopps                   Expires December 5, 2019               [Page 21]
-
-Internet-Draft          IP Traffic Flow Security               June 2019
-
-
 C.1.2.  ESP with Padding Overhead
 
    The overhead per inner packet for constant-send-rate padded ESP
@@ -1192,6 +1154,29 @@ C.1.2.  ESP with Padding Overhead
    packet.  The required tail padding is the number of required packets
    times the difference of the Outer Payload Size and the IP Overhead
    minus the Inner Payload Size.  So:
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Hopps                   Expires December 6, 2019               [Page 21]
+
+Internet-Draft          IP Traffic Flow Security               June 2019
+
 
      Inner Paylaod Size = IP Packet Size - IP Overhead
      Outer Payload Size = MTU - IPsec Overhead
@@ -1220,20 +1205,6 @@ C.2.  Overhead Comparison
    octets of overhead for a given L3 MTU sized packet.  The second table
    is the percentage of overhead in the same MTU sized packet.
 
-
-
-
-
-
-
-
-
-
-Hopps                   Expires December 5, 2019               [Page 22]
-
-Internet-Draft          IP Traffic Flow Security               June 2019
-
-
            Type  ESP+Pad  ESP+Pad  ESP+Pad  IP-TFS  IP-TFS  IP-TFS
          L3 MTU      576     1500     9000     576    1500    9000
           PSize      540     1464     8964     536    1460    8960
@@ -1249,6 +1220,19 @@ Internet-Draft          IP Traffic Flow Security               June 2019
            9000     1368     1500     9000   671.6   246.6    40.2
 
                   Figure 5: Overhead comparison in octets
+
+
+
+
+
+
+
+
+
+Hopps                   Expires December 6, 2019               [Page 22]
+
+Internet-Draft          IP Traffic Flow Security               June 2019
+
 
           Type  ESP+Pad  ESP+Pad   ESP+Pad  IP-TFS  IP-TFS  IP-TFS
            MTU      576     1500      9000     576    1500    9000
@@ -1282,14 +1266,6 @@ C.3.1.  Ethernet
    (preamble, start, and inter-packet gap) for a total of 48 octets.
    Additionally the minimum payload is 46 octets.
 
-
-
-
-Hopps                   Expires December 5, 2019               [Page 23]
-
-Internet-Draft          IP Traffic Flow Security               June 2019
-
-
          Size  E + P  E + P  E + P  IPTFS  IPTFS  IPTFS  Enet   ESP
           MTU    590   1514   9014    590   1514   9014   any   any
            OH     74     74     74     78     78     78    38    74
@@ -1305,6 +1281,14 @@ Internet-Draft          IP Traffic Flow Security               June 2019
          9000  11052  10766  18076  10309   9480   9078  9038  9074
 
                       Figure 7: L2 Octets Per Packet
+
+
+
+
+Hopps                   Expires December 6, 2019               [Page 23]
+
+Internet-Draft          IP Traffic Flow Security               June 2019
+
 
         Size  E + P  E + P  E + P  IPTFS  IPTFS  IPTFS  Enet   ESP
          MTU  590    1514   9014   590    1514   9014   any    any
@@ -1338,14 +1322,6 @@ Internet-Draft          IP Traffic Flow Security               June 2019
 
              Figure 9: Percentage of Bandwidth on 10G Ethernet
 
-
-
-
-Hopps                   Expires December 5, 2019               [Page 24]
-
-Internet-Draft          IP Traffic Flow Security               June 2019
-
-
    A sometimes unexpected result of using IP-TFS (or any packet
    aggregating tunnel) is that, for small to medium sized packets, the
    available bandwidth is actually greater than native Ethernet.  This
@@ -1355,6 +1331,20 @@ Internet-Draft          IP Traffic Flow Security               June 2019
    following table illustrates the latency for some common values on a
    10G Ethernet link.  The table also includes latency introduced by
    padding if using ESP with padding.
+
+
+
+
+
+
+
+
+
+
+Hopps                   Expires December 6, 2019               [Page 24]
+
+Internet-Draft          IP Traffic Flow Security               June 2019
+
 
                         ESP+Pad  ESP+Pad  IP-TFS   IP-TFS
                         1500     9000     1500     9000
@@ -1397,4 +1387,14 @@ Author's Address
 
 
 
-Hopps                   Expires December 5, 2019               [Page 25]
+
+
+
+
+
+
+
+
+
+
+Hopps                   Expires December 6, 2019               [Page 25]

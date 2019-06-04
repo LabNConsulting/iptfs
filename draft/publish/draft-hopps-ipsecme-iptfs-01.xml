@@ -96,16 +96,17 @@ the tunnel packets if there is no data available to be sent at the
 time of tunnel packet transmission, or if fragmentation has been
 disabled by the receiver.</t>
 
-<t>In order to do this we use a new IPsec (<xref target="RFC4303"/>) payload type
-identified using the IP protocol number IPTFS_PROTOCOL (TBD1).</t>
+<t>In order to do this we use a new Encapsulating Security Payload (ESP,
+<xref target="RFC4303"/>) payload type which is the new IP protocol number
+IPTFS_PROTOCOL (TBD1).</t>
 
 </section>
 
 <section title="IPTFS_PROTOCOL Payload Content">
-<t>The IPTFS_PROTOCOL IPsec payload is comprised a 4 or 16 octet header
+<t>The IPTFS_PROTOCOL ESP payload is comprised a 4 or 16 octet header
 followed by either a partial, a full or multiple partial or full data
-blocks. The following diagram illustrates the IPTFS_PROTOCOL payload
-within the IPsec packet. See <xref target="sec-ipsec-ip-tfs-payload"></xref> for the exact
+blocks. The following diagram illustrates the IPTFS_PROTOCOL ESP
+payload within the ESP packet. See <xref target="sec-esp-ip-tfs-payload"></xref> for the exact
 formats of the IPTFS_PROTOCOL payload.</t>
 
 <figure title="Layout of an IP-TFS IPsec Packet" anchor="sec-layout-of-an-ip-tfs-ipsec-packet"><artwork><![CDATA[
@@ -418,34 +419,34 @@ configuration method is required.</t>
 <section title="IKEv2">
 <section title="TFS Type Transform Type">
 <t>When IP-TFS is used with IKEv2 a new "TFS Type" Transform Type (TBD2)
-is used to negotiate the possible operation of IP-TFS on the child SA
-pair. This document defines 3 "TFS Type" values: None (0),
-TFS_IPTFS_CC (1) for congestion-controlled IP-TFS mode or
-TFS_IPTFS_NOCC (2) for non-congestion controlled IP-TFS mode. The
-selection of a proposal with a "TFS Type" value TFS_IPTFS_CC or
-TFS_IPTFS_NOCC does not mandate the use of IP-TFS, rather it
-indicates a willingness or intent to use IP-TFS on the SA pair. A new
-Notify Message Status Type IPTFS_REQUIREMENTS (TBD3) is then used by
-the initiator and responder to further refine any operational
+is used to negotiate (as defined in <xref target="RFC7296"/>) the possible operation
+of IP-TFS on a child SA pair. This document defines 3 values for the
+new "TFS Type" Transform Type: None (0), TFS_IPTFS_CC (1) for
+congestion-controlled IP-TFS mode or TFS_IPTFS_NOCC (2) for
+non-congestion controlled IP-TFS mode. The selection of a proposal
+with a "TFS Type" value TFS_IPTFS_CC or TFS_IPTFS_NOCC does not
+mandate the use of IP-TFS, rather it indicates a willingness or
+intent to use IP-TFS on the SA pair. In addition, a new Notify
+Message Status Type IPTFS_REQUIREMENTS (TBD3) MAY be used by the
+initiator as well as the responder to further refine any operational
 requirements.</t>
 
 </section>
 
 <section title="IPTFS_REQUIREMENTS Status Notification">
 <t>As mentioned in the previous section, a new Notify Message Status
-Type IPTFS_REQUIREMENTS (TBD3) is used by the initiator and responder
-to further refine what will be supported. This notification is sent
-during IKE_AUTH and new CREATE_CHILD_SA exchanges; however, it MUST
-NOT be sent, and MUST be ignored, during a CREATE_CHILD_SA rekeying
-exchange as the requirements are not allowed to change during
-rekeying.</t>
+Type IPTFS_REQUIREMENTS (TBD3) MAY be sent by the initiator and/or the
+responder to further refine what will be supported. This notification
+is sent during IKE_AUTH and new CREATE_CHILD_SA exchanges; however,
+it MUST NOT be sent, and MUST be ignored, during a CREATE_CHILD_SA
+rekeying exchange as the requirements are not allowed to change
+during rekeying.</t>
 
 <t>The IPTFS_REQUIREMENTS notification contains a 1 octet payload of
 flags that specify any extra requirements from the sender of the
 message. The flag values (currently a single flag) are defined below.
-The initiator and responder MAY both include this notification. If
-the IPTFS_REQUIREMENTS notification is not sent then it implies that
-all the flag bits are clear.</t>
+If the IPTFS_REQUIREMENTS notification is not sent then it implies
+that all the flag bits are clear.</t>
 
 <figure><artwork><![CDATA[
  +-+-+-+-+-+-+-+-+
@@ -454,7 +455,7 @@ all the flag bits are clear.</t>
 ]]></artwork></figure>
 
 <t><list style="hanging">
-<t hangText="0:"><vspace/>Set to zero on send and checked for zero on receive.</t>
+<t hangText="0:"><vspace/>MUST be zero on send and MUST be ignored on receive.</t>
 <t hangText="D:"><vspace/>Don't Fragment bit, if set indicates the sender of the notify
 message does not support receiving packet fragments (i.e.,
 inner packets MUST be sent using a single Datablock). This
@@ -464,27 +465,13 @@ restricted by the receiver in it's IPTFS_REQUIREMENTS
 notification.</t>
 </list></t>
 
-<t>If any unknown IPTFS_REQUIREMENTS flag bit are set, a receiving
-responder should not select any IPTFS proposal, and a receiving
-initiator should fail the child SA creation if an IPTFS proposal was
-selected by the responder. This is done to allow for adding future
-requirements in a backward compatible way. In both the responder and
-the initiator case the receiver should send a Notify Message with
-Error Type IPTFS_UNKNOWN_REQUIREMENTS (TBD4) back to the sender, and
-include with this notification an octet with the unknown bits set.
-For the responder this would be sent in the IKE_AUTH or
-CREATE_CHILD_SA response, and for the initiator it would be included
-in a new INFORMATIONAL exchange. This allows the sender of the
-IPTFS_REQUIREMENTS message to determine which requirements are not
-understood by the receiver.</t>
-
 </section>
 
 </section>
 
 <section title="Packet and Data Formats">
-<section title="IPsec IP-TFS Payload" anchor="sec-ipsec-ip-tfs-payload">
-<t>An IPsec IP-TFS payload is identified by the IP protocol number
+<section title="ESP IP-TFS Payload" anchor="sec-esp-ip-tfs-payload">
+<t>An ESP IP-TFS payload is identified by the IP protocol number
 IPTFS_PROTOCOL (TBD1). This payload begins with a fixed 4 or 16 octet
 header followed by a variable amount of <spanx style='verb'>DataBlocks</spanx> data. The exact
 payload format and fields are defined in the following sections.</t>
@@ -724,19 +711,6 @@ from the "IKEv2 Notify Message Types - Status Types" registry.</t>
 <t><list style="hanging">
 <t hangText="Value:"><vspace/>TBD3</t>
 <t hangText="Name:"><vspace/>IPTFS_REQUIREMENTS</t>
-<t hangText="Reference:"><vspace/>This document</t>
-</list></t>
-
-</section>
-
-<section title="IPTFS_UNKNOWN_REQUIREMENTS Notify Message Error Type">
-<t>This document requests a status type IPTFS_UNKNOWN_REQUIREMENTS be
-allocated from the "IKEv2 Notify Message Types - Error Types"
-registry.</t>
-
-<t><list style="hanging">
-<t hangText="Value:"><vspace/>TBD4</t>
-<t hangText="Name:"><vspace/>IPTFS_UNKNOWN_REQUIREMENTS</t>
 <t hangText="Reference:"><vspace/>This document</t>
 </list></t>
 
