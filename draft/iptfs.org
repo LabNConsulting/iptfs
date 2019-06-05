@@ -421,16 +421,19 @@ configuration method is required.
 
 When IP-TFS is used with IKEv2 a new "TFS Type" Transform Type (TBD2)
 is used to negotiate (as defined in [[RFC7296]]) the possible operation
-of IP-TFS on a child SA pair. This document defines 3 values for the
-new "TFS Type" Transform Type: None (0), TFS_IPTFS_CC (1) for
-congestion-controlled IP-TFS mode or TFS_IPTFS_NOCC (2) for
-non-congestion controlled IP-TFS mode. The selection of a proposal
-with a "TFS Type" value TFS_IPTFS_CC or TFS_IPTFS_NOCC does not
-mandate the use of IP-TFS, rather it indicates a willingness or
-intent to use IP-TFS on the SA pair. In addition, a new Notify
-Message Status Type IPTFS_REQUIREMENTS (TBD3) MAY be used by the
-initiator as well as the responder to further refine any operational
-requirements.
+of IP-TFS on a child SA pair. This document defines 3 "TFS Type"
+Transform IDs for the new "TFS Type" Transform Type: None (0),
+TFS_IPTFS_CC (1) for congestion-controlled IP-TFS mode or
+TFS_IPTFS_NOCC (2) for non-congestion controlled IP-TFS mode. The
+selection of a proposal with a "TFS Type" Transform ID TFS_IPTFS_CC
+or TFS_IPTFS_NOCC does not mandate the use of IP-TFS, rather it
+indicates a willingness or intent to use IP-TFS on the SA pair. In
+addition, a new Notify Message Status Type IPTFS_REQUIREMENTS (TBD3)
+MAY be used by the initiator as well as the responder to further
+refine any operational requirements.
+
+Additional "TFS Type" Transform IDs may be defined in the future, and
+so readers are referred to [[IKEV2IANA]] for the most up to date list.
 
 ** IPTFS_REQUIREMENTS Status Notification
 
@@ -457,7 +460,7 @@ that all the flag bits are clear.
 - 0 :: MUST be zero on send and MUST be ignored on receive.
 - D :: Don't Fragment bit, if set indicates the sender of the notify
        message does not support receiving packet fragments (i.e.,
-       inner packets MUST be sent using a single Datablock). This
+       inner packets MUST be sent using a single ~Data Block~). This
        value only applies to what the sender is capable of receiving;
        the sender MAY still send packet fragments unless similarly
        restricted by the receiver in it's IPTFS_REQUIREMENTS
@@ -655,9 +658,9 @@ allocated by IANA from the "Transform Type Values" registry.
   - Used In :: (optional in ESP)
   - Reference :: This document
 
-** TFS Type IDs Registry
+** TFS Type Transform IDs Registry
 
-This document requests a "Transform Type TBD3 - TFS Type IDs"
+This document requests a "Transform Type TBD3 - TFS Type Transform IDs"
 registry be created. The registration procedure is Expert Review. The
 initial values are as follows:
 
@@ -719,6 +722,12 @@ then non-congestion controlled mode use should be considered instead.
 ** RFC8200
 ** RFC8201
 ** I-D.iab-wire-image
+** IKEV2IANA
+   :PROPERTIES:
+   :REF_ORG: IANA
+   :REF_TITLE: Internet Key Exchange Version 2 (IKEv2) Parameters
+   :REF_TARGET: http://www.iana.org/assignments/ikev2-parameters/
+   :END:
 
 * Example Of An Encapsulated IP Packet Flow
 
