@@ -30,18 +30,18 @@ usage() {
     echo "l -- listen"
     echo "v -- verbose"
     echo
-    echo "tunpfx -- 3 octet prefix for tfs interface prefix (default: 192.168.30)."
+    echo "tunpfx -- 3 octet prefix for tfs interface prefix (default: 192.168.60)."
     echo "ip -- listen on or connect to this iP"
     echo "port -- use port (default: 8001)"
     exit 1;
 }
 
-TUNPFX=192.168.30
+TUNPFX=192.168.60
 CONIP=
 LISTIP=
 port=8001
 mtu=1470
-rate=10
+rate=$((10 * 1000))
 listen=
 debug=
 while getopts "Cdlm:p:r:t:v" o; do
@@ -95,6 +95,11 @@ cleanup () {
         wait $tfspid
         unset tfspid
     fi
+    if [[ -n $iperfpid ]]; then
+        kill -9 $iperfpid
+        wait $iperfpid
+        unset iperfpid
+    fi
 }
 trap cleanup EXIT ERR
 
@@ -127,6 +132,7 @@ fi
 tfspid=$!
 
 sleep 1
+ip link
 if [ -e /proc/sys/net/ipv6/conf/tfs0/disable_ipv6 ]; then
     sysctl -w net.ipv6.conf.tfs0.disable_ipv6=1
 fi
@@ -136,6 +142,8 @@ ip link set tfs0 up
 
 if [[ -n "$listen" ]]; then
     iperf -s &
+    iperfpid=$!
 fi
+
 #tcpdump -vvv -i tfs0
 wait $tfspid

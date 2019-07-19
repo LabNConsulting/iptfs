@@ -50,12 +50,12 @@ $(OBJDIR):
 	mkdir -p $(OBJDIR)
 
 $(BIN): $(OBJDIR) $(OBJ)
-	gcc -o $@ $(OBJ) -lpthread
+	gcc -g -O0 -o $@ $(OBJ) -lpthread
 
 $(OBJ): $(SRC)
 
 $(OBJDIR)/%.o: src/%.c src/iptfs.h
-	gcc -c -o $@ $<
+	gcc -g -O0 -c -o $@ $<
 
 docker-build:
 	docker build -t iptfs .

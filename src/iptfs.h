@@ -44,7 +44,7 @@
 /* Globals */
 extern ssize_t g_tfsmtu;
 extern uint g_max_inner_pkt;
-extern bool g_debug, g_verbose;
+extern bool g_debug, g_dontfrag, g_oneonly, g_verbose;
 
 #define DBG(x...) do { if (g_debug) printf(x); } while (0)
 #define LOG(x...) do { if (g_verbose) printf(x); } while (0)
@@ -107,10 +107,11 @@ struct mbuf *mbuf_new(size_t max, size_t hdrspace);
 struct mqueue *mqueue_new(const char *name, int depth);
 struct mqueue *mqueue_new_freeq(const char *name, int depth, ssize_t maxbuf, ssize_t hdrspace);
 struct mbuf *mqueue_pop(struct mqueue *mq);
-struct mbuf *mqueue_trypop(struct mqueue *mq);
+struct mbuf *mqueue_trypop(struct mqueue *mq, int maxsize);
 int mqueue_push(struct mqueue *mq, struct mbuf *m, bool reset);
 void mqueue_get_ackinfo(struct mqueue *outq, uint32_t *drops, uint32_t *start, uint32_t *end);
 struct ackinfo *mqueue_get_ackinfop(struct mqueue *outq);
+void mqueue_wait(struct mqueue *mq);
 
 static void __inline__
 mbuf_deref(struct mqueue *freeq, struct mbuf *m)
@@ -158,7 +159,7 @@ struct periodic *periodic_new(uint64_t nsecs);
 void periodic_change_rate(struct periodic *pp, uint64_t nsecs);
 void periodic_wait(struct periodic *pp);
 
-struct pps *pps_new(int pps);
+struct pps *pps_new(float pps);
 uint pps_incrate(struct pps *pp, int inc);
 uint pps_decrate(struct pps *pp, int pct);
 uint pps_change_pps(struct pps *pp, int pps);

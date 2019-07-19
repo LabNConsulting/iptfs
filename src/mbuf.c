@@ -134,8 +134,22 @@ mqueue_pop(struct mqueue *mq)
 	return m;
 }
 
+void
+mqueue_wait(struct mqueue *mq)
+{
+	struct mbuf *m;
+
+	pthread_mutex_lock(&mq->lock);
+	while (MQ_EMPTY(mq)) {
+		DBG("mqueue_pop: %s empty\n", mq->name);
+		pthread_cond_wait(&mq->popcv, &mq->lock);
+	}
+	pthread_mutex_unlock(&mq->lock);
+	return;
+}
+
 struct mbuf *
-mqueue_trypop(struct mqueue *mq)
+mqueue_trypop(struct mqueue *mq, int maxsize)
 {
 	struct mbuf *m;
 
@@ -144,8 +158,13 @@ mqueue_trypop(struct mqueue *mq)
 		m = NULL;
 		goto out;
 	}
+	m = mq->queue[mq->depth - 1];
+	if (maxsize && MBUF_LEN(m) > maxsize) {
+		m = NULL;
+		goto out;
+	}
 	pthread_cond_signal(&mq->pushcv);
-	m = mq->queue[--mq->depth];
+	--mq->depth;
 out:
 	pthread_mutex_unlock(&mq->lock);
 	return m;
