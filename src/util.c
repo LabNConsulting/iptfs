@@ -239,7 +239,7 @@ struct pps {
 };
 
 struct pps *
-pps_new(int target_pps)
+pps_new(float target_pps)
 {
 	struct pps *pp = xmalloc(sizeof(*pp));
 	pp->target_pps = target_pps;

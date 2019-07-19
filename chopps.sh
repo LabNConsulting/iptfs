@@ -26,13 +26,13 @@
 usage() {
     echo "Usage: $0 [-o] [-p tunpfx] [-u usepfx] [peerip]"
     echo "o -- default peers start odd (e.g., .1 and .2 vs .2 and .3)"
-    echo "tunpfx -- 3 octet prefix for tfs interface (default: 192.168.30)."
+    echo "tunpfx -- 3 octet prefix for tfs interface (default: 192.168.60)."
     echo "usepfx -- 3 octet prefix to use for outer tunnel (default is same as route default)"
     echo "peerip -- to connect to if default doesn't work."
     exit 1;
 }
 
-TUNPFX=192.168.30
+TUNPFX=192.168.60
 autoset=0
 even=0
 while getopts "ap:" o; do
@@ -97,16 +97,16 @@ COMMON="--verbose --rate=$TXRATE --dev tfs0 --port 8001"
 #COMMON="--debug --rate=$TXRATE --dev tfs0 --port 8001"
 if (( IPID == 66 )); then
     OVMID=3
-    sleep 1
+    sleep 3
     if [[ -d venv ]]; then
         . venv/bin/activate
     fi
-    #build/iptfs $COMMON --connect 192.168.10.$((OVMID + 64)) &
-    venv/bin/iptfs $COMMON --connect 192.168.10.$((OVMID + 64)) &
+    build/iptfs $COMMON --connect 192.168.10.$((OVMID + 64)) &
+    #venv/bin/iptfs $COMMON --connect 192.168.10.$((OVMID + 64)) &
     tfspid=$!
     sleep 1
     sysctl -w net.ipv6.conf.tfs0.disable_ipv6=1
-    ip addr add 192.168.30.$IPID/24 dev tfs0
+    ip addr add 192.168.60.$IPID/24 dev tfs0
     ip link set tfs0 mtu 1470
     #ip link set tfs0 mtu 8970
     ip link set tfs0 up
@@ -114,12 +114,12 @@ else
     if [[ -d venv ]]; then
         . venv/bin/activate
     fi
-    #build/iptfs $COMMON --listen 192.168.10.$IPID &
-    iptfs $COMMON --listen 192.168.10.$IPID &
+    build/iptfs $COMMON --listen 192.168.10.$IPID &
+    #iptfs $COMMON --listen 192.168.10.$IPID &
     tfspid=$!
     sleep 1
     sysctl -w net.ipv6.conf.tfs0.disable_ipv6=1
-    ip addr add 192.168.30.$IPID/24 dev tfs0
+    ip addr add 192.168.60.$IPID/24 dev tfs0
     ip link set tfs0 mtu 1470
     #ip link set tfs0 mtu 8970
     ip link set tfs0 up

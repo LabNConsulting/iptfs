@@ -358,8 +358,10 @@ read_tfs_pkts(int s, struct mqueue *freeq, struct miovq *iovfreeq,
 	}
 
 	/* convert ack rate from ms to ns */
-	ack_rate *= 1000000;
-	st_reset(&acktimer, ack_rate);
+	if (!g_oneonly) {
+		ack_rate *= 1000000;
+		st_reset(&acktimer, ack_rate);
+	}
 
 	struct ackinfo ack;
 	struct sockaddr_storage sender;
@@ -376,7 +378,7 @@ read_tfs_pkts(int s, struct mqueue *freeq, struct miovq *iovfreeq,
 
 	while (true) {
 		/* Check to see if we should send ack info */
-		if (st_check(&acktimer))
+		if (!g_oneonly && st_check(&acktimer))
 			send_ack(s, &acktimer.ts, &ack);
 
 		/* If no one referenced the mbuf reset and re-use it */
@@ -508,7 +510,7 @@ write_tfs_pkt(int s, struct mqueue *inq, struct mqueue *freeq, uint32_t seq,
 		*leftover = NULL;
 		offset = MBUF_LEN(m);
 	} else {
-		m = mqueue_trypop(inq);
+		m = mqueue_trypop(inq, 0);
 		offset = 0;
 		if (m) {
 			DBG("write_tfs_pkt: trypop: seq %d mtu %ld m %p\n", seq,
@@ -529,7 +531,10 @@ write_tfs_pkt(int s, struct mqueue *inq, struct mqueue *freeq, uint32_t seq,
 
 	if (m == NULL) {
 		*leftover = NULL;
-		return write_empty_tfs_pkt(s, seq, mtu);
+		if (g_oneonly)
+			return seq;
+		else
+			return write_empty_tfs_pkt(s, seq, mtu);
 	}
 
 	/* Set the header */
@@ -573,8 +578,8 @@ write_tfs_pkt(int s, struct mqueue *inq, struct mqueue *freeq, uint32_t seq,
 		mtu -= mlen;
 
 		/* Get next MBUF if we have space */
-		if (mtu > 6)
-			m = mqueue_trypop(inq);
+		if (mtu > 6 && !g_oneonly)
+			m = mqueue_trypop(inq, g_dontfrag ? mtu : 0);
 	}
 
 	/* XXX assert check on length adding up */
@@ -611,12 +616,17 @@ write_tfs_pkts(int s, struct mqueue *outq, struct mqueue *freeq,
 	struct mbuf *leftover = NULL;
 	uint32_t seq = 1;
 	uint64_t mtub = (g_tfsmtu - 32) * 8;
-	uint64_t pps = txrate / mtub;
+	float pps = (float)txrate / mtub;
 
 	st_reset(&sectimer, NSECS_IN_SEC);
 
-	g_pps = pps_new(pps);
-	LOG("Writing TFS %ld pps for %ld Mbps\n", pps, pps * mtub / 1000000);
+	if (g_oneonly)
+		LOG("Writing One-Per-Packet TFS at rate\n");
+	else {
+		g_pps = pps_new(pps);
+		LOG("Writing TFS %f pps for %ld Mbps\n", pps,
+		    (uint64_t)(pps * mtub / 1000000));
+	}
 
 	/* Allocate globals for writing to TFS */
 	g_max_inner_pkt = MAXBUF / 20;
@@ -626,9 +636,17 @@ write_tfs_pkts(int s, struct mqueue *outq, struct mqueue *freeq,
 	g_wtfs_iovecs[0].iov_len = sizeof(g_wtfs_hdr);
 	g_wtfs_msg.msg_iov = g_wtfs_iovecs;
 
-	while (true) {
-		pps_wait(g_pps);
-		seq = write_tfs_pkt(s, outq, freeq, seq, &leftover);
+	if (g_oneonly) {
+		/* Send packets as we get them. */
+		while (true) {
+			mqueue_wait(outq);
+			seq = write_tfs_pkt(s, outq, freeq, seq, &leftover);
+		}
+	} else {
+		while (true) {
+			pps_wait(g_pps);
+			seq = write_tfs_pkt(s, outq, freeq, seq, &leftover);
+		}
 	}
 }
 
@@ -644,6 +662,10 @@ static struct runavg *g_avgdrops;
 void
 recv_ack(struct mbuf *m)
 {
+	if (g_oneonly) {
+		warn("recv_ack: one-only mode doesn't use ACKs\n");
+		return;
+	}
 	if (MBUF_LEN(m) != 20) {
 		warn("recv_ack: bad length %ld\n", MBUF_LEN(m));
 		return;
@@ -714,6 +736,7 @@ send_ack(int s, struct timespec *now, struct ackinfo *ack)
 	};
 	static uint8_t *bp = &buffer[4];
 
+	assert(!g_oneonly);
 	if (ack->start == 0) {
 		/* nothing to talk about */
 		return;
@@ -827,5 +850,6 @@ tfs_tunnel_egress(int fd, int s, uint64_t congest, pthread_t *threads)
 
 /* Local Variables: */
 /* c-file-style: "bsd" */
+/* tab-width: 8 */
 /* c-c++-enable-clang-format-on-save: t */
 /* End: */

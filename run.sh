@@ -30,13 +30,13 @@ usage() {
     echo "l -- listen"
     echo "v -- verbose"
     echo
-    echo "tunpfx -- 3 octet prefix for tfs interface prefix (default: 192.168.30)."
+    echo "tunpfx -- 3 octet prefix for tfs interface prefix (default: 192.168.60)."
     echo "ip -- listen on or connect to this iP"
     echo "port -- use port (default: 8001)"
     exit 1;
 }
 
-TUNPFX=192.168.30
+TUNPFX=192.168.60
 CONIP=
 LISTIP=
 port=8001
@@ -127,6 +127,7 @@ fi
 tfspid=$!
 
 sleep 1
+ip link
 if [ -e /proc/sys/net/ipv6/conf/tfs0/disable_ipv6 ]; then
     sysctl -w net.ipv6.conf.tfs0.disable_ipv6=1
 fi

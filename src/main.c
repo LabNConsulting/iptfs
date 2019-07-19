@@ -36,7 +36,7 @@
 #include <unistd.h>
 
 struct sockaddr_in peeraddr; /* XXX remove */
-bool g_debug, g_verbose;
+bool g_debug, g_dontfrag, g_oneonly, g_verbose;
 pthread_t threads[4];
 
 char progname[128];
@@ -156,11 +156,13 @@ int
 main(int argc, char **argv)
 {
 	static struct option lopts[] = {
+	    {"single-only", no_argument, 0, '1'},
 	    {"help", no_argument, 0, 'h'},
 	    {"debug", no_argument, 0, 0},
 	    {"congest-rate", required_argument, 0, 'C'},
 	    {"connect", required_argument, 0, 'c'},
 	    {"dev", required_argument, 0, 'd'},
+	    {"dont-fragment", no_argument, 0, 'D'},
 	    {"listen", required_argument, 0, 'l'},
 	    {"mtu", required_argument, 0, 'm'},
 	    {"port", required_argument, 0, 'p'},
@@ -179,7 +181,7 @@ main(int argc, char **argv)
 	congest = txrate = 0;
 	strncpy(progname, argv[0], sizeof(progname) - 1);
 
-	while ((opt = getopt_long(argc, argv, "C:c:d:hl:p:uv", lopts, &li)) !=
+	while ((opt = getopt_long(argc, argv, "1C:c:Dd:hl:p:uv", lopts, &li)) !=
 	       -1) {
 		switch (opt) {
 		case 0:
@@ -189,6 +191,9 @@ main(int argc, char **argv)
 				printf("DBG enabled\n");
 			}
 			break;
+		case '1':
+			g_oneonly = true;
+			break;
 		case 'C':
 			/* congest-rate */
 			congest = (uint64_t)atoi(optarg) * 1000ULL;
@@ -197,6 +202,10 @@ main(int argc, char **argv)
 		case 'c':
 			/* connect */
 			server = optarg;
+			break;
+		case 'D':
+			errx(1, "dont-fragment not implemented yet");
+			g_dontfrag = true;
 			break;
 		case 'd':
 			/* dev */
