@@ -41,7 +41,7 @@ CONIP=
 LISTIP=
 port=8001
 mtu=1470
-rate=10
+rate=$((10 * 1000))
 listen=
 debug=
 while getopts "Cdlm:p:r:t:v" o; do
@@ -95,6 +95,11 @@ cleanup () {
         wait $tfspid
         unset tfspid
     fi
+    if [[ -n $iperfpid ]]; then
+        kill -9 $iperfpid
+        wait $iperfpid
+        unset iperfpid
+    fi
 }
 trap cleanup EXIT ERR
 
@@ -137,6 +142,8 @@ ip link set tfs0 up
 
 if [[ -n "$listen" ]]; then
     iperf -s &
+    iperfpid=$!
 fi
+
 #tcpdump -vvv -i tfs0
 wait $tfspid

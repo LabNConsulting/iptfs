@@ -1,5 +1,5 @@
 # -*- Dockerfile -*-
-FROM ubuntu:19.04
+FROM ubuntu:18.04
 MAINTAINER Christian Hopps <chopps@labn.net>
 
 ENV LANG=en_US.UTF-8 \
@@ -29,6 +29,7 @@ RUN python3 -m pip install -U \
         pytest pyyaml ryu tox twine wheel && \
         apt-get autoremove -y && apt-get clean -y
 
+COPY docker/run-iptfs.sh /etc/run-iptfs.sh
 COPY . /iptfs
 WORKDIR /iptfs
 RUN python3 setup.py install
