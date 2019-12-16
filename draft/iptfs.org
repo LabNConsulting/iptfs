@@ -6,8 +6,8 @@
 #+EMAIL: chopps@chopps.org
 #+AFFILIATION: LabN Consulting, L.L.C.
 #
-#+RFC_NAME: draft-hopps-ipsecme-iptfs
-#+RFC_VERSION: 01
+#+RFC_NAME: draft-ietf-ipsecme-iptfs
+#+RFC_VERSION: 00
 #+RFC_XML_VERSION: 2
 #+RFC_ASCII_TABLE: t
 #
@@ -1163,24 +1163,32 @@ The following people made significant contributions to this document.
 # # Now let's consider a loss rate of 1 packet every second on a 10M link.
 # # p = 1/832
 
-# #+begin_src python :results output :var linkspeed=100000 :var psize=1500 :var lossint=4294967295
-#     from math import sqrt
-#     linkspeed *= 1000000
-#     psize *= 8.
-#     print("psize:", psize)
-#     prate = linkspeed / psize
-#     print("prate:", prate)
-#     # R = 10 * 2. * psize / linkspeed
-#     R = .003
-#     print("R:", R)
-#     p = 1. / lossint
-#     print("p:", p)
-#     denom = R * (sqrt(2*p/3) + 12*sqrt(3*p/8)*p*(1+32*(p**2)))
-#     print("denom:", denom)
-#     pps = 1. / denom
-#     print(pps)
-#     # return pps
+# #+begin_src python :results output :var linkspeed=1000000 :var psize=1500 :var lossint=(- (expt 2 32) 1) exports: none
+#   from math import sqrt
+#   linkspeed *= 1000000
+#   psize *= 8.
+#   print("psize:", psize)
+#   prate = linkspeed / psize
+#   print("prate:", prate)
+#   # R = 10 * 2. * psize / linkspeed
+#   R = .0001
+#   print("R:", R)
+#   p = 1. / lossint
+#   print("p:", p)
+#   denom = R * (sqrt(2*p/3) + 12*sqrt(3*p/8)*p*(1+32*(p**2)))
+#   print("denom:", denom)
+#   pps = 1. / denom
+#   print(pps)
+#   # return pps
 # #+end_src
+
+# #+RESULTS:
+# : psize: 12000.0
+# : prate: 83333333.33333333
+# : R: 0.0001
+# : p: 2.3283064370807974e-10
+# : denom: 1.2458749126186029e-09
+# : 802648797.13982
 
 # #+begin_example
 #                                 1
