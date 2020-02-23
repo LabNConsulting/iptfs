@@ -26,7 +26,6 @@ constant-send-rate IPsec tunnel. The solution allows for congestion
 control as well.
 #+end_abstract
 
-
 * Introduction
 
 Traffic Analysis ([[RFC4301]], [[AppCrypt]]) is the act of extracting
@@ -103,16 +102,16 @@ time of tunnel packet transmission, or if fragmentation has been
 disabled by the receiver.
 
 In order to do this we use a new Encapsulating Security Payload (ESP,
-[[RFC4303]]) payload type which is the new IP protocol number
+[[RFC4303]]) type which is identified by the IP protocol number
 IPTFS_PROTOCOL (TBD1).
 
 ** IPTFS_PROTOCOL Payload Content
 
-The IPTFS_PROTOCOL ESP payload is comprised a 4 or 16 octet header
-followed by either a partial, a full or multiple partial or full data
-blocks. The following diagram illustrates the IPTFS_PROTOCOL ESP
-payload within the ESP packet. See [[ESP IP-TFS Payload]] for the exact
-formats of the IPTFS_PROTOCOL payload.
+The IPTFS_PROTOCOL payload content defined in this document is
+comprised of a 4 or 16 octet header followed by either a partial, a
+full or multiple partial or full data blocks. The following diagram
+illustrates this IPTFS_PROTOCOL payload within the ESP packet. See
+[[IP-TFS Payload]] for the exact formats of the IPTFS_PROTOCOL payload.
 
 #+CAPTION: Layout of an IP-TFS IPsec Packet
 #+begin_example
@@ -170,18 +169,19 @@ type overhead is required to encapsulate an IP packet. Likewise, the
 length of the data block is extracted from the encapsulated IPv4 or
 IPv6 packet's length field.
 
-*** No Implicit Padding Required
+*** No Implicit End Padding Required
 
-It's worth noting that there is never a need for an implicit pad at
-the end of an encapsulating packet. Even when the start of a data
-block occurs near the end of a encapsulating packet such that there
-is no room for the length field of the encapsulated header to be
-included in the current encapsulating packet, the fact that the
-length comes at a known location and is guaranteed to be present is
-enough to fetch the length field from the subsequent encapsulating
-packet payload. Only when there is no data to encapsulate is padding
-required, and then an explicit ~Pad Data Block~ would be used to
-identify the padding.
+It's worth noting that since a data block type is identified by its
+first octet there is never a need for an implicit pad at the end of
+an encapsulating packet. Even when the start of a data block occurs
+near the end of a encapsulating packet such that there is no room for
+the length field of the encapsulated header to be included in the
+current encapsulating packet, the fact that the length comes at a
+known location and is guaranteed to be present is enough to fetch the
+length field from the subsequent encapsulating packet payload. Only
+when there is no data to encapsulated is end padding required, and
+then an explicit ~Pad Data Block~ would be used to identify the
+padding.
 
 *** Empty Payload
 
@@ -417,63 +417,61 @@ configuration method is required.
 
 * IKEv2
 
-** TFS Type Transform Type
+** USE_TFS Notification Message
 
-When IP-TFS is used with IKEv2 a new "TFS Type" Transform Type (TBD2)
-is used to negotiate (as defined in [[RFC7296]]) the possible operation
-of IP-TFS on a child SA pair. This document defines 3 "TFS Type"
-Transform IDs for the new "TFS Type" Transform Type: None (0),
-TFS_IPTFS_CC (1) for congestion-controlled IP-TFS mode or
-TFS_IPTFS_NOCC (2) for non-congestion controlled IP-TFS mode. The
-selection of a proposal with a "TFS Type" Transform ID TFS_IPTFS_CC
-or TFS_IPTFS_NOCC does not mandate the use of IP-TFS, rather it
-indicates a willingness or intent to use IP-TFS on the SA pair. In
-addition, a new Notify Message Status Type IPTFS_REQUIREMENTS (TBD3)
-MAY be used by the initiator as well as the responder to further
-refine any operational requirements.
+When using IKEv2, a new "USE_IPTFS" Notification Message is used to
+enable operation of IP-TFS on a child SA pair. The method used is
+similar to how USE_TRANSPORT_MODE is negotiated, as described in
+[[RFC7296]].
 
-Additional "TFS Type" Transform IDs may be defined in the future, and
-so readers are referred to [[IKEV2IANA]] for the most up to date list.
+To request IP-TFS operation on the Child SA pair, the initiator
+includes the USE_IPTFS notification in an SA payload requesting a new
+Child SA (either during the initial IKE_AUTH or during non-rekeying
+CREATE_CHILD_SA exchanges). If the request is accepted then response
+MUST also include a notification of type USE_IPTFS. If the responder
+declines the request the child SA will be established without IP-TFS
+enabled. If this is unacceptable to the initiator, the initiator MUST
+delete the child SA.
 
-** IPTFS_REQUIREMENTS Status Notification
+The USE_IPTFS notification MUST NOT be sent, and MUST be ignored,
+during a CREATE_CHILD_SA rekeying exchange as it is not allowed to
+change IP-TFS operation during rekeying.
 
-As mentioned in the previous section, a new Notify Message Status
-Type IPTFS_REQUIREMENTS (TBD3) MAY be sent by the initiator and/or the
-responder to further refine what will be supported. This notification
-is sent during IKE_AUTH and new CREATE_CHILD_SA exchanges; however,
-it MUST NOT be sent, and MUST be ignored, during a CREATE_CHILD_SA
-rekeying exchange as the requirements are not allowed to change
-during rekeying.
+The USE_IPTFS notification contains a 2 octet payload of flags that
+specify any extra requirements or options from the sender of the
+message. The first octet of flags are considered requirement flags,
+and the second octet are considered option flags. If any requirement
+flags are not understood or cannot be supported by the receiver then
+the receiver should not enable IP-TFS mode (either by not responding
+with the USE_IPTFS notification, or in the case of the initiator, by
+deleting the child SA if established non-IP-TFS operation is
+unacceptable). Option flags can either be acted on or ignored by the
+receiver. The receiver MUST ignore any option flags it does not
+understand.
 
-The IPTFS_REQUIREMENTS notification contains a 1 octet payload of
-flags that specify any extra requirements from the sender of the
-message. The flag values (currently a single flag) are defined below.
-If the IPTFS_REQUIREMENTS notification is not sent then it implies
-that all the flag bits are clear.
-
-#+begin_example
- +-+-+-+-+-+-+-+-+
- |0|0|0|0|0|0|0|D|
- +-+-+-+-+-+-+-+-+
-#+end_example
-
-- 0 :: MUST be zero on send and MUST be ignored on receive.
-- D :: Don't Fragment bit, if set indicates the sender of the notify
-       message does not support receiving packet fragments (i.e.,
-       inner packets MUST be sent using a single ~Data Block~). This
-       value only applies to what the sender is capable of receiving;
-       the sender MAY still send packet fragments unless similarly
-       restricted by the receiver in it's IPTFS_REQUIREMENTS
-       notification.
+The notification type and payload values are defined in [[IKEv2
+USE_IPTFS Notify Message]].
 
 * Packet and Data Formats
 
-** ESP IP-TFS Payload
+** IP-TFS Payload
 
-An ESP IP-TFS payload is identified by the IP protocol number
-IPTFS_PROTOCOL (TBD1). This payload begins with a fixed 4 or 16 octet
-header followed by a variable amount of ~DataBlocks~ data. The exact
-payload format and fields are defined in the following sections.
+An IP-TFS payload is identified by the IP protocol number
+IPTFS_PROTOCOL (TBD1). The first octet of this payload indicates the
+format of the remaining payload data. This format is intended to
+allow for re-use of the IP protocol number.
+
+#+begin_example
+  0 1 2 3 4 5 6 7
+ +-+-+-+-+-+-+-+-+-+-+-
+ |   Sub-type    | ...
+ +-+-+-+-+-+-+-+-+-+-+-
+#+end_example
+
+- Sub-type :: An 8 bit value indicating the payload format.
+
+This specification defines 2 payload sub-types. These payload formats
+are defined in the following sections.
 
 *** Non-Congestion Control IPTFS_PROTOCOL Payload Format
 
@@ -485,17 +483,15 @@ shown below.
                       1                   2                   3
   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- |V|C|        Reserved           |          BlockOffset          |
+ |  Sub-Type (1) |   Reserved    |          BlockOffset          |
  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  |       DataBlocks ...
  +-+-+-+-+-+-+-+-+-+-+-
 #+end_example
 
-- V :: A 1 bit version field that MUST be set to zero. If received as
-       one the packet MUST be dropped.
-- C :: A 1 bit value that MUST be set to 0 to indicate no congestion
-       control information is present.
-- Reserved :: A 14 bit field set to 0 and ignored on receipt.
+- Sub-type :: An octet indicating the payload format. For this
+              non-congestion control format, the value is 1.
+- Reserved :: An octet set to 0 and ignored on receipt.
 - BlockOffset :: A 16 bit unsigned integer counting the number of
                  octets of ~DataBlocks~ data before the start of a
                  new data block. ~BlockOffset~ can count past the end
@@ -520,7 +516,7 @@ shown below.
                       1                   2                   3
   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- |V|C|E|        Reserved         |          BlockOffset          |
+ |  Sub-type (2) |  Reserved   |E|          BlockOffset          |
  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  |              RTT              |             Delay             |
  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -532,15 +528,12 @@ shown below.
  +-+-+-+-+-+-+-+-+-+-+-
 #+end_example
 
-- V :: A 1 bit version field that MUST be set to zero. If received as
-       one the packet MUST be dropped.
-- C :: A 1 bit value that MUST be set to 1 which indicates the
-       presence of the congestion information header fields ~RTT~,
-       ~Delay~, ~LossEventRate~ and ~LastSeqNum~.
+- Sub-type :: An octet indicating the payload format. For this
+              congestion control format, the value is 2.
+- Reserved :: A 7 bit field set to 0 and ignored on receipt.
 - E :: A 1 bit value if set indicates that Congestion Experienced
        (CE) ECN bits were received and used in deriving the
        reported ~LossEventRate~.
-- Reserved :: A 13 bit field set to 0 and ignored on receipt.
 - BlockOffset :: The same value as the non-congestion controlled
                  payload format value.
 - RTT :: A 16 bit value specifying the sender's current round-trip
@@ -634,50 +627,97 @@ the encapsulated IP packet.
 - Type :: A 4 bit value of 0x0 indicating a padding data block.
 - Padding :: extends to end of the encapsulating packet.
 
+*** IKEv2 USE_IPTFS Notification Message
+
+As discussed in [[USE_TFS Notification Message]] a notification message
+USE_IPTFS is used to negotiate IP-TFS operation in IKEv2.
+
+The USE_IPTFS Notification Message State Type is (TBD2).
+
+The notification payload contains 2 octets of flags. The first octet
+of the payload indicates requirements from the sender of the
+notification, and the second octet indicates options from the sender.
+Later specifications may add flag definitions beyond those defined
+below.
+
+**** First Octet - Requirement Flags
+
+There are currently 2 requirement flags defined. This may be revised
+by later specifications.
+
+#+begin_example
+ +-+-+-+-+-+-+-+-+
+ |0|0|0|0|0|0|C|D|
+ +-+-+-+-+-+-+-+-+
+#+end_example
+
+- 0 :: 6 bits - reserved, MUST be zero on send, unless defined by
+  later specifications.
+- C :: Congestion Control bit, [[Congestion Controlled Mode]]. If set,
+  then the sender is requiring that congestion control information
+  MUST be returned to it periodically as defined in [[Congestion
+  Information]].
+- D :: Don't Fragment bit, if set indicates the sender of the notify
+  message does not support receiving packet fragments (i.e., inner
+  packets MUST be sent using a single ~Data Block~). This value only
+  applies to what the sender is capable of receiving; the sender MAY
+  still send packet fragments unless similarly restricted by the
+  receiver in it's USE_IPTFS notification.
+
+**** Second Octet - Option Flags
+
+There are currently no option flags defined. This may be revised by
+later specifications.
+
+#+begin_example
+ +-+-+-+-+-+-+-+-+
+ |0|0|0|0|0|0|0|0|
+ +-+-+-+-+-+-+-+-+
+#+end_example
+
+- 0 :: 8 bits - reserved, MUST be zero on send, and ignored on
+  receipt, unless defined by later specification.
+
 * IANA Considerations
 
 ** IPTFS_PROTOCOL Type
 
 This document requests a protocol number IPTFS_PROTOCOL be allocated
 by IANA from "Assigned Internet Protocol Numbers" registry for
-identifying the IP-TFS ESP payload format.
+identifying the IP-TFS payload.
 
   - Type :: TBD1
-  - Description :: IP-TFS ESP payload format.
+  - Description :: An IP-TFS payload.
   - Reference :: This document
 
 # ^IANA-PN^ https://www.iana.org/assignments/protocol-numbers
 
-** IKEv2 Transform Type TFS Type
+** IPTFS_PROTOCOL Sub-Type Registry
 
-This document requests an IKEv2 Transform Type "TFS Type" be
-allocated by IANA from the "Transform Type Values" registry.
+This document requests IANA create a registry called "IPTFS_PROTOCOL
+Sub-Type Registry" under "IPTFS_PROTOCOL Parameters" IANA registries.
+The registration policy for this registry is "Standards Action"
+([[RFC8126]] and [[RFC7120]]).
 
-  - Type :: TBD2
-  - Description :: TFS Type
-  - Used In :: (optional in ESP)
+  - Name :: IPTFS_PROTOCOL Sub-Type Registry
+  - Description :: IPTFS_PROTOCOL Payload Formats.
   - Reference :: This document
 
-** TFS Type Transform IDs Registry
+This initial content for this registry is as follows:
 
-This document requests a "Transform Type TBD3 - TFS Type Transform IDs"
-registry be created. The registration procedure is Expert Review. The
-initial values are as follows:
+| Sub-Type | Name                          | Reference     |
+|----------+-------------------------------+---------------|
+|        1 | Non-Congestion Control Format | This document |
+|        2 | Congestion Control Format     | This document |
+|    3-255 | Reserved                      |               |
 
-|  Number | Name           | Reference     |
-|---------+----------------+---------------|
-|       0 | NONE           | This document |
-|       1 | TFS_IPTFS_CC   | This document |
-|       2 | TFS_IPTFS_NOCC | This document |
-| 3-65535 | Reserved       | This document |
+** USE_IPTFS Notify Message Status Type
 
-** IPTFS_REQUIREMENTS Notify Message Status Type
-
-This document requests a status type IPTFS_REQUIREMENTS be allocated
+This document requests a status type USE_IPTFS be allocated
 from the "IKEv2 Notify Message Types - Status Types" registry.
 
-  - Value :: TBD3
-  - Name :: IPTFS_REQUIREMENTS
+  - Value :: TBD2
+  - Name :: USE_IPTFS
   - Reference :: This document
 
 # ^IANA-IKECA^
@@ -717,8 +757,10 @@ then non-congestion controlled mode use should be considered instead.
 ** RFC4301
 ** RFC4342
 ** RFC5348
+** RFC7120
 ** RFC7510
 ** RFC8084
+** RFC8126
 ** RFC8200
 ** RFC8201
 ** I-D.iab-wire-image
