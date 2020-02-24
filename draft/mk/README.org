@@ -1,0 +1,48 @@
+* yang-org-make
+
+This is a repo to track a common sub-makefile for authors of YANG modules that
+utilize ~org-rfc~.
+
+If you find this file inside a sub-directory of a YANG project, it has probably
+been included into the project using ~git subtree~. You can safely ignore this
+~README.org~ file, and just know that the module developers are taking advantage
+of ~git subtree~ to track changes to the included ~yang.mk~
+
+If you're a YANG module author using ~org-rfc~ and you'd like to contribute back
+changes to ~yang.mk~, please submit a PR for changes to the ~yang-org-make~
+project.
+
+** YANG module authors
+
+If you are creating a new YANG project using ~org-rfc~ you should include this
+project using ~git subtree~ using the following commands (using a suggested
+"prefix" of "mk").
+
+#+begin_src shell
+git subtree add --prefix mk https://github.com/choppsv1/yang-org-make.git master --squash
+#+end_src
+
+Now your top level ~Makefile~ would simply be:
+
+#+begin_src makefile
+ORG := my-new-module.org
+include mk/yang.mk
+#+end_src
+
+** Developers
+
+If you'd also like to contribute changes back, fork this project and submit a
+pull-request on github.com
+
+The easiest way to push changes you've made locally, is to add your fork as a
+remote, and then reference in the ~git subtree push~ command.
+
+#+begin_src shell
+git remote add -f mk-fork https://github.com/YOURGITHUB/yang-org-make.git
+git subtree push --prefix mk mk-fork master
+#+end_src
+
+In order for this to work well, make sure your changes to the subtree (in 'mk')
+are distinct from other commits in your repo.
+
+Alternatively you can also email the author a patch. :)
