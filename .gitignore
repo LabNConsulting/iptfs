@@ -1,8 +1,7 @@
+.DS_Store
 .eggs/
 auto/
 build/
-draft/*.pdf
-draft/*.tex
 target/
 README.pdf
 README.tex
@@ -11,11 +10,5 @@ __pycache__/
 *.egg-info/
 *.so
 avenv
-draft/idnits
-draft/ox-rfc.el
-draft/*.xml
-draft/publish/*-chopps-*
-draft/publish/*.html
-draft/publish/*.pdf
 venv
 .#*

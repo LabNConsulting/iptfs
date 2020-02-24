@@ -1,0 +1,1325 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" 
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head profile="http://www.w3.org/2006/03/hcard http://dublincore.org/documents/2008/08/04/dc-html/">
+  <meta http-equiv="Content-Type" content="text/html; charset=us-ascii" />
+
+  <title>IP Traffic Flow Security</title>
+
+  <style type="text/css" title="Xml2Rfc (sans serif)">
+  /*<![CDATA[*/
+	  a {
+	  text-decoration: none;
+	  }
+      /* info code from SantaKlauss at http://www.madaboutstyle.com/tooltip2.html */
+      a.info {
+          /* This is the key. */
+          position: relative;
+          z-index: 24;
+          text-decoration: none;
+      }
+      a.info:hover {
+          z-index: 25;
+          color: #FFF; background-color: #900;
+      }
+      a.info span { display: none; }
+      a.info:hover span.info {
+          /* The span will display just on :hover state. */
+          display: block;
+          position: absolute;
+          font-size: smaller;
+          top: 2em; left: -5em; width: 15em;
+          padding: 2px; border: 1px solid #333;
+          color: #900; background-color: #EEE;
+          text-align: left;
+      }
+	  a.smpl {
+	  color: black;
+	  }
+	  a:hover {
+	  text-decoration: underline;
+	  }
+	  a:active {
+	  text-decoration: underline;
+	  }
+	  address {
+	  margin-top: 1em;
+	  margin-left: 2em;
+	  font-style: normal;
+	  }
+	  body {
+	  color: black;
+	  font-family: verdana, helvetica, arial, sans-serif;
+	  font-size: 10pt;
+	  max-width: 55em;
+	  
+	  }
+	  cite {
+	  font-style: normal;
+	  }
+	  dd {
+	  margin-right: 2em;
+	  }
+	  dl {
+	  margin-left: 2em;
+	  }
+	
+	  ul.empty {
+	  list-style-type: none;
+	  }
+	  ul.empty li {
+	  margin-top: .5em;
+	  }
+	  dl p {
+	  margin-left: 0em;
+	  }
+	  dt {
+	  margin-top: .5em;
+	  }
+	  h1 {
+	  font-size: 14pt;
+	  line-height: 21pt;
+	  page-break-after: avoid;
+	  }
+	  h1.np {
+	  page-break-before: always;
+	  }
+	  h1 a {
+	  color: #333333;
+	  }
+	  h2 {
+	  font-size: 12pt;
+	  line-height: 15pt;
+	  page-break-after: avoid;
+	  }
+	  h3, h4, h5, h6 {
+	  font-size: 10pt;
+	  page-break-after: avoid;
+	  }
+	  h2 a, h3 a, h4 a, h5 a, h6 a {
+	  color: black;
+	  }
+	  img {
+	  margin-left: 3em;
+	  }
+	  li {
+	  margin-left: 2em;
+	  margin-right: 2em;
+	  }
+	  ol {
+	  margin-left: 2em;
+	  margin-right: 2em;
+	  }
+	  ol p {
+	  margin-left: 0em;
+	  }
+	  p {
+	  margin-left: 2em;
+	  margin-right: 2em;
+	  }
+	  pre {
+	  margin-left: 3em;
+	  background-color: lightyellow;
+	  padding: .25em;
+	  }
+	  pre.text2 {
+	  border-style: dotted;
+	  border-width: 1px;
+	  background-color: #f0f0f0;
+	  width: 69em;
+	  }
+	  pre.inline {
+	  background-color: white;
+	  padding: 0em;
+	  }
+	  pre.text {
+	  border-style: dotted;
+	  border-width: 1px;
+	  background-color: #f8f8f8;
+	  width: 69em;
+	  }
+	  pre.drawing {
+	  border-style: solid;
+	  border-width: 1px;
+	  background-color: #f8f8f8;
+	  padding: 2em;
+	  }
+	  table {
+	  margin-left: 2em;
+	  }
+	  table.tt {
+	  vertical-align: top;
+	  }
+	  table.full {
+	  border-style: outset;
+	  border-width: 1px;
+	  }
+	  table.headers {
+	  border-style: outset;
+	  border-width: 1px;
+	  }
+	  table.tt td {
+	  vertical-align: top;
+	  }
+	  table.full td {
+	  border-style: inset;
+	  border-width: 1px;
+	  }
+	  table.tt th {
+	  vertical-align: top;
+	  }
+	  table.full th {
+	  border-style: inset;
+	  border-width: 1px;
+	  }
+	  table.headers th {
+	  border-style: none none inset none;
+	  border-width: 1px;
+	  }
+	  table.left {
+	  margin-right: auto;
+	  }
+	  table.right {
+	  margin-left: auto;
+	  }
+	  table.center {
+	  margin-left: auto;
+	  margin-right: auto;
+	  }
+	  caption {
+	  caption-side: bottom;
+	  font-weight: bold;
+	  font-size: 9pt;
+	  margin-top: .5em;
+	  }
+	
+	  table.header {
+	  border-spacing: 1px;
+	  width: 95%;
+	  font-size: 10pt;
+	  color: white;
+	  }
+	  td.top {
+	  vertical-align: top;
+	  }
+	  td.topnowrap {
+	  vertical-align: top;
+	  white-space: nowrap; 
+	  }
+	  table.header td {
+	  background-color: gray;
+	  width: 50%;
+	  }
+	  table.header a {
+	  color: white;
+	  }
+	  td.reference {
+	  vertical-align: top;
+	  white-space: nowrap;
+	  padding-right: 1em;
+	  }
+	  thead {
+	  display:table-header-group;
+	  }
+	  ul.toc, ul.toc ul {
+	  list-style: none;
+	  margin-left: 1.5em;
+	  margin-right: 0em;
+	  padding-left: 0em;
+	  }
+	  ul.toc li {
+	  line-height: 150%;
+	  font-weight: bold;
+	  font-size: 10pt;
+	  margin-left: 0em;
+	  margin-right: 0em;
+	  }
+	  ul.toc li li {
+	  line-height: normal;
+	  font-weight: normal;
+	  font-size: 9pt;
+	  margin-left: 0em;
+	  margin-right: 0em;
+	  }
+	  li.excluded {
+	  font-size: 0pt;
+	  }
+	  ul p {
+	  margin-left: 0em;
+	  }
+	
+	  .comment {
+	  background-color: yellow;
+	  }
+	  .center {
+	  text-align: center;
+	  }
+	  .error {
+	  color: red;
+	  font-style: italic;
+	  font-weight: bold;
+	  }
+	  .figure {
+	  font-weight: bold;
+	  text-align: center;
+	  font-size: 9pt;
+	  }
+	  .filename {
+	  color: #333333;
+	  font-weight: bold;
+	  font-size: 12pt;
+	  line-height: 21pt;
+	  text-align: center;
+	  }
+	  .fn {
+	  font-weight: bold;
+	  }
+	  .hidden {
+	  display: none;
+	  }
+	  .left {
+	  text-align: left;
+	  }
+	  .right {
+	  text-align: right;
+	  }
+	  .title {
+	  color: #990000;
+	  font-size: 18pt;
+	  line-height: 18pt;
+	  font-weight: bold;
+	  text-align: center;
+	  margin-top: 36pt;
+	  }
+	  .vcardline {
+	  display: block;
+	  }
+	  .warning {
+	  font-size: 14pt;
+	  background-color: yellow;
+	  }
+	
+	
+	  @media print {
+	  .noprint {
+		display: none;
+	  }
+	
+	  a {
+		color: black;
+		text-decoration: none;
+	  }
+	
+	  table.header {
+		width: 90%;
+	  }
+	
+	  td.header {
+		width: 50%;
+		color: black;
+		background-color: white;
+		vertical-align: top;
+		font-size: 12pt;
+	  }
+	
+	  ul.toc a::after {
+		content: leader('.') target-counter(attr(href), page);
+	  }
+	
+	  ul.ind li li a {
+		content: target-counter(attr(href), page);
+	  }
+	
+	  .print2col {
+		column-count: 2;
+		-moz-column-count: 2;
+		column-fill: auto;
+	  }
+	  }
+	
+	  @page {
+	  @top-left {
+		   content: "Internet-Draft"; 
+	  } 
+	  @top-right {
+		   content: "December 2010"; 
+	  } 
+	  @top-center {
+		   content: "Abbreviated Title";
+	  } 
+	  @bottom-left {
+		   content: "Doe"; 
+	  } 
+	  @bottom-center {
+		   content: "Expires June 2011"; 
+	  } 
+	  @bottom-right {
+		   content: "[Page " counter(page) "]"; 
+	  } 
+	  }
+	
+	  @page:first { 
+		@top-left {
+		  content: normal;
+		}
+		@top-right {
+		  content: normal;
+		}
+		@top-center {
+		  content: normal;
+		}
+	  }
+  /*]]>*/
+  </style>
+
+  <link href="#rfc.toc" rel="Contents">
+<link href="#rfc.section.1" rel="Chapter" title="1 Introduction">
+<link href="#rfc.section.1.1" rel="Chapter" title="1.1 Terminology &amp; Concepts">
+<link href="#rfc.section.2" rel="Chapter" title="2 The IP-TFS Tunnel">
+<link href="#rfc.section.2.1" rel="Chapter" title="2.1 Tunnel Content">
+<link href="#rfc.section.2.2" rel="Chapter" title="2.2 IPTFS_PROTOCOL Payload Content">
+<link href="#rfc.section.2.2.1" rel="Chapter" title="2.2.1 Data Blocks">
+<link href="#rfc.section.2.2.2" rel="Chapter" title="2.2.2 No Implicit End Padding Required">
+<link href="#rfc.section.2.2.3" rel="Chapter" title="2.2.3 Empty Payload">
+<link href="#rfc.section.2.2.4" rel="Chapter" title="2.2.4 IP Header Value Mapping">
+<link href="#rfc.section.2.3" rel="Chapter" title="2.3 Exclusive SA Use">
+<link href="#rfc.section.2.4" rel="Chapter" title="2.4 Initiating IP-TFS Operation On The SA.">
+<link href="#rfc.section.2.5" rel="Chapter" title="2.5 Modes of Operation">
+<link href="#rfc.section.2.5.1" rel="Chapter" title="2.5.1 Non-Congestion Controlled Mode">
+<link href="#rfc.section.2.5.2" rel="Chapter" title="2.5.2 Congestion Controlled Mode">
+<link href="#rfc.section.3" rel="Chapter" title="3 Congestion Information">
+<link href="#rfc.section.3.1" rel="Chapter" title="3.1 ECN Support">
+<link href="#rfc.section.4" rel="Chapter" title="4 Configuration">
+<link href="#rfc.section.4.1" rel="Chapter" title="4.1 Bandwidth">
+<link href="#rfc.section.4.2" rel="Chapter" title="4.2 Fixed Packet Size">
+<link href="#rfc.section.4.3" rel="Chapter" title="4.3 Congestion Control">
+<link href="#rfc.section.5" rel="Chapter" title="5 IKEv2">
+<link href="#rfc.section.5.1" rel="Chapter" title="5.1 USE_TFS Notification Message">
+<link href="#rfc.section.6" rel="Chapter" title="6 Packet and Data Formats">
+<link href="#rfc.section.6.1" rel="Chapter" title="6.1 IP-TFS Payload">
+<link href="#rfc.section.6.1.1" rel="Chapter" title="6.1.1 Non-Congestion Control IPTFS_PROTOCOL Payload Format">
+<link href="#rfc.section.6.1.2" rel="Chapter" title="6.1.2 Congestion Control IPTFS_PROTOCOL Payload Format">
+<link href="#rfc.section.6.1.3" rel="Chapter" title="6.1.3 Data Blocks">
+<link href="#rfc.section.6.1.4" rel="Chapter" title="6.1.4 IKEv2 USE_IPTFS Notification Message">
+<link href="#rfc.section.7" rel="Chapter" title="7 IANA Considerations">
+<link href="#rfc.section.7.1" rel="Chapter" title="7.1 IPTFS_PROTOCOL Type">
+<link href="#rfc.section.7.2" rel="Chapter" title="7.2 IPTFS_PROTOCOL Sub-Type Registry">
+<link href="#rfc.section.7.3" rel="Chapter" title="7.3 USE_IPTFS Notify Message Status Type">
+<link href="#rfc.section.8" rel="Chapter" title="8 Security Considerations">
+<link href="#rfc.references" rel="Chapter" title="9 References">
+<link href="#rfc.references.1" rel="Chapter" title="9.1 Normative References">
+<link href="#rfc.references.2" rel="Chapter" title="9.2 Informative References">
+<link href="#rfc.appendix.A" rel="Chapter" title="A Example Of An Encapsulated IP Packet Flow">
+<link href="#rfc.appendix.B" rel="Chapter" title="B A Send and Loss Event Rate Calculation">
+<link href="#rfc.appendix.C" rel="Chapter" title="C Comparisons of IP-TFS">
+<link href="#rfc.appendix.C.1" rel="Chapter" title="C.1 Comparing Overhead">
+<link href="#rfc.appendix.C.1.1" rel="Chapter" title="C.1.1 IP-TFS Overhead">
+<link href="#rfc.appendix.C.1.2" rel="Chapter" title="C.1.2 ESP with Padding Overhead">
+<link href="#rfc.appendix.C.2" rel="Chapter" title="C.2 Overhead Comparison">
+<link href="#rfc.appendix.C.3" rel="Chapter" title="C.3 Comparing Available Bandwidth">
+<link href="#rfc.appendix.C.3.1" rel="Chapter" title="C.3.1 Ethernet">
+<link href="#rfc.appendix.D" rel="Chapter" title="D Acknowledgements">
+<link href="#rfc.appendix.E" rel="Chapter" title="E Contributors">
+<link href="#rfc.authors" rel="Chapter">
+
+
+  <meta name="generator" content="xml2rfc version 2.22.3 - https://tools.ietf.org/tools/xml2rfc" />
+  <link rel="schema.dct" href="http://purl.org/dc/terms/" />
+
+  <meta name="dct.creator" content="Hopps, C." />
+  <meta name="dct.identifier" content="urn:ietf:id:draft-ietf-ipsecme-iptfs-01" />
+  <meta name="dct.issued" scheme="ISO8601" content="2020-24" />
+  <meta name="dct.abstract" content="This document describes a mechanism to enhance IPsec traffic flow security by adding traffic flow confidentiality to encrypted IP encapsulated traffic. Traffic flow confidentiality is provided by obscuring the size and frequency of IP traffic using a fixed-sized, constant-send-rate IPsec tunnel. The solution allows for congestion control as well." />
+  <meta name="description" content="This document describes a mechanism to enhance IPsec traffic flow security by adding traffic flow confidentiality to encrypted IP encapsulated traffic. Traffic flow confidentiality is provided by obscuring the size and frequency of IP traffic using a fixed-sized, constant-send-rate IPsec tunnel. The solution allows for congestion control as well." />
+
+</head>
+
+<body>
+
+  <table class="header">
+    <tbody>
+    
+    	<tr>
+<td class="left">Network Working Group</td>
+<td class="right">C. Hopps</td>
+</tr>
+<tr>
+<td class="left">Internet-Draft</td>
+<td class="right">LabN Consulting, L.L.C.</td>
+</tr>
+<tr>
+<td class="left">Intended status: Standards Track</td>
+<td class="right">February 24, 2020</td>
+</tr>
+<tr>
+<td class="left">Expires: August 27, 2020</td>
+<td class="right"></td>
+</tr>
+
+    	
+    </tbody>
+  </table>
+
+  <p class="title">IP Traffic Flow Security<br />
+  <span class="filename">draft-ietf-ipsecme-iptfs-01</span></p>
+  
+  <h1 id="rfc.abstract"><a href="#rfc.abstract">Abstract</a></h1>
+<p>This document describes a mechanism to enhance IPsec traffic flow security by adding traffic flow confidentiality to encrypted IP encapsulated traffic. Traffic flow confidentiality is provided by obscuring the size and frequency of IP traffic using a fixed-sized, constant-send-rate IPsec tunnel. The solution allows for congestion control as well.</p>
+<h1 id="rfc.status"><a href="#rfc.status">Status of This Memo</a></h1>
+<p>This Internet-Draft is submitted in full conformance with the provisions of BCP 78 and BCP 79.</p>
+<p>Internet-Drafts are working documents of the Internet Engineering Task Force (IETF).  Note that other groups may also distribute working documents as Internet-Drafts.  The list of current Internet-Drafts is at https://datatracker.ietf.org/drafts/current/.</p>
+<p>Internet-Drafts are draft documents valid for a maximum of six months and may be updated, replaced, or obsoleted by other documents at any time.  It is inappropriate to use Internet-Drafts as reference material or to cite them other than as "work in progress."</p>
+<p>This Internet-Draft will expire on August 27, 2020.</p>
+<h1 id="rfc.copyrightnotice"><a href="#rfc.copyrightnotice">Copyright Notice</a></h1>
+<p>Copyright (c) 2020 IETF Trust and the persons identified as the document authors.  All rights reserved.</p>
+<p>This document is subject to BCP 78 and the IETF Trust's Legal Provisions Relating to IETF Documents (https://trustee.ietf.org/license-info) in effect on the date of publication of this document.  Please review these documents carefully, as they describe your rights and restrictions with respect to this document.  Code Components extracted from this document must include Simplified BSD License text as described in Section 4.e of the Trust Legal Provisions and are provided without warranty as described in the Simplified BSD License.</p>
+
+  
+  <hr class="noprint" />
+  <h1 class="np" id="rfc.toc"><a href="#rfc.toc">Table of Contents</a></h1>
+  <ul class="toc">
+
+  	<li>1.   <a href="#rfc.section.1">Introduction</a>
+</li>
+<ul><li>1.1.   <a href="#rfc.section.1.1">Terminology &amp; Concepts</a>
+</li>
+</ul><li>2.   <a href="#rfc.section.2">The IP-TFS Tunnel</a>
+</li>
+<ul><li>2.1.   <a href="#rfc.section.2.1">Tunnel Content</a>
+</li>
+<li>2.2.   <a href="#rfc.section.2.2">IPTFS_PROTOCOL Payload Content</a>
+</li>
+<ul><li>2.2.1.   <a href="#rfc.section.2.2.1">Data Blocks</a>
+</li>
+<li>2.2.2.   <a href="#rfc.section.2.2.2">No Implicit End Padding Required</a>
+</li>
+<li>2.2.3.   <a href="#rfc.section.2.2.3">Empty Payload</a>
+</li>
+<li>2.2.4.   <a href="#rfc.section.2.2.4">IP Header Value Mapping</a>
+</li>
+</ul><li>2.3.   <a href="#rfc.section.2.3">Exclusive SA Use</a>
+</li>
+<li>2.4.   <a href="#rfc.section.2.4">Initiating IP-TFS Operation On The SA.</a>
+</li>
+<li>2.5.   <a href="#rfc.section.2.5">Modes of Operation</a>
+</li>
+<ul><li>2.5.1.   <a href="#rfc.section.2.5.1">Non-Congestion Controlled Mode</a>
+</li>
+<li>2.5.2.   <a href="#rfc.section.2.5.2">Congestion Controlled Mode</a>
+</li>
+</ul></ul><li>3.   <a href="#rfc.section.3">Congestion Information</a>
+</li>
+<ul><li>3.1.   <a href="#rfc.section.3.1">ECN Support</a>
+</li>
+</ul><li>4.   <a href="#rfc.section.4">Configuration</a>
+</li>
+<ul><li>4.1.   <a href="#rfc.section.4.1">Bandwidth</a>
+</li>
+<li>4.2.   <a href="#rfc.section.4.2">Fixed Packet Size</a>
+</li>
+<li>4.3.   <a href="#rfc.section.4.3">Congestion Control</a>
+</li>
+</ul><li>5.   <a href="#rfc.section.5">IKEv2</a>
+</li>
+<ul><li>5.1.   <a href="#rfc.section.5.1">USE_TFS Notification Message</a>
+</li>
+</ul><li>6.   <a href="#rfc.section.6">Packet and Data Formats</a>
+</li>
+<ul><li>6.1.   <a href="#rfc.section.6.1">IP-TFS Payload</a>
+</li>
+<ul><li>6.1.1.   <a href="#rfc.section.6.1.1">Non-Congestion Control IPTFS_PROTOCOL Payload Format</a>
+</li>
+<li>6.1.2.   <a href="#rfc.section.6.1.2">Congestion Control IPTFS_PROTOCOL Payload Format</a>
+</li>
+<li>6.1.3.   <a href="#rfc.section.6.1.3">Data Blocks</a>
+</li>
+<li>6.1.4.   <a href="#rfc.section.6.1.4">IKEv2 USE_IPTFS Notification Message</a>
+</li>
+</ul></ul><li>7.   <a href="#rfc.section.7">IANA Considerations</a>
+</li>
+<ul><li>7.1.   <a href="#rfc.section.7.1">IPTFS_PROTOCOL Type</a>
+</li>
+<li>7.2.   <a href="#rfc.section.7.2">IPTFS_PROTOCOL Sub-Type Registry</a>
+</li>
+<li>7.3.   <a href="#rfc.section.7.3">USE_IPTFS Notify Message Status Type</a>
+</li>
+</ul><li>8.   <a href="#rfc.section.8">Security Considerations</a>
+</li>
+<li>9.   <a href="#rfc.references">References</a>
+</li>
+<ul><li>9.1.   <a href="#rfc.references.1">Normative References</a>
+</li>
+<li>9.2.   <a href="#rfc.references.2">Informative References</a>
+</li>
+</ul><li>Appendix A.   <a href="#rfc.appendix.A">Example Of An Encapsulated IP Packet Flow</a>
+</li>
+<li>Appendix B.   <a href="#rfc.appendix.B">A Send and Loss Event Rate Calculation</a>
+</li>
+<li>Appendix C.   <a href="#rfc.appendix.C">Comparisons of IP-TFS</a>
+</li>
+<ul><li>C.1.   <a href="#rfc.appendix.C.1">Comparing Overhead</a>
+</li>
+<ul><li>C.1.1.   <a href="#rfc.appendix.C.1.1">IP-TFS Overhead</a>
+</li>
+<li>C.1.2.   <a href="#rfc.appendix.C.1.2">ESP with Padding Overhead</a>
+</li>
+</ul><li>C.2.   <a href="#rfc.appendix.C.2">Overhead Comparison</a>
+</li>
+<li>C.3.   <a href="#rfc.appendix.C.3">Comparing Available Bandwidth</a>
+</li>
+<ul><li>C.3.1.   <a href="#rfc.appendix.C.3.1">Ethernet</a>
+</li>
+</ul></ul><li>Appendix D.   <a href="#rfc.appendix.D">Acknowledgements</a>
+</li>
+<li>Appendix E.   <a href="#rfc.appendix.E">Contributors</a>
+</li>
+<li><a href="#rfc.authors">Author's Address</a>
+</li>
+
+
+  </ul>
+
+  <h1 id="rfc.section.1">
+<a href="#rfc.section.1">1.</a> <a href="#sec-introduction" id="sec-introduction">Introduction</a>
+</h1>
+<p id="rfc.section.1.p.1">Traffic Analysis (<a href="#RFC4301" class="xref">[RFC4301]</a>, <a href="#AppCrypt" class="xref">[AppCrypt]</a>) is the act of extracting information about data being sent through a network. While one may directly obscure the data through the use of encryption <a href="#RFC4303" class="xref">[RFC4303]</a>, the traffic pattern itself exposes information due to variations in it's shape and timing (<a href="#I-D.iab-wire-image" class="xref">[I-D.iab-wire-image]</a>, <a href="#AppCrypt" class="xref">[AppCrypt]</a>).  Hiding the size and frequency of traffic is referred to as Traffic Flow Confidentiality (TFC) per <a href="#RFC4303" class="xref">[RFC4303]</a>.</p>
+<p><a href="#RFC4303" class="xref">[RFC4303]</a> provides for TFC by allowing padding to be added to encrypted IP packets and allowing for transmission of all-pad packets (indicated using protocol 59). This method has the major limitation that it can significantly under-utilize the available bandwidth.</p>
+<p id="rfc.section.1.p.3">The IP-TFS solution provides for full TFC without the aforementioned bandwidth limitation. To do this, we use a constant-send-rate IPsec <a href="#RFC4303" class="xref">[RFC4303]</a> tunnel with fixed-sized encapsulating packets; however, these fixed-sized packets can contain partial, whole or multiple IP packets to maximize the bandwidth of the tunnel.</p>
+<p id="rfc.section.1.p.4">For a comparison of the overhead of IP-TFS with the RFC4303 prescribed TFC solution see <a href="#sec-comparisons-of-ip-tfs" class="xref">Appendix C</a>.</p>
+<p id="rfc.section.1.p.5">Additionally, IP-TFS provides for dealing with network congestion <a href="#RFC2914" class="xref">[RFC2914]</a>. This is important for when the IP-TFS user is not in full control of the domain through which the IP-TFS tunnel path flows.</p>
+<h1 id="rfc.section.1.1">
+<a href="#rfc.section.1.1">1.1.</a> Terminology &amp; Concepts</h1>
+<p id="rfc.section.1.1.p.1">The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and "OPTIONAL" in this document are to be interpreted as described in <a href="#RFC2119" class="xref">[RFC2119]</a> <a href="#RFC8174" class="xref">[RFC8174]</a> when, and only when, they appear in all capitals, as shown here.</p>
+<p id="rfc.section.1.1.p.2">This document assumes familiarity with IP security concepts described in <a href="#RFC4301" class="xref">[RFC4301]</a>.</p>
+<h1 id="rfc.section.2">
+<a href="#rfc.section.2">2.</a> The IP-TFS Tunnel</h1>
+<p id="rfc.section.2.p.1">As mentioned in <a href="#sec-introduction" class="xref">Section 1</a> IP-TFS utilizes an IPsec <a href="#RFC4303" class="xref">[RFC4303]</a> tunnel (SA) as it's transport. To provide for full TFC we send fixed-sized encapsulating packets at a constant rate on the tunnel.</p>
+<p id="rfc.section.2.p.2">The primary input to the tunnel algorithm is the requested bandwidth of the tunnel. Two values are then required to provide for this bandwidth, the fixed size of the encapsulating packets, and rate at which to send them.</p>
+<p id="rfc.section.2.p.3">The fixed packet size may either be specified manually or can be determined through the use of Path MTU discovery <a href="#RFC1191" class="xref">[RFC1191]</a> and <a href="#RFC8201" class="xref">[RFC8201]</a>.</p>
+<p id="rfc.section.2.p.4">Given the encapsulating packet size and the requested tunnel bandwidth, the corresponding packet send rate can be calculated. The packet send rate is the requested bandwidth divided by the payload size of the encapsulating packet.</p>
+<p id="rfc.section.2.p.5">The egress of the IP-TFS tunnel MUST allow for, and expect the ingress (sending) side of the IP-TFS tunnel to vary the size and rate of sent encapsulating packets, unless constrained by other policy.</p>
+<h1 id="rfc.section.2.1">
+<a href="#rfc.section.2.1">2.1.</a> Tunnel Content</h1>
+<p id="rfc.section.2.1.p.1">As previously mentioned, one issue with the TFC padding solution in <a href="#RFC4303" class="xref">[RFC4303]</a> is the large amount of wasted bandwidth as only one IP packet can be sent per encapsulating packet. In order to maximize bandwidth IP-TFS breaks this one-to-one association.</p>
+<p id="rfc.section.2.1.p.2">With IP-TFS we aggregate as well as fragment the inner IP traffic flow into fixed-sized encapsulating IPsec tunnel packets. We only pad the tunnel packets if there is no data available to be sent at the time of tunnel packet transmission, or if fragmentation has been disabled by the receiver.</p>
+<p id="rfc.section.2.1.p.3">In order to do this we use a new Encapsulating Security Payload (ESP, <a href="#RFC4303" class="xref">[RFC4303]</a>) type which is identified by the IP protocol number IPTFS_PROTOCOL (TBD1).</p>
+<h1 id="rfc.section.2.2">
+<a href="#rfc.section.2.2">2.2.</a> IPTFS_PROTOCOL Payload Content</h1>
+<p id="rfc.section.2.2.p.1">The IPTFS_PROTOCOL payload content defined in this document is comprised of a 4 or 16 octet header followed by either a partial, a full or multiple partial or full data blocks. The following diagram illustrates this IPTFS_PROTOCOL payload within the ESP packet. See <a href="#sec-ip-tfs-payload" class="xref">Section 6.1</a> for the exact formats of the IPTFS_PROTOCOL payload.</p>
+<div id="rfc.figure.1"></div>
+<div id="sec-layout-of-an-ip-tfs-ipsec-packet"></div>
+<pre>
+ . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+ . Outer Encapsulating Header ...                                .
+ . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+ . ESP Header...                                                 .
+ +---------------------------------------------------------------+
+ |               ...            :           BlockOffset          |
+ +---------------------------------------------------------------+
+ :                  [Optional Congestion Info]                   :
+ +---------------------------------------------------------------+
+ |       DataBlocks ...                                          ~
+ ~                                                               ~
+ ~                                                               |
+ +---------------------------------------------------------------|
+ . ESP Trailer...                                                .
+ . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+</pre>
+<p class="figure">Figure 1: Layout of an IP-TFS IPsec Packet</p>
+<p id="rfc.section.2.2.p.2">The <samp>BlockOffset</samp> value is either zero or some offset into or past the end of the <samp>DataBlocks</samp> data.</p>
+<p id="rfc.section.2.2.p.3">If the <samp>BlockOffset</samp> value is zero it means that the <samp>DataBlocks</samp> data begins with a new data block.</p>
+<p id="rfc.section.2.2.p.4">Conversely, if the <samp>BlockOffset</samp> value is non-zero it points to the start of the new data block, and the initial <samp>DataBlocks</samp> data belongs to a previous data block that is still being re-assembled.</p>
+<p id="rfc.section.2.2.p.5">The <samp>BlockOffset</samp> can point past the end of the <samp>DataBlocks</samp> data which indicates that the next data block occurs in a subsequent encapsulating packet.</p>
+<p id="rfc.section.2.2.p.6">Having the <samp>BlockOffset</samp> always point at the next available data block allows for quick recovery with minimal inner packet loss in the presence of outer encapsulating packet loss.</p>
+<p id="rfc.section.2.2.p.7">An example IP-TFS packet flow can be found in <a href="#sec-example-of-an-encapsulated-ip-packet-flow" class="xref">Appendix A</a>.</p>
+<h1 id="rfc.section.2.2.1">
+<a href="#rfc.section.2.2.1">2.2.1.</a> Data Blocks</h1>
+<div id="rfc.figure.2"></div>
+<div id="sec-layout-of-ip-tfs-data-block"></div>
+<pre>
+ +---------------------------------------------------------------+
+ | Type  | rest of IPv4, IPv6 or pad.
+ +--------
+</pre>
+<p class="figure">Figure 2: Layout of IP-TFS data block</p>
+<p id="rfc.section.2.2.1.p.1">A data block is defined by a 4-bit type code followed by the data block data. The type values have been carefully chosen to coincide with the IPv4/IPv6 version field values so that no per-data block type overhead is required to encapsulate an IP packet. Likewise, the length of the data block is extracted from the encapsulated IPv4 or IPv6 packet's length field.</p>
+<h1 id="rfc.section.2.2.2">
+<a href="#rfc.section.2.2.2">2.2.2.</a> No Implicit End Padding Required</h1>
+<p id="rfc.section.2.2.2.p.1">It's worth noting that since a data block type is identified by its first octet there is never a need for an implicit pad at the end of an encapsulating packet. Even when the start of a data block occurs near the end of a encapsulating packet such that there is no room for the length field of the encapsulated header to be included in the current encapsulating packet, the fact that the length comes at a known location and is guaranteed to be present is enough to fetch the length field from the subsequent encapsulating packet payload. Only when there is no data to encapsulated is end padding required, and then an explicit <samp>Pad Data Block</samp> would be used to identify the padding.</p>
+<h1 id="rfc.section.2.2.3">
+<a href="#rfc.section.2.2.3">2.2.3.</a> Empty Payload</h1>
+<p id="rfc.section.2.2.3.p.1">In order to support reporting of congestion control information (described later) on a non-IP-TFS enabled SA, IP-TFS allows for the sending of an IP-TFS payload with no data blocks (i.e., the ESP payload length is equal to the IP-TFS header length). This special payload is called an empty payload.</p>
+<h1 id="rfc.section.2.2.4">
+<a href="#rfc.section.2.2.4">2.2.4.</a> IP Header Value Mapping</h1>
+<p><a href="#RFC4301" class="xref">[RFC4301]</a> provides some direction on when and how to map various values from an inner IP header to the outer encapsulating header, namely the Don't-Fragment (DF) bit (<a href="#RFC0791" class="xref">[RFC0791]</a> and <a href="#RFC8200" class="xref">[RFC8200]</a>), the Differentiated Services (DS) field <a href="#RFC2474" class="xref">[RFC2474]</a> and the Explicit Congestion Notification (ECN) field <a href="#RFC3168" class="xref">[RFC3168]</a>. Unlike <a href="#RFC4301" class="xref">[RFC4301]</a> with IP-TFS we may and often will be encapsulating more than 1 IP packet per ESP packet. To deal with this we further restrict these mappings.  In particular we never map the inner DF bit as it is unrelated to the IP-TFS tunnel functionality; we never IP fragment the inner packets and the inner packets will not affect the fragmentation of the outer encapsulation packets. Likewise, the ECN value need not be mapped as any congestion related to the constant-send-rate IP-TFS tunnel is unrelated (by design!) to the inner traffic flow. Finally, by default the DS field SHOULD NOT be copied although an implementation MAY choose to allow for configuration to override this behavior. An implementation SHOULD also allow the DS value to be set by configuration.</p>
+<h1 id="rfc.section.2.3">
+<a href="#rfc.section.2.3">2.3.</a> Exclusive SA Use</h1>
+<p id="rfc.section.2.3.p.1">It is not the intention of this specification to allow for mixed use of an IP-TFS enabled SA. In other words, an SA that has IP-TFS enabled is exclusively for IP-TFS use and MUST NOT have non-IP-TFS payloads such as IP (IP protocol 4), TCP transport (IP protocol 6), or ESP pad packets (protocol 59) intermixed with non-empty IP-TFS (IP protocol TBD1) payloads. While it's possible to envision making the algorithm work in the presence of sequence number skips in the IP-TFS payload stream, the added complexity is not deemed worthwhile. Other IPsec uses can configure and use their own SAs.</p>
+<h1 id="rfc.section.2.4">
+<a href="#rfc.section.2.4">2.4.</a> Initiating IP-TFS Operation On The SA.</h1>
+<p id="rfc.section.2.4.p.1">While a user will normally configure their IPsec tunnel (SA) to operate using IP-TFS to start, we also allow IP-TFS operation to be enabled post-SA creation and use. This late-enabling may be useful for debugging or other purposes. To support this late-enabled operation the receiver switches to IP-TFS operation on receipt of the first ESP payload with the IPTFS_PROTOCOL indicated as the payload type which also contains a data block (i.e., a non-empty IP-TFS payload). The the receipt of an empty IPTFS_PROTOCOL payload (i.e., one without any data blocks) is used to communicate congestion control information from the receiver back to the sender on a non-IP-TFS enabled SA, and MUST NOT cause IP-TFS to be enabled on that SA.</p>
+<h1 id="rfc.section.2.5">
+<a href="#rfc.section.2.5">2.5.</a> Modes of Operation</h1>
+<p id="rfc.section.2.5.p.1">Just as with normal IPsec/ESP tunnels, IP-TFS tunnels are unidirectional. Bidirectional IP-TFS functionality is achieved by setting up 2 IP-TFS tunnels, one in either direction.</p>
+<p id="rfc.section.2.5.p.2">An IP-TFS tunnel can operate in 2 modes, a non-congestion controlled mode and congestion controlled mode.</p>
+<h1 id="rfc.section.2.5.1">
+<a href="#rfc.section.2.5.1">2.5.1.</a> Non-Congestion Controlled Mode</h1>
+<p id="rfc.section.2.5.1.p.1">In the non-congestion controlled mode IP-TFS sends fixed-sized packets at a constant rate. The packet send rate is constant and is not automatically adjusted regardless of any network congestion (e.g., packet loss).</p>
+<p id="rfc.section.2.5.1.p.2">For similar reasons as given in <a href="#RFC7510" class="xref">[RFC7510]</a> the non-congestion controlled mode should only be used where the user has full administrative control over the path the tunnel will take. This is required so the user can guarantee the bandwidth and also be sure as to not be negatively affecting network congestion <a href="#RFC2914" class="xref">[RFC2914]</a>. In this case packet loss should be reported to the administrator (e.g., via syslog, YANG notification, SNMP traps, etc) so that any failures due to a lack of bandwidth can be corrected.</p>
+<h1 id="rfc.section.2.5.2">
+<a href="#rfc.section.2.5.2">2.5.2.</a> <a href="#sec-congestion-controlled-mode" id="sec-congestion-controlled-mode">Congestion Controlled Mode</a>
+</h1>
+<p id="rfc.section.2.5.2.p.1">With the congestion controlled mode, IP-TFS adapts to network congestion by lowering the packet send rate to accommodate the congestion, as well as raising the rate when congestion subsides.  Since overhead is per packet, by allowing for maximal fixed-size packets and varying the send rate we minimize transport overhead.</p>
+<p id="rfc.section.2.5.2.p.2">The output of the congestion control algorithm will adjust the rate at which the ingress sends packets. While this document does not require a specific congestion control algorithm, best current practice RECOMMENDS that the algorithm conform to <a href="#RFC5348" class="xref">[RFC5348]</a>. Congestion control principles are documented in <a href="#RFC2914" class="xref">[RFC2914]</a> as well. An example of an implementation of the <a href="#RFC5348" class="xref">[RFC5348]</a> algorithm which matches the requirements of IP-TFS (i.e., designed for fixed-size packet and send rate varied based on congestion) is documented in <a href="#RFC4342" class="xref">[RFC4342]</a>.</p>
+<p id="rfc.section.2.5.2.p.3">The required inputs for the TCP friendly rate control algorithm described in <a href="#RFC5348" class="xref">[RFC5348]</a> are the receivers loss event rate and the senders estimated round-trip time (RTT). These values are provided by IP-TFS using the congestion information header fields described in <a href="#sec-congestion-information" class="xref">Section 3</a>. In particular these values are sufficient to implement the algorithm described in <a href="#RFC5348" class="xref">[RFC5348]</a>.</p>
+<p id="rfc.section.2.5.2.p.4">At a minimum, the congestion information must be sent, from the receiver as well as from the sender, at least once per RTT. Prior to establishing an RTT the information SHOULD be sent constantly from the sender and the receiver so that an RTT estimate can be established. The lack of receiving this information over multiple consecutive RTT intervals should be considered a congestion event that causes the sender to adjust it's sending rate lower. For example, <a href="#RFC4342" class="xref">[RFC4342]</a> calls this the "no feedback timeout" and it is equal to 4 RTT intervals. When a "no feedback timeout" has occurred <a href="#RFC4342" class="xref">[RFC4342]</a> halves the sending rate.</p>
+<p id="rfc.section.2.5.2.p.5">An implementation could choose to always include the congestion information in it's IP-TFS payload header if sending on an IP-TFS enabled SA. Since IP-TFS normally will operate with a large packet size, the congestion information should represent a small portion of the available tunnel bandwidth.</p>
+<p id="rfc.section.2.5.2.p.6">When an implementation is choosing a congestion control algorithm (or a selection of algorithms) one should remember that IP-TFS is not providing for reliable delivery of IP traffic, and so per packet ACKs are not required and are not provided.</p>
+<p id="rfc.section.2.5.2.p.7">It's worth noting that the variable send-rate of a congestion controlled IP-TFS tunnel, is not private; however, this send-rate is being driven by network congestion, and as long as the encapsulated (inner) traffic flow shape and timing are not directly affecting the (outer) network congestion, the variations in the tunnel rate will not weaken the provided inner traffic flow confidentiality.</p>
+<h1 id="rfc.section.2.5.2.1">
+<a href="#rfc.section.2.5.2.1">2.5.2.1.</a> Circuit Breakers</h1>
+<p id="rfc.section.2.5.2.1.p.1">In additional to congestion control, implementations MAY choose to define and implement circuit breakers <a href="#RFC8084" class="xref">[RFC8084]</a> as a recovery method of last resort. Enabling circuit breakers is also a reason a user may wish to enable congestion information reports even when using the non-congestion controlled mode of operation. The definition of circuit breakers are outside the scope of this document.</p>
+<h1 id="rfc.section.3">
+<a href="#rfc.section.3">3.</a> <a href="#sec-congestion-information" id="sec-congestion-information">Congestion Information</a>
+</h1>
+<p id="rfc.section.3.p.1">In order to support the congestion control mode, the sender needs to know the loss event rate and also be able to approximate the RTT (<a href="#RFC5348" class="xref">[RFC5348]</a>). In order to obtain these values the receiver sends congestion control information on it's SA back to the sender. Thus, in order to support congestion control the receiver must have a paired SA back to the sender (this is always the case when the tunnel was created using IKEv2). If the SA back to the sender is a non-IP-TFS enabled SA then an IPTFS_PROTOCOL empty payload (i.e., header only) is used to convey the information.</p>
+<p id="rfc.section.3.p.2">In order to calculate a loss event rate compatible with <a href="#RFC5348" class="xref">[RFC5348]</a>, the receiver needs to have a round-trip time estimate. Thus the sender communicates this estimate in the <samp>RTT</samp> header field. On startup this value will be zero as no RTT estimate is yet known.</p>
+<p id="rfc.section.3.p.3">In order to allow the sender to calculate the <samp>RTT</samp> value, the receiver communicates the last sequence number it has seen to the sender in the <samp>LastSeqNum</samp> header field. In addition to the <samp>LastSeqNum</samp> value, the receiver sends an estimate of the amount of time between receiving the <samp>LastSeqNum</samp> packet and transmitting the <samp>LastSeqNum</samp> value back to the sender in the congestion information. It places this time estimate in the <samp>Delay</samp> header field along with the <samp>LastSeqNum</samp>.</p>
+<p id="rfc.section.3.p.4">The receiver also calculates, and communicates in the <samp>LossEventRate</samp> header field, the loss event rate for use by the sender. This is slightly different from <a href="#RFC4342" class="xref">[RFC4342]</a> which periodically sends all the loss interval data back to the sender so that it can do the calculation.  See <a href="#sec-a-send-and-loss-event-rate-calculation" class="xref">Appendix B</a> for a suggested way to calculate the loss event rate value. Initially this value will be zero (indicating no loss) until enough data has been collected by the receiver to update it.</p>
+<h1 id="rfc.section.3.1">
+<a href="#rfc.section.3.1">3.1.</a> ECN Support</h1>
+<p id="rfc.section.3.1.p.1">In additional to normal packet loss information IP-TFS supports use of the ECN bits in the encapsulating IP header <a href="#RFC3168" class="xref">[RFC3168]</a> for identifying congestion. If ECN use is enabled and a packet arrives at the egress endpoint with the Congestion Experienced (CE) value set, then the receiver considers that packet as being dropped, although it does not drop it. The receiver MUST set the E bit in any IPTFS_PROTOCOL payload header containing a <samp>LossEventRate</samp> value derived from a CE value being considered.</p>
+<p id="rfc.section.3.1.p.2">As noted in <a href="#RFC3168" class="xref">[RFC3168]</a> the ECN bits are not protected by IPsec and thus may constitute a covert channel. For this reason ECN use SHOULD NOT be enabled by default.</p>
+<h1 id="rfc.section.4">
+<a href="#rfc.section.4">4.</a> Configuration</h1>
+<p id="rfc.section.4.p.1">IP-TFS is meant to be deployable with a minimal amount of configuration. All IP-TFS specific configuration should be able to be specified at the unidirectional tunnel ingress (sending) side. It is intended that non-IKEv2 operation is supported, at least, with local static configuration.</p>
+<h1 id="rfc.section.4.1">
+<a href="#rfc.section.4.1">4.1.</a> Bandwidth</h1>
+<p id="rfc.section.4.1.p.1">Bandwidth is a local configuration option. For non-congestion controlled mode the bandwidth SHOULD be configured. For congestion controlled mode one can configure the bandwidth or have no configuration and let congestion control discover the maximum bandwidth available. No standardized configuration method is required.</p>
+<h1 id="rfc.section.4.2">
+<a href="#rfc.section.4.2">4.2.</a> Fixed Packet Size</h1>
+<p id="rfc.section.4.2.p.1">The fixed packet size to be used for the tunnel encapsulation packets can be configured manually or can be automatically determined using Path MTU discovery (see <a href="#RFC1191" class="xref">[RFC1191]</a> and <a href="#RFC8201" class="xref">[RFC8201]</a>). No standardized configuration method is required.</p>
+<h1 id="rfc.section.4.3">
+<a href="#rfc.section.4.3">4.3.</a> Congestion Control</h1>
+<p id="rfc.section.4.3.p.1">Congestion control is a local configuration option. No standardized configuration method is required.</p>
+<h1 id="rfc.section.5">
+<a href="#rfc.section.5">5.</a> IKEv2</h1>
+<h1 id="rfc.section.5.1">
+<a href="#rfc.section.5.1">5.1.</a> <a href="#sec-use-tfs-notification-message" id="sec-use-tfs-notification-message">USE_TFS Notification Message</a>
+</h1>
+<p id="rfc.section.5.1.p.1">When using IKEv2, a new "USE_IPTFS" Notification Message is used to enable operation of IP-TFS on a child SA pair. The method used is similar to how USE_TRANSPORT_MODE is negotiated, as described in <a href="#RFC7296" class="xref">[RFC7296]</a>.</p>
+<p id="rfc.section.5.1.p.2">To request IP-TFS operation on the Child SA pair, the initiator includes the USE_IPTFS notification in an SA payload requesting a new Child SA (either during the initial IKE_AUTH or during non-rekeying CREATE_CHILD_SA exchanges). If the request is accepted then response MUST also include a notification of type USE_IPTFS. If the responder declines the request the child SA will be established without IP-TFS enabled. If this is unacceptable to the initiator, the initiator MUST delete the child SA.</p>
+<p id="rfc.section.5.1.p.3">The USE_IPTFS notification MUST NOT be sent, and MUST be ignored, during a CREATE_CHILD_SA rekeying exchange as it is not allowed to change IP-TFS operation during rekeying.</p>
+<p id="rfc.section.5.1.p.4">The USE_IPTFS notification contains a 1 octet payload of flags that specify any requirements from the sender of the message. If any requirement flags are not understood or cannot be supported by the receiver then the receiver should not enable IP-TFS mode (either by not responding with the USE_IPTFS notification, or in the case of the initiator, by deleting the child SA if the now established non-IP-TFS operation is unacceptable).</p>
+<p id="rfc.section.5.1.p.5">The notification type and payload flag values are defined in <a href="#sec-ikev2-use-iptfs-notification-message" class="xref">Section 6.1.4</a>.</p>
+<h1 id="rfc.section.6">
+<a href="#rfc.section.6">6.</a> Packet and Data Formats</h1>
+<h1 id="rfc.section.6.1">
+<a href="#rfc.section.6.1">6.1.</a> <a href="#sec-ip-tfs-payload" id="sec-ip-tfs-payload">IP-TFS Payload</a>
+</h1>
+<p id="rfc.section.6.1.p.1">An IP-TFS payload is identified by the IP protocol number IPTFS_PROTOCOL (TBD1). The first octet of this payload indicates the format of the remaining payload data. This format is intended to allow for re-use of the IP protocol number.</p>
+<pre>
+  0 1 2 3 4 5 6 7
+ +-+-+-+-+-+-+-+-+-+-+-
+ |   Sub-type    | ...
+ +-+-+-+-+-+-+-+-+-+-+-
+</pre>
+<p></p>
+
+<dl>
+<dt>Sub-type:</dt>
+<dd style="margin-left: 8">
+<br>An 8 bit value indicating the payload format.</dd>
+</dl>
+<p id="rfc.section.6.1.p.3">This specification defines 2 payload sub-types. These payload formats are defined in the following sections.</p>
+<h1 id="rfc.section.6.1.1">
+<a href="#rfc.section.6.1.1">6.1.1.</a> Non-Congestion Control IPTFS_PROTOCOL Payload Format</h1>
+<p id="rfc.section.6.1.1.p.1">The non-congestion control IPTFS_PROTOCOL payload is comprised of a 4 octet header followed by a variable amount of <samp>DataBlocks</samp> data as shown below.</p>
+<pre>
+                      1                   2                   3
+  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ |  Sub-Type (1) |   Reserved    |          BlockOffset          |
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ |       DataBlocks ...
+ +-+-+-+-+-+-+-+-+-+-+-
+</pre>
+<p></p>
+
+<dl>
+<dt>Sub-type:</dt>
+<dd style="margin-left: 8">
+<br>An octet indicating the payload format. For this non-congestion control format, the value is 1.</dd>
+<dt>Reserved:</dt>
+<dd style="margin-left: 8">
+<br>An octet set to 0 and ignored on receipt.</dd>
+<dt>BlockOffset:</dt>
+<dd style="margin-left: 8">
+<br>A 16 bit unsigned integer counting the number of octets of <samp>DataBlocks</samp> data before the start of a new data block. <samp>BlockOffset</samp> can count past the end of the <samp>DataBlocks</samp> data in which case all the <samp>DataBlocks</samp> data belongs to the previous data block being re-assembled. If the <samp>BlockOffset</samp> extends into subsequent packets it continues to only count subsequent <samp>DataBlocks</samp> data (i.e., it does not count subsequent packets non-<samp>DataBlocks</samp> octets).</dd>
+<dt>DataBlocks:</dt>
+<dd style="margin-left: 8">
+<br>Variable number of octets that begins with the start of a data block, or the continuation of a previous data block, followed by zero or more additional data blocks.</dd>
+</dl>
+<h1 id="rfc.section.6.1.2">
+<a href="#rfc.section.6.1.2">6.1.2.</a> Congestion Control IPTFS_PROTOCOL Payload Format</h1>
+<p id="rfc.section.6.1.2.p.1">The congestion control IPTFS_PROTOCOL payload is comprised of a 16 octet header followed by a variable amount of <samp>DataBlocks</samp> data as shown below.</p>
+<pre>
+                      1                   2                   3
+  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ |  Sub-type (2) |  Reserved   |E|          BlockOffset          |
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ |              RTT              |             Delay             |
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ |                          LossEventRate                        |
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ |                           LastSeqNum                          |
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ |       DataBlocks ...
+ +-+-+-+-+-+-+-+-+-+-+-
+</pre>
+<p></p>
+
+<dl>
+<dt>Sub-type:</dt>
+<dd style="margin-left: 8">
+<br>An octet indicating the payload format. For this congestion control format, the value is 2.</dd>
+<dt>Reserved:</dt>
+<dd style="margin-left: 8">
+<br>A 7 bit field set to 0 and ignored on receipt.</dd>
+<dt>E:</dt>
+<dd style="margin-left: 8">
+<br>A 1 bit value if set indicates that Congestion Experienced (CE) ECN bits were received and used in deriving the reported <samp>LossEventRate</samp>.</dd>
+<dt>BlockOffset:</dt>
+<dd style="margin-left: 8">
+<br>The same value as the non-congestion controlled payload format value.</dd>
+<dt>RTT:</dt>
+<dd style="margin-left: 8">
+<br>A 16 bit value specifying the sender's current round-trip time estimate in milliseconds. The value MAY be zero prior to the sender having calculated a round-trip time estimate.  The value SHOULD be set to zero on non-IP-TFS enabled SAs.</dd>
+<dt>Delay:</dt>
+<dd style="margin-left: 8">
+<br>A 16 bit value specifying the delay in milliseconds incurred between the receiver receiving the <samp>LastSeqNum</samp> packet and the sending of this acknowledgement of it.</dd>
+<dt>LossEventRate:</dt>
+<dd style="margin-left: 8">
+<br>A 32 bit value specifying the inverse of the current loss event rate as calculated by the receiver. A value of zero indicates no loss.  Otherwise the loss event rate is <samp>1/LossEventRate</samp>.</dd>
+<dt>LastSeqNum:</dt>
+<dd style="margin-left: 8">
+<br>A 32 bit value containing the lower 32 bits of the largest sequence number last received. This is the latest in the sequence not necessarily the most recent (in the case of re-ordering of packets it may be less recent). When determining largest and 64 bit extended sequence numbers are in use, the upper 32 bits should be used during the comparison.</dd>
+<dt>DataBlocks:</dt>
+<dd style="margin-left: 8">
+<br>Variable number of octets that begins with the start of a data block, or the continuation of a previous data block, followed by zero or more additional data blocks. For the special case of sending congestion control information on an non-IP-TFS enabled SA this value MUST be empty (i.e., be zero octets long).</dd>
+</dl>
+<h1 id="rfc.section.6.1.3">
+<a href="#rfc.section.6.1.3">6.1.3.</a> Data Blocks</h1>
+<pre>
+                      1                   2                   3
+  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ | Type  | IPv4, IPv6 or pad...
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
+</pre>
+<p></p>
+
+<dl>
+<dt>Type:</dt>
+<dd style="margin-left: 8">
+<br>A 4 bit field where 0x0 identifies a pad data block, 0x4 indicates an IPv4 data block, and 0x6 indicates an IPv6 data block.</dd>
+</dl>
+<h1 id="rfc.section.6.1.3.1">
+<a href="#rfc.section.6.1.3.1">6.1.3.1.</a> IPv4 Data Block</h1>
+<pre>
+                      1                   2                   3
+  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ |  0x4  |  IHL  |  TypeOfService  |         TotalLength         |
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ | Rest of the inner packet ...
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
+</pre>
+<p id="rfc.section.6.1.3.1.p.1">These values are the actual values within the encapsulated IPv4 header. In other words, the start of this data block is the start of the encapsulated IP packet.</p>
+<p></p>
+
+<dl>
+<dt>Type:</dt>
+<dd style="margin-left: 8">
+<br>A 4 bit value of 0x4 indicating IPv4 (i.e., first nibble of the IPv4 packet).</dd>
+<dt>TotalLength:</dt>
+<dd style="margin-left: 8">
+<br>The 16 bit unsigned integer length field of the IPv4 inner packet.</dd>
+</dl>
+<h1 id="rfc.section.6.1.3.2">
+<a href="#rfc.section.6.1.3.2">6.1.3.2.</a> IPv6 Data Block</h1>
+<pre>
+                      1                   2                   3
+  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ |  0x6  | TrafficClass  |               FlowLabel               |
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ |          TotalLength          | Rest of the inner packet ...
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
+</pre>
+<p id="rfc.section.6.1.3.2.p.1">These values are the actual values within the encapsulated IPv6 header. In other words, the start of this data block is the start of the encapsulated IP packet.</p>
+<p></p>
+
+<dl>
+<dt>Type:</dt>
+<dd style="margin-left: 8">
+<br>A 4 bit value of 0x6 indicating IPv6 (i.e., first nibble of the IPv6 packet).</dd>
+<dt>TotalLength:</dt>
+<dd style="margin-left: 8">
+<br>The 16 bit unsigned integer length field of the inner IPv6 inner packet.</dd>
+</dl>
+<h1 id="rfc.section.6.1.3.3">
+<a href="#rfc.section.6.1.3.3">6.1.3.3.</a> Pad Data Block</h1>
+<pre>
+                      1                   2                   3
+  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ |  0x0  | Padding ...
+ +-+-+-+-+-+-+-+-+-+-+-
+</pre>
+<p></p>
+
+<dl>
+<dt>Type:</dt>
+<dd style="margin-left: 8">
+<br>A 4 bit value of 0x0 indicating a padding data block.</dd>
+<dt>Padding:</dt>
+<dd style="margin-left: 8">
+<br>extends to end of the encapsulating packet.</dd>
+</dl>
+<h1 id="rfc.section.6.1.4">
+<a href="#rfc.section.6.1.4">6.1.4.</a> <a href="#sec-ikev2-use-iptfs-notification-message" id="sec-ikev2-use-iptfs-notification-message">IKEv2 USE_IPTFS Notification Message</a>
+</h1>
+<p id="rfc.section.6.1.4.p.1">As discussed in <a href="#sec-use-tfs-notification-message" class="xref">Section 5.1</a> a notification message USE_IPTFS is used to negotiate IP-TFS operation in IKEv2.</p>
+<p id="rfc.section.6.1.4.p.2">The USE_IPTFS Notification Message State Type is (TBD2).</p>
+<p id="rfc.section.6.1.4.p.3">The notification payload contains 1 octet of requirement flags. There are currently 2 requirement flags defined. This may be revised by later specifications.</p>
+<pre>
+ +-+-+-+-+-+-+-+-+
+ |0|0|0|0|0|0|C|D|
+ +-+-+-+-+-+-+-+-+
+</pre>
+<p></p>
+
+<dl>
+<dt>0:</dt>
+<dd style="margin-left: 8">
+<br>6 bits - reserved, MUST be zero on send, unless defined by later specifications.</dd>
+<dt>C:</dt>
+<dd style="margin-left: 8">
+<br>Congestion Control bit. If set, then the sender is requiring that congestion control information MUST be returned to it periodically as defined in <a href="#sec-congestion-information" class="xref">Section 3</a>.</dd>
+<dt>D:</dt>
+<dd style="margin-left: 8">
+<br>Don't Fragment bit, if set indicates the sender of the notify message does not support receiving packet fragments (i.e., inner packets MUST be sent using a single <samp>Data Block</samp>). This value only applies to what the sender is capable of receiving; the sender MAY still send packet fragments unless similarly restricted by the receiver in it's USE_IPTFS notification.</dd>
+</dl>
+<h1 id="rfc.section.7">
+<a href="#rfc.section.7">7.</a> IANA Considerations</h1>
+<h1 id="rfc.section.7.1">
+<a href="#rfc.section.7.1">7.1.</a> IPTFS_PROTOCOL Type</h1>
+<p id="rfc.section.7.1.p.1">This document requests a protocol number IPTFS_PROTOCOL be allocated by IANA from "Assigned Internet Protocol Numbers" registry for identifying the IP-TFS payload.</p>
+<p></p>
+
+<dl>
+<dt>Type:</dt>
+<dd style="margin-left: 8">
+<br>TBD1</dd>
+<dt>Description:</dt>
+<dd style="margin-left: 8">
+<br>An IP-TFS payload.</dd>
+<dt>Reference:</dt>
+<dd style="margin-left: 8">
+<br>This document</dd>
+</dl>
+<h1 id="rfc.section.7.2">
+<a href="#rfc.section.7.2">7.2.</a> IPTFS_PROTOCOL Sub-Type Registry</h1>
+<p id="rfc.section.7.2.p.1">This document requests IANA create a registry called "IPTFS_PROTOCOL Sub-Type Registry" under "IPTFS_PROTOCOL Parameters" IANA registries.  The registration policy for this registry is "Standards Action" (<a href="#RFC8126" class="xref">[RFC8126]</a> and <a href="#RFC7120" class="xref">[RFC7120]</a>).</p>
+<p></p>
+
+<dl>
+<dt>Name:</dt>
+<dd style="margin-left: 8">
+<br>IPTFS_PROTOCOL Sub-Type Registry</dd>
+<dt>Description:</dt>
+<dd style="margin-left: 8">
+<br>IPTFS_PROTOCOL Payload Formats.</dd>
+<dt>Reference:</dt>
+<dd style="margin-left: 8">
+<br>This document</dd>
+</dl>
+<p id="rfc.section.7.2.p.3">This initial content for this registry is as follows:</p>
+<pre>
+ Sub-Type  Name                           Reference     
+--------------------------------------------------------
+        1  Non-Congestion Control Format  This document 
+        2  Congestion Control Format      This document 
+    3-255  Reserved                                     
+</pre>
+<h1 id="rfc.section.7.3">
+<a href="#rfc.section.7.3">7.3.</a> USE_IPTFS Notify Message Status Type</h1>
+<p id="rfc.section.7.3.p.1">This document requests a status type USE_IPTFS be allocated from the "IKEv2 Notify Message Types - Status Types" registry.</p>
+<p></p>
+
+<dl>
+<dt>Value:</dt>
+<dd style="margin-left: 8">
+<br>TBD2</dd>
+<dt>Name:</dt>
+<dd style="margin-left: 8">
+<br>USE_IPTFS</dd>
+<dt>Reference:</dt>
+<dd style="margin-left: 8">
+<br>This document</dd>
+</dl>
+<h1 id="rfc.section.8">
+<a href="#rfc.section.8">8.</a> Security Considerations</h1>
+<p id="rfc.section.8.p.1">This document describes a mechanism to add Traffic Flow Confidentiality to IP traffic. Use of this mechanism is expected to increase the security of the traffic being transported. Other than the additional security afforded by using this mechanism, IP-TFS utilizes the security protocols <a href="#RFC4303" class="xref">[RFC4303]</a> and <a href="#RFC7296" class="xref">[RFC7296]</a> and so their security considerations apply to IP-TFS as well.</p>
+<p id="rfc.section.8.p.2">As noted previously in <a href="#sec-congestion-controlled-mode" class="xref">Section 2.5.2</a>, for TFC to be fully maintained the encapsulated traffic flow should not be affecting network congestion in a predictable way, and if it would be then non-congestion controlled mode use should be considered instead.</p>
+<h1 id="rfc.references">
+<a href="#rfc.references">9.</a> References</h1>
+<h1 id="rfc.references.1">
+<a href="#rfc.references.1">9.1.</a> Normative References</h1>
+<table><tbody>
+<tr>
+<td class="reference"><b id="RFC2119">[RFC2119]</b></td>
+<td class="top">
+<a>Bradner, S.</a>, "<a href="https://tools.ietf.org/html/rfc2119">Key words for use in RFCs to Indicate Requirement Levels</a>", BCP 14, RFC 2119, DOI 10.17487/RFC2119, March 1997.</td>
+</tr>
+<tr>
+<td class="reference"><b id="RFC4303">[RFC4303]</b></td>
+<td class="top">
+<a>Kent, S.</a>, "<a href="https://tools.ietf.org/html/rfc4303">IP Encapsulating Security Payload (ESP)</a>", RFC 4303, DOI 10.17487/RFC4303, December 2005.</td>
+</tr>
+<tr>
+<td class="reference"><b id="RFC7296">[RFC7296]</b></td>
+<td class="top">
+<a>Kaufman, C.</a>, <a>Hoffman, P.</a>, <a>Nir, Y.</a>, <a>Eronen, P.</a> and <a>T. Kivinen</a>, "<a href="https://tools.ietf.org/html/rfc7296">Internet Key Exchange Protocol Version 2 (IKEv2)</a>", STD 79, RFC 7296, DOI 10.17487/RFC7296, October 2014.</td>
+</tr>
+<tr>
+<td class="reference"><b id="RFC8174">[RFC8174]</b></td>
+<td class="top">
+<a>Leiba, B.</a>, "<a href="https://tools.ietf.org/html/rfc8174">Ambiguity of Uppercase vs Lowercase in RFC 2119 Key Words</a>", BCP 14, RFC 8174, DOI 10.17487/RFC8174, May 2017.</td>
+</tr>
+</tbody></table>
+<h1 id="rfc.references.2">
+<a href="#rfc.references.2">9.2.</a> Informative References</h1>
+<table><tbody>
+<tr>
+<td class="reference"><b id="AppCrypt">[AppCrypt]</b></td>
+<td class="top">
+<a>Schneier, B.</a>, "<a>Applied Cryptography: Protocols, Algorithms, and Source Code in C</a>", November 2017.</td>
+</tr>
+<tr>
+<td class="reference"><b id="I-D.iab-wire-image">[I-D.iab-wire-image]</b></td>
+<td class="top">
+<a>Trammell, B.</a> and <a>M. Kuehlewind</a>, "<a href="https://tools.ietf.org/html/draft-iab-wire-image-01">The Wire Image of a Network Protocol</a>", Internet-Draft draft-iab-wire-image-01, November 2018.</td>
+</tr>
+<tr>
+<td class="reference"><b id="IKEV2IANA">[IKEV2IANA]</b></td>
+<td class="top">
+<a>IANA</a>, "<a href="http://www.iana.org/assignments/ikev2-parameters/">Internet Key Exchange Version 2 (IKEv2) Parameters</a>"</td>
+</tr>
+<tr>
+<td class="reference"><b id="RFC0791">[RFC0791]</b></td>
+<td class="top">
+<a>Postel, J.</a>, "<a href="https://tools.ietf.org/html/rfc791">Internet Protocol</a>", STD 5, RFC 791, DOI 10.17487/RFC0791, September 1981.</td>
+</tr>
+<tr>
+<td class="reference"><b id="RFC1191">[RFC1191]</b></td>
+<td class="top">
+<a>Mogul, J.</a> and <a>S. Deering</a>, "<a href="https://tools.ietf.org/html/rfc1191">Path MTU discovery</a>", RFC 1191, DOI 10.17487/RFC1191, November 1990.</td>
+</tr>
+<tr>
+<td class="reference"><b id="RFC2474">[RFC2474]</b></td>
+<td class="top">
+<a>Nichols, K.</a>, <a>Blake, S.</a>, <a>Baker, F.</a> and <a>D. Black</a>, "<a href="https://tools.ietf.org/html/rfc2474">Definition of the Differentiated Services Field (DS Field) in the IPv4 and IPv6 Headers</a>", RFC 2474, DOI 10.17487/RFC2474, December 1998.</td>
+</tr>
+<tr>
+<td class="reference"><b id="RFC2914">[RFC2914]</b></td>
+<td class="top">
+<a>Floyd, S.</a>, "<a href="https://tools.ietf.org/html/rfc2914">Congestion Control Principles</a>", BCP 41, RFC 2914, DOI 10.17487/RFC2914, September 2000.</td>
+</tr>
+<tr>
+<td class="reference"><b id="RFC3168">[RFC3168]</b></td>
+<td class="top">
+<a>Ramakrishnan, K.</a>, <a>Floyd, S.</a> and <a>D. Black</a>, "<a href="https://tools.ietf.org/html/rfc3168">The Addition of Explicit Congestion Notification (ECN) to IP</a>", RFC 3168, DOI 10.17487/RFC3168, September 2001.</td>
+</tr>
+<tr>
+<td class="reference"><b id="RFC4301">[RFC4301]</b></td>
+<td class="top">
+<a>Kent, S.</a> and <a>K. Seo</a>, "<a href="https://tools.ietf.org/html/rfc4301">Security Architecture for the Internet Protocol</a>", RFC 4301, DOI 10.17487/RFC4301, December 2005.</td>
+</tr>
+<tr>
+<td class="reference"><b id="RFC4342">[RFC4342]</b></td>
+<td class="top">
+<a>Floyd, S.</a>, <a>Kohler, E.</a> and <a>J. Padhye</a>, "<a href="https://tools.ietf.org/html/rfc4342">Profile for Datagram Congestion Control Protocol (DCCP) Congestion Control ID 3: TCP-Friendly Rate Control (TFRC)</a>", RFC 4342, DOI 10.17487/RFC4342, March 2006.</td>
+</tr>
+<tr>
+<td class="reference"><b id="RFC5348">[RFC5348]</b></td>
+<td class="top">
+<a>Floyd, S.</a>, <a>Handley, M.</a>, <a>Padhye, J.</a> and <a>J. Widmer</a>, "<a href="https://tools.ietf.org/html/rfc5348">TCP Friendly Rate Control (TFRC): Protocol Specification</a>", RFC 5348, DOI 10.17487/RFC5348, September 2008.</td>
+</tr>
+<tr>
+<td class="reference"><b id="RFC7120">[RFC7120]</b></td>
+<td class="top">
+<a>Cotton, M.</a>, "<a href="https://tools.ietf.org/html/rfc7120">Early IANA Allocation of Standards Track Code Points</a>", BCP 100, RFC 7120, DOI 10.17487/RFC7120, January 2014.</td>
+</tr>
+<tr>
+<td class="reference"><b id="RFC7510">[RFC7510]</b></td>
+<td class="top">
+<a>Xu, X.</a>, <a>Sheth, N.</a>, <a>Yong, L.</a>, <a>Callon, R.</a> and <a>D. Black</a>, "<a href="https://tools.ietf.org/html/rfc7510">Encapsulating MPLS in UDP</a>", RFC 7510, DOI 10.17487/RFC7510, April 2015.</td>
+</tr>
+<tr>
+<td class="reference"><b id="RFC8084">[RFC8084]</b></td>
+<td class="top">
+<a>Fairhurst, G.</a>, "<a href="https://tools.ietf.org/html/rfc8084">Network Transport Circuit Breakers</a>", BCP 208, RFC 8084, DOI 10.17487/RFC8084, March 2017.</td>
+</tr>
+<tr>
+<td class="reference"><b id="RFC8126">[RFC8126]</b></td>
+<td class="top">
+<a>Cotton, M.</a>, <a>Leiba, B.</a> and <a>T. Narten</a>, "<a href="https://tools.ietf.org/html/rfc8126">Guidelines for Writing an IANA Considerations Section in RFCs</a>", BCP 26, RFC 8126, DOI 10.17487/RFC8126, June 2017.</td>
+</tr>
+<tr>
+<td class="reference"><b id="RFC8200">[RFC8200]</b></td>
+<td class="top">
+<a>Deering, S.</a> and <a>R. Hinden</a>, "<a href="https://tools.ietf.org/html/rfc8200">Internet Protocol, Version 6 (IPv6) Specification</a>", STD 86, RFC 8200, DOI 10.17487/RFC8200, July 2017.</td>
+</tr>
+<tr>
+<td class="reference"><b id="RFC8201">[RFC8201]</b></td>
+<td class="top">
+<a>McCann, J.</a>, <a>Deering, S.</a>, <a>Mogul, J.</a> and <a>R. Hinden</a>, "<a href="https://tools.ietf.org/html/rfc8201">Path MTU Discovery for IP version 6</a>", STD 87, RFC 8201, DOI 10.17487/RFC8201, July 2017.</td>
+</tr>
+</tbody></table>
+<h1 id="rfc.appendix.A">
+<a href="#rfc.appendix.A">Appendix A.</a> <a href="#sec-example-of-an-encapsulated-ip-packet-flow" id="sec-example-of-an-encapsulated-ip-packet-flow">Example Of An Encapsulated IP Packet Flow</a>
+</h1>
+<p id="rfc.section.A.p.1">Below we show an example inner IP packet flow within the encapsulating tunnel packet stream. Notice how encapsulated IP packets can start and end anywhere, and more than one or less than 1 may occur in a single encapsulating packet.</p>
+<div id="rfc.figure.3"></div>
+<div id="sec-inner-and-outer-packet-flow"></div>
+<pre>
+  Offset: 0        Offset: 100    Offset: 2900    Offset: 1400
+ [ ESP1  (1500) ][ ESP2  (1500) ][ ESP3  (1500) ][ ESP4  (1500) ]
+ [--800--][--800--][60][-240-][--4000----------------------][pad]
+</pre>
+<p class="figure">Figure 3: Inner and Outer Packet Flow</p>
+<p id="rfc.section.A.p.2">The encapsulated IP packet flow (lengths include IP header and payload) is as follows: an 800 octet packet, an 800 octet packet, a 60 octet packet, a 240 octet packet, a 4000 octet packet.</p>
+<p id="rfc.section.A.p.3">The <samp>BlockOffset</samp> values in the 4 IP-TFS payload headers for this packet flow would thus be: 0, 100, 2900, 1400 respectively. The first encapsulating packet ESP1 has a zero <samp>BlockOffset</samp> which points at the IP data block immediately following the IP-TFS header. The following packet ESP2s <samp>BlockOffset</samp> points inward 100 octets to the start of the 60 octet data block. The third encapsulating packet ESP3 contains the middle portion of the 4000 octet data block so the offset points past its end and into the forth encapsulating packet. The fourth packet ESP4s offset is 1400 pointing at the padding which follows the completion of the continued 4000 octet packet.</p>
+<h1 id="rfc.appendix.B">
+<a href="#rfc.appendix.B">Appendix B.</a> <a href="#sec-a-send-and-loss-event-rate-calculation" id="sec-a-send-and-loss-event-rate-calculation">A Send and Loss Event Rate Calculation</a>
+</h1>
+<p id="rfc.section.B.p.1">The current best practice indicates that congestion control should be done in a TCP friendly way. A TCP friendly congestion control algorithm is described in <a href="#RFC5348" class="xref">[RFC5348]</a>. For our use case (as with <a href="#RFC4342" class="xref">[RFC4342]</a>) we consider our (fixed) packet size the segment size for the algorithm. The formula for the send rate is then as follows:</p>
+<pre>
+                                1
+   X_Pps = -----------------------------------------------
+           R * (sqrt(2*p/3) + 12*sqrt(3*p/8)*p*(1+32*p^2))
+</pre>
+<p id="rfc.section.B.p.2">Where <samp>X_Pps</samp> is the send rate in packets per second, <samp>R</samp> is the round trip time estimate and <samp>p</samp> is the loss event rate (the inverse of which is provided by the receiver).</p>
+<p id="rfc.section.B.p.3">The IP-TFS receiver, having the RTT estimate from the sender MAY use the same method as described in <a href="#RFC4342" class="xref">[RFC4342]</a> to collect the loss intervals and calculate the loss event rate value using the weighted average as indicated. The receiver communicates the inverse of this value back to the sender in the IPTFS_PROTOCOL payload header field <samp>LossEventRate</samp>.</p>
+<p id="rfc.section.B.p.4">The IP-TFS sender now has both the <samp>R</samp> and <samp>p</samp> values and can calculate the correct sending rate (<samp>X_Pps</samp>). If following <a href="#RFC5348" class="xref">[RFC5348]</a> the sender SHOULD also use the slow start mechanism described therein when the IP-TFS SA is first established.</p>
+<h1 id="rfc.appendix.C">
+<a href="#rfc.appendix.C">Appendix C.</a> <a href="#sec-comparisons-of-ip-tfs" id="sec-comparisons-of-ip-tfs">Comparisons of IP-TFS</a>
+</h1>
+<h1 id="rfc.appendix.C.1">
+<a href="#rfc.appendix.C.1">C.1.</a> Comparing Overhead</h1>
+<h1 id="rfc.appendix.C.1.1">
+<a href="#rfc.appendix.C.1.1">C.1.1.</a> IP-TFS Overhead</h1>
+<p id="rfc.section.C.1.1.p.1">The overhead of IP-TFS is 40 bytes per outer packet. Therefore the octet overhead per inner packet is 40 divided by the number of outer packets required (fractional allowed). The overhead as a percentage of inner packet size is a constant based on the Outer MTU size.</p>
+<pre>
+   OH = 40 / Outer Payload Size / Inner Packet Size
+   OH % of Inner Packet Size = 100 * OH / Inner Packet Size
+   OH % of Inner Packet Size = 4000 / Outer Payload Size
+</pre>
+<div id="rfc.figure.4"></div>
+<div id="sec-ip-tfs-overhead-as-percentage-of-inner-packet-size"></div>
+<pre>
+		     Type  IP-TFS  IP-TFS  IP-TFS 
+		      MTU     576    1500    9000 
+		    PSize     536    1460    8960 
+		   -------------------------------
+		       40   7.46%   2.74%   0.45% 
+		      576   7.46%   2.74%   0.45% 
+		     1500   7.46%   2.74%   0.45% 
+		     9000   7.46%   2.74%   0.45% 
+</pre>
+<p class="figure">Figure 4: IP-TFS Overhead as Percentage of Inner Packet Size</p>
+<h1 id="rfc.appendix.C.1.2">
+<a href="#rfc.appendix.C.1.2">C.1.2.</a> ESP with Padding Overhead</h1>
+<p id="rfc.section.C.1.2.p.1">The overhead per inner packet for constant-send-rate padded ESP (i.e., traditional IPsec TFC) is 36 octets plus any padding, unless fragmentation is required.</p>
+<p id="rfc.section.C.1.2.p.2">When fragmentation of the inner packet is required to fit in the outer IPsec packet, overhead is the number of outer packets required to carry the fragmented inner packet times both the inner IP overhead (20) and the outer packet overhead (36) minus the initial inner IP overhead plus any required tail padding in the last encapsulation packet. The required tail padding is the number of required packets times the difference of the Outer Payload Size and the IP Overhead minus the Inner Payload Size. So:</p>
+<pre>
+  Inner Paylaod Size = IP Packet Size - IP Overhead
+  Outer Payload Size = MTU - IPsec Overhead
+
+                Inner Payload Size
+  NF0 = ----------------------------------
+         Outer Payload Size - IP Overhead
+
+  NF = CEILING(NF0)
+
+  OH = NF * (IP Overhead + IPsec Overhead)
+       - IP Overhead
+       + NF * (Outer Payload Size - IP Overhead)
+       - Inner Payload Size
+
+  OH = NF * (IPsec Overhead + Outer Payload Size)
+       - (IP Overhead + Inner Payload Size)
+
+  OH = NF * (IPsec Overhead + Outer Payload Size)
+       - Inner Packet Size
+</pre>
+<h1 id="rfc.appendix.C.2">
+<a href="#rfc.appendix.C.2">C.2.</a> Overhead Comparison</h1>
+<p id="rfc.section.C.2.p.1">The following tables collect the overhead values for some common L3 MTU sizes in order to compare them. The first table is the number of octets of overhead for a given L3 MTU sized packet. The second table is the percentage of overhead in the same MTU sized packet.</p>
+<p></p>
+<div id="rfc.figure.5"></div>
+<div id="sec-overhead-comparison-in-octets"></div>
+<pre>
+        Type  ESP+Pad  ESP+Pad  ESP+Pad  IP-TFS  IP-TFS  IP-TFS 
+      L3 MTU      576     1500     9000     576    1500    9000 
+       PSize      540     1464     8964     536    1460    8960 
+     -----------------------------------------------------------
+          40      500     1424     8924     3.0     1.1     0.2 
+         128      412     1336     8836     9.6     3.5     0.6 
+         256      284     1208     8708    19.1     7.0     1.1 
+         536        4      928     8428    40.0    14.7     2.4 
+         576      576      888     8388    43.0    15.8     2.6 
+        1460      268        4     7504   109.0    40.0     6.5 
+        1500      228     1500     7464   111.9    41.1     6.7 
+        8960     1408     1540        4   668.7   245.5    40.0 
+        9000     1368     1500     9000   671.6   246.6    40.2 
+</pre>
+<p class="figure">Figure 5: Overhead comparison in octets</p>
+<div id="rfc.figure.6"></div>
+<div id="sec-overhead-as-percentage-of-inner-packet-size"></div>
+<pre>
+       Type  ESP+Pad  ESP+Pad   ESP+Pad  IP-TFS  IP-TFS  IP-TFS 
+        MTU      576     1500      9000     576    1500    9000 
+      PSize      540     1464      8964     536    1460    8960 
+     -----------------------------------------------------------
+         40  1250.0%  3560.0%  22310.0%   7.46%   2.74%   0.45% 
+        128   321.9%  1043.8%   6903.1%   7.46%   2.74%   0.45% 
+        256   110.9%   471.9%   3401.6%   7.46%   2.74%   0.45% 
+        536     0.7%   173.1%   1572.4%   7.46%   2.74%   0.45% 
+        576   100.0%   154.2%   1456.2%   7.46%   2.74%   0.45% 
+       1460    18.4%     0.3%    514.0%   7.46%   2.74%   0.45% 
+       1500    15.2%   100.0%    497.6%   7.46%   2.74%   0.45% 
+       8960    15.7%    17.2%      0.0%   7.46%   2.74%   0.45% 
+       9000    15.2%    16.7%    100.0%   7.46%   2.74%   0.45% 
+</pre>
+<p class="figure">Figure 6: Overhead as Percentage of Inner Packet Size</p>
+<h1 id="rfc.appendix.C.3">
+<a href="#rfc.appendix.C.3">C.3.</a> Comparing Available Bandwidth</h1>
+<p id="rfc.section.C.3.p.1">Another way to compare the two solutions is to look at the amount of available bandwidth each solution provides. The following sections consider and compare the percentage of available bandwidth. For the sake of providing a well understood baseline we will also include normal (unencrypted) Ethernet as well as normal ESP values.</p>
+<h1 id="rfc.appendix.C.3.1">
+<a href="#rfc.appendix.C.3.1">C.3.1.</a> Ethernet</h1>
+<p id="rfc.section.C.3.1.p.1">In order to calculate the available bandwidth we first calculate the per packet overhead in bits. The total overhead of Ethernet is 14+4 octets of header and CRC plus and additional 20 octets of framing (preamble, start, and inter-packet gap) for a total of 48 octets.  Additionally the minimum payload is 46 octets.</p>
+<div id="rfc.figure.7"></div>
+<div id="sec-l2-octets-per-packet"></div>
+<pre>
+      Size  E + P  E + P  E + P  IPTFS  IPTFS  IPTFS  Enet   ESP 
+       MTU    590   1514   9014    590   1514   9014   any   any 
+        OH     74     74     74     78     78     78    38    74 
+     ------------------------------------------------------------
+        40    614   1538   9038     45     42     40    84   114 
+       128    614   1538   9038    146    134    129   166   202 
+       256    614   1538   9038    293    269    258   294   330 
+       536    614   1538   9038    614    564    540   574   610 
+       576   1228   1538   9038    659    606    581   614   650 
+      1460   1842   1538   9038   1672   1538   1472  1498  1534 
+      1500   1842   3076   9038   1718   1580   1513  1538  1574 
+      8960  11052  10766   9038  10263   9438   9038  8998  9034 
+      9000  11052  10766  18076  10309   9480   9078  9038  9074 
+</pre>
+<p class="figure">Figure 7: L2 Octets Per Packet</p>
+<div id="rfc.figure.8"></div>
+<div id="sec-packets-per-second-on-10g-ethernet"></div>
+<pre>
+     Size  E + P  E + P  E + P  IPTFS  IPTFS  IPTFS  Enet   ESP   
+      MTU  590    1514   9014   590    1514   9014   any    any   
+       OH  74     74     74     78     78     78     38     74    
+    --------------------------------------------------------------
+       40  2.0M   0.8M   0.1M   27.3M  29.7M  31.0M  14.9M  11.0M 
+      128  2.0M   0.8M   0.1M   8.5M   9.3M   9.7M   7.5M   6.2M  
+      256  2.0M   0.8M   0.1M   4.3M   4.6M   4.8M   4.3M   3.8M  
+      536  2.0M   0.8M   0.1M   2.0M   2.2M   2.3M   2.2M   2.0M  
+      576  1.0M   0.8M   0.1M   1.9M   2.1M   2.2M   2.0M   1.9M  
+     1460  678K   812K   138K   747K   812K   848K   834K   814K  
+     1500  678K   406K   138K   727K   791K   826K   812K   794K  
+     8960  113K   116K   138K   121K   132K   138K   138K   138K  
+     9000  113K   116K   69K    121K   131K   137K   138K   137K  
+</pre>
+<p class="figure">Figure 8: Packets Per Second on 10G Ethernet</p>
+<div id="rfc.figure.9"></div>
+<div id="sec-percentage-of-bandwidth-on-10g-ethernet"></div>
+<pre>
+ Size   E + P   E + P   E + P   IPTFS   IPTFS   IPTFS    Enet     ESP 
+          590    1514    9014     590    1514    9014     any     any 
+           74      74      74      78      78      78      38      74 
+----------------------------------------------------------------------
+   40   6.51%   2.60%   0.44%  87.30%  94.93%  99.14%  47.62%  35.09% 
+  128  20.85%   8.32%   1.42%  87.30%  94.93%  99.14%  77.11%  63.37% 
+  256  41.69%  16.64%   2.83%  87.30%  94.93%  99.14%  87.07%  77.58% 
+  536  87.30%  34.85%   5.93%  87.30%  94.93%  99.14%  93.38%  87.87% 
+  576  46.91%  37.45%   6.37%  87.30%  94.93%  99.14%  93.81%  88.62% 
+ 1460  79.26%  94.93%  16.15%  87.30%  94.93%  99.14%  97.46%  95.18% 
+ 1500  81.43%  48.76%  16.60%  87.30%  94.93%  99.14%  97.53%  95.30% 
+ 8960  81.07%  83.22%  99.14%  87.30%  94.93%  99.14%  99.58%  99.18% 
+ 9000  81.43%  83.60%  49.79%  87.30%  94.93%  99.14%  99.58%  99.18% 
+</pre>
+<p class="figure">Figure 9: Percentage of Bandwidth on 10G Ethernet</p>
+<p id="rfc.section.C.3.1.p.2">A sometimes unexpected result of using IP-TFS (or any packet aggregating tunnel) is that, for small to medium sized packets, the available bandwidth is actually greater than native Ethernet. This is due to the reduction in Ethernet framing overhead. This increased bandwidth is paid for with an increase in latency. This latency is the time to send the unrelated octets in the outer tunnel frame. The following table illustrates the latency for some common values on a 10G Ethernet link. The table also includes latency introduced by padding if using ESP with padding.</p>
+<div id="rfc.figure.10"></div>
+<div id="sec-added-latency"></div>
+<pre>
+	             ESP+Pad  ESP+Pad  IP-TFS   IP-TFS  
+	             1500     9000     1500     9000    
+                                          
+	      ------------------------------------------
+	         40  1.14 us  7.14 us  1.17 us  7.17 us 
+	        128  1.07 us  7.07 us  1.10 us  7.10 us 
+	        256  0.97 us  6.97 us  1.00 us  7.00 us 
+	        536  0.74 us  6.74 us  0.77 us  6.77 us 
+	        576  0.71 us  6.71 us  0.74 us  6.74 us 
+	       1460  0.00 us  6.00 us  0.04 us  6.04 us 
+	       1500  1.20 us  5.97 us  0.00 us  6.00 us 
+</pre>
+<p class="figure">Figure 10: Added Latency</p>
+<p id="rfc.section.C.3.1.p.3">Notice that the latency values are very similar between the two solutions; however, whereas IP-TFS provides for constant high bandwidth, in some cases even exceeding native Ethernet, ESP with padding often greatly reduces available bandwidth.</p>
+<h1 id="rfc.appendix.D">
+<a href="#rfc.appendix.D">Appendix D.</a> Acknowledgements</h1>
+<p id="rfc.section.D.p.1">We would like to thank Don Fedyk for help in reviewing this work.</p>
+<h1 id="rfc.appendix.E">
+<a href="#rfc.appendix.E">Appendix E.</a> Contributors</h1>
+<p id="rfc.section.E.p.1">The following people made significant contributions to this document.</p>
+<pre>
+   Lou Berger
+   LabN Consulting, L.L.C.
+
+   Email: lberger@labn.net
+</pre>
+<h1 id="rfc.authors"><a href="#rfc.authors">Author's Address</a></h1>
+<div class="avoidbreak">
+  <address class="vcard">
+	<span class="vcardline">
+	  <span class="fn">Christian Hopps</span> 
+	  <span class="n hidden">
+		<span class="family-name">Hopps</span>
+	  </span>
+	</span>
+	<span class="org vcardline">LabN Consulting, L.L.C.</span>
+	<span class="adr">
+	  
+	  <span class="vcardline">
+		<span class="locality"></span> 
+		<span class="region"></span>
+		<span class="code"></span>
+	  </span>
+	  <span class="country-name vcardline"></span>
+	</span>
+	<span class="vcardline">EMail: <a href="mailto:chopps@chopps.org">chopps@chopps.org</a></span>
+
+  </address>
+</div>
+
+</body>
+</html>

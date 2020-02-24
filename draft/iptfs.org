@@ -7,7 +7,7 @@
 #+AFFILIATION: LabN Consulting, L.L.C.
 #
 #+RFC_NAME: draft-ietf-ipsecme-iptfs
-#+RFC_VERSION: 00
+#+RFC_VERSION: 01
 #+RFC_XML_VERSION: 2
 #+RFC_ASCII_TABLE: t
 #
@@ -437,20 +437,16 @@ The USE_IPTFS notification MUST NOT be sent, and MUST be ignored,
 during a CREATE_CHILD_SA rekeying exchange as it is not allowed to
 change IP-TFS operation during rekeying.
 
-The USE_IPTFS notification contains a 2 octet payload of flags that
-specify any extra requirements or options from the sender of the
-message. The first octet of flags are considered requirement flags,
-and the second octet are considered option flags. If any requirement
-flags are not understood or cannot be supported by the receiver then
-the receiver should not enable IP-TFS mode (either by not responding
-with the USE_IPTFS notification, or in the case of the initiator, by
-deleting the child SA if established non-IP-TFS operation is
-unacceptable). Option flags can either be acted on or ignored by the
-receiver. The receiver MUST ignore any option flags it does not
-understand.
+The USE_IPTFS notification contains a 1 octet payload of flags that
+specify any requirements from the sender of the message. If any
+requirement flags are not understood or cannot be supported by the
+receiver then the receiver should not enable IP-TFS mode (either by
+not responding with the USE_IPTFS notification, or in the case of the
+initiator, by deleting the child SA if the now established non-IP-TFS
+operation is unacceptable).
 
-The notification type and payload values are defined in [[IKEv2
-USE_IPTFS Notify Message]].
+The notification type and payload flag values are defined in [[IKEv2
+USE_IPTFS Notification Message]].
 
 * Packet and Data Formats
 
@@ -634,16 +630,9 @@ USE_IPTFS is used to negotiate IP-TFS operation in IKEv2.
 
 The USE_IPTFS Notification Message State Type is (TBD2).
 
-The notification payload contains 2 octets of flags. The first octet
-of the payload indicates requirements from the sender of the
-notification, and the second octet indicates options from the sender.
-Later specifications may add flag definitions beyond those defined
-below.
-
-**** First Octet - Requirement Flags
-
-There are currently 2 requirement flags defined. This may be revised
-by later specifications.
+The notification payload contains 1 octet of requirement flags. There
+are currently 2 requirement flags defined. This may be revised by
+later specifications.
 
 #+begin_example
  +-+-+-+-+-+-+-+-+
@@ -653,30 +642,15 @@ by later specifications.
 
 - 0 :: 6 bits - reserved, MUST be zero on send, unless defined by
   later specifications.
-- C :: Congestion Control bit, [[Congestion Controlled Mode]]. If set,
-  then the sender is requiring that congestion control information
-  MUST be returned to it periodically as defined in [[Congestion
-  Information]].
+- C :: Congestion Control bit. If set, then the sender is requiring
+  that congestion control information MUST be returned to it
+  periodically as defined in [[Congestion Information]].
 - D :: Don't Fragment bit, if set indicates the sender of the notify
   message does not support receiving packet fragments (i.e., inner
   packets MUST be sent using a single ~Data Block~). This value only
   applies to what the sender is capable of receiving; the sender MAY
   still send packet fragments unless similarly restricted by the
   receiver in it's USE_IPTFS notification.
-
-**** Second Octet - Option Flags
-
-There are currently no option flags defined. This may be revised by
-later specifications.
-
-#+begin_example
- +-+-+-+-+-+-+-+-+
- |0|0|0|0|0|0|0|0|
- +-+-+-+-+-+-+-+-+
-#+end_example
-
-- 0 :: 8 bits - reserved, MUST be zero on send, and ignored on
-  receipt, unless defined by later specification.
 
 * IANA Considerations
 

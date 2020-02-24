@@ -1,0 +1,14 @@
+*.pdf
+*~
+*.yang
+ox-rfc.el
+idnits
+ox-rfc.el
+draft-*-location.xml
+test-xml-example.xml
+publish/*-ietf-*.html
+publish/*-ietf-*.pdf
+publish/*-hopps-*.html
+publish/*-hopps-*.pdf
+publish/*.html
+publish/*.pdf
