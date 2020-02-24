@@ -11,7 +11,7 @@ SHELL := /bin/bash
 
 # If you have docker you can avoid having to install anything by leaving this.
 ifeq ($(CIRCLECI),)
-export DOCKRUN ?= docker run --network=host -v $$(pwd):/work labn/org-rfc
+export DOCKRUN ?= docker run --user $(shell id -u) --network=host -v $$(pwd):/work labn/org-rfc
 endif
 EMACSCMD := $(DOCKRUN) emacs -Q --batch --debug-init --eval '(setq org-confirm-babel-evaluate nil)' -l ./ox-rfc.el
 
@@ -56,13 +56,13 @@ $(VBASE).xml: $(ORG) ox-rfc.el test
 	mv $(BASE).xml $@
 
 %-$(VERSION).txt: %-$(VERSION).xml
-	$(DOCKRUN) xml2rfc --text $< > $@
+	$(DOCKRUN) xml2rfc --cache /tmp --text $< > $@
 
 %-$(VERSION).html: %-$(VERSION).xml
-	$(DOCKRUN) xml2rfc --html $< > $@
+	$(DOCKRUN) xml2rfc --cache /tmp --html $< > $@
 
 %-$(VERSION).pdf: %-$(VERSION).xml
-	$(DOCKRUN) xml2rfc --pdf $< > $@
+	$(DOCKRUN) xml2rfc --cache /tmp --pdf $< > $@
 
 $(LBASE).%: $(VBASE).%
 	cp $< $@
