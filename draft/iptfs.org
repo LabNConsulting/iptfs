@@ -7,7 +7,7 @@
 #+AFFILIATION: LabN Consulting, L.L.C.
 #
 #+RFC_NAME: draft-ietf-ipsecme-iptfs
-#+RFC_VERSION: 01
+#+RFC_VERSION: 02
 #+RFC_XML_VERSION: 2
 #+RFC_ASCII_TABLE: t
 #
