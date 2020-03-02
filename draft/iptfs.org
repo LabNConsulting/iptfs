@@ -84,7 +84,7 @@ bandwidth, the corresponding packet send rate can be calculated. The
 packet send rate is the requested bandwidth divided by the payload
 size of the encapsulating packet.
 
-The egress of the IP-TFS tunnel MUST allow for, and expect the ingress
+The egress of the IP-TFS tunnel MUST allow for and expect the ingress
 (sending) side of the IP-TFS tunnel to vary the size and rate of
 sent encapsulating packets, unless constrained by other policy.
 
@@ -454,8 +454,7 @@ USE_IPTFS Notification Message]].
 
 An IP-TFS payload is identified by the IP protocol number
 IPTFS_PROTOCOL (TBD1). The first octet of this payload indicates the
-format of the remaining payload data. This format is intended to
-allow for re-use of the IP protocol number.
+format of the remaining payload data.
 
 #+begin_example
   0 1 2 3 4 5 6 7
@@ -479,15 +478,16 @@ shown below.
                       1                   2                   3
   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- |  Sub-Type (1) |   Reserved    |          BlockOffset          |
+ |  Sub-Type (0) |   Reserved    |          BlockOffset          |
  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  |       DataBlocks ...
  +-+-+-+-+-+-+-+-+-+-+-
 #+end_example
 
 - Sub-type :: An octet indicating the payload format. For this
-              non-congestion control format, the value is 1.
-- Reserved :: An octet set to 0 and ignored on receipt.
+              non-congestion control format, the value is 0.
+- Reserved :: An octet set to 0 on generation, and ignored on
+              receipt.
 - BlockOffset :: A 16 bit unsigned integer counting the number of
                  octets of ~DataBlocks~ data before the start of a
                  new data block. ~BlockOffset~ can count past the end
@@ -512,7 +512,7 @@ shown below.
                       1                   2                   3
   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- |  Sub-type (2) |  Reserved   |E|          BlockOffset          |
+ |  Sub-type (1) |  Reserved   |E|          BlockOffset          |
  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  |              RTT              |             Delay             |
  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -525,8 +525,9 @@ shown below.
 #+end_example
 
 - Sub-type :: An octet indicating the payload format. For this
-              congestion control format, the value is 2.
-- Reserved :: A 7 bit field set to 0 and ignored on receipt.
+              congestion control format, the value is 1.
+- Reserved :: A 7 bit field set to 0 on generation, and ignored on
+              receipt.
 - E :: A 1 bit value if set indicates that Congestion Experienced
        (CE) ECN bits were received and used in deriving the
        reported ~LossEventRate~.
@@ -588,8 +589,8 @@ the encapsulated IP packet.
 
 - Type :: A 4 bit value of 0x4 indicating IPv4 (i.e., first nibble of
           the IPv4 packet).
-- TotalLength :: The 16 bit unsigned integer length field of the IPv4
-                 inner packet.
+- TotalLength :: The 16 bit unsigned integer "Total Length" field of
+                 the IPv4 inner packet.
 
 **** IPv6 Data Block
 #+begin_example
@@ -598,7 +599,7 @@ the encapsulated IP packet.
  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  |  0x6  | TrafficClass  |               FlowLabel               |
  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- |          TotalLength          | Rest of the inner packet ...
+ |         PayloadLength         | Rest of the inner packet ...
  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 #+end_example
 
@@ -608,8 +609,8 @@ the encapsulated IP packet.
 
 - Type :: A 4 bit value of 0x6 indicating IPv6 (i.e., first nibble of
           the IPv6 packet).
-- TotalLength :: The 16 bit unsigned integer length field of the
-                 inner IPv6 inner packet.
+- PayloadLength :: The 16 bit unsigned integer "Payload Length" field
+                   of the inner IPv6 inner packet.
 
 **** Pad Data Block
 #+begin_example
@@ -681,8 +682,8 @@ This initial content for this registry is as follows:
 
 | Sub-Type | Name                          | Reference     |
 |----------+-------------------------------+---------------|
-|        1 | Non-Congestion Control Format | This document |
-|        2 | Congestion Control Format     | This document |
+|        0 | Non-Congestion Control Format | This document |
+|        1 | Congestion Control Format     | This document |
 |    3-255 | Reserved                      |               |
 
 ** USE_IPTFS Notify Message Status Type
