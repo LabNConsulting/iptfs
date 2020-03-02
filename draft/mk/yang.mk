@@ -30,7 +30,7 @@ publish: git-clean-check $(VBASE).xml $(VBASE).txt $(VBASE).html
 	cp $(VBASE).xml $(VBASE).txt $(VBASE).html publish
 	git checkout -b $(PBRANCH)
 	git tag -m "yank.mk publish-$(DTYPE)-$(VERSION)" bp-$(PBRANCH)
-	git push --tags
+	git push -f --tags
 	git add $(PBASE).xml $(PBASE).txt $(PBASE).html
 	git commit -m "yank.mk publish-$(DTYPE)-$(VERSION)"
 	git push origin $(PBRANCH)
