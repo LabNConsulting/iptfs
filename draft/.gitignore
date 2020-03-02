@@ -9,7 +9,6 @@ build/
 draft/
 idnits
 ox-rfc.el
-publish/draft-*.html
 publish/draft-*.pdf
 publish/draft-*-latest-*
 test-*-xml
