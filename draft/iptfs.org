@@ -42,10 +42,11 @@ IP packets and allowing for transmission of all-pad packets
 that it can significantly under-utilize the available bandwidth.
 
 The IP-TFS solution provides for full TFC without the aforementioned
-bandwidth limitation. To do this, we use a constant-send-rate IPsec
-[[RFC4303]] tunnel with fixed-sized encapsulating packets; however,
-these fixed-sized packets can contain partial, whole or multiple IP
-packets to maximize the bandwidth of the tunnel.
+bandwidth limitation. This is accomplished by using a
+constant-send-rate IPsec [[RFC4303]] tunnel with fixed-sized
+encapsulating packets; however, these fixed-sized packets can contain
+partial, whole or multiple IP packets to maximize the bandwidth of
+the tunnel.
 
 For a comparison of the overhead of IP-TFS with the RFC4303
 prescribed TFC solution see [[Comparisons of IP-TFS]].
@@ -68,8 +69,8 @@ in [[RFC4301]].
 * The IP-TFS Tunnel
 
 As mentioned in [[Introduction]] IP-TFS utilizes an IPsec [[RFC4303]] tunnel
-(SA) as it's transport. To provide for full TFC we send fixed-sized
-encapsulating packets at a constant rate on the tunnel.
+(SA) as it's transport. To provide for full TFC fixed-sized
+encapsulating packets are sent at a constant rate on the tunnel.
 
 The primary input to the tunnel algorithm is the requested bandwidth
 of the tunnel. Two values are then required to provide for this
@@ -95,13 +96,13 @@ As previously mentioned, one issue with the TFC padding solution in
 packet can be sent per encapsulating packet. In order to maximize
 bandwidth IP-TFS breaks this one-to-one association.
 
-With IP-TFS we aggregate as well as fragment the inner IP traffic
-flow into fixed-sized encapsulating IPsec tunnel packets. We only pad
-the tunnel packets if there is no data available to be sent at the
-time of tunnel packet transmission, or if fragmentation has been
+IP-TFS aggregates as well as fragments the inner IP traffic flow into
+fixed-sized encapsulating IPsec tunnel packets. Padding is only added
+to the the tunnel packets if there is no data available to be sent at
+the time of tunnel packet transmission, or if fragmentation has been
 disabled by the receiver.
 
-In order to do this we use a new Encapsulating Security Payload (ESP,
+This is accomplished using a new Encapsulating Security Payload (ESP,
 [[RFC4303]]) type which is identified by the IP protocol number
 IPTFS_PROTOCOL (TBD1).
 
@@ -146,8 +147,8 @@ The ~BlockOffset~ can point past the end of the ~DataBlocks~ data
 which indicates that the next data block occurs in a subsequent
 encapsulating packet.
 
-Having the ~BlockOffset~ always point at the next available data block
-allows for quick recovery with minimal inner packet loss in the
+Having the ~BlockOffset~ always point at the next available data
+block allows for recovering the next full inner packet in the
 presence of outer encapsulating packet loss.
 
 An example IP-TFS packet flow can be found in [[Example Of An
@@ -183,6 +184,20 @@ when there is no data to encapsulated is end padding required, and
 then an explicit ~Pad Data Block~ would be used to identify the
 padding.
 
+*** Fragmentation, Sequence Numbers and All-Pad Payloads
+
+When an inner packet is fragmented across multiple IP-TFS payloads
+the inner packet fragments MUST be sent in order. The fragments MUST
+also be sent using consecutive sequence numbers with one exception.
+Within an inner packet fragment sequence the sender is allowed to
+insert "all-pad" IP-TFS payloads (i.e., payloads with a ~BlockOffset~
+of zero and a single pad ~DataBlock~). This all-pad exception allows
+for the insertion of "all-pad" payloads within the inner packet
+fragment stream to maintain correct timing regardless of any
+encapsulation computational requirements. When a receiver is
+reassembling an inner packet and it receives an "all-pad" payload it
+simply increments the next fragment expected sequence number.
+
 *** Empty Payload
 
 In order to support reporting of congestion control information
@@ -193,23 +208,23 @@ payload is called an empty payload.
 
 *** IP Header Value Mapping
 
-[[RFC4301]] provides some direction on when and how to map various
-values from an inner IP header to the outer encapsulating header,
-namely the Don't-Fragment (DF) bit ([[RFC0791]] and [[RFC8200]]), the
-Differentiated Services (DS) field [[RFC2474]] and the Explicit
-Congestion Notification (ECN) field [[RFC3168]]. Unlike [[RFC4301]] with
-IP-TFS we may and often will be encapsulating more than 1 IP packet
-per ESP packet. To deal with this we further restrict these mappings.
-In particular we never map the inner DF bit as it is unrelated to the
-IP-TFS tunnel functionality; we never IP fragment the inner
-packets and the inner packets will not affect the fragmentation of
-the outer encapsulation packets. Likewise, the ECN value need not be
-mapped as any congestion related to the constant-send-rate IP-TFS
-tunnel is unrelated (by design!) to the inner traffic flow. Finally,
-by default the DS field SHOULD NOT be copied although an
-implementation MAY choose to allow for configuration to override this
-behavior. An implementation SHOULD also allow the DS value to be set
-by configuration.
+[[RFC4301]] provides some direction on when and how to map various values
+from an inner IP header to the outer encapsulating header, namely the
+Don't-Fragment (DF) bit ([[RFC0791]] and [[RFC8200]]), the Differentiated
+Services (DS) field [[RFC2474]] and the Explicit Congestion Notification
+(ECN) field [[RFC3168]]. Unlike [[RFC4301]], IP-TFS may and often will be
+encapsulating more than one IP packet per ESP packet. To deal with
+this, these mappings mappings are restricted further. In particular
+IP-TFS never maps the inner DF bit as it is unrelated to the IP-TFS
+tunnel functionality; IP-TFS never IP fragments the inner packets and
+the inner packets will not affect the fragmentation of the outer
+encapsulation packets. Likewise, the ECN value need not be mapped as
+any congestion related to the constant-send-rate IP-TFS tunnel is
+unrelated (by design!) to the inner traffic flow. Finally, by default
+the DS field SHOULD NOT be copied although an implementation MAY
+choose to allow for configuration to override this behavior. An
+implementation SHOULD also allow the DS value to be set by
+configuration.
 
 ** Exclusive SA Use
 
@@ -226,9 +241,9 @@ IPsec uses can configure and use their own SAs.
 ** Initiating IP-TFS Operation On The SA.
 
 While a user will normally configure their IPsec tunnel (SA) to
-operate using IP-TFS to start, we also allow IP-TFS operation to be
-enabled post-SA creation and use. This late-enabling may be useful
-for debugging or other purposes. To support this late-enabled
+operate using IP-TFS at startup, IP-TFS operation is allowed to be
+enabled post-SA creation while in use. This late-enabling may be
+useful for debugging or other purposes. To support this late-enabled
 operation the receiver switches to IP-TFS operation on receipt of the
 first ESP payload with the IPTFS_PROTOCOL indicated as the payload
 type which also contains a data block (i.e., a non-empty IP-TFS
@@ -269,7 +284,7 @@ With the congestion controlled mode, IP-TFS adapts to network
 congestion by lowering the packet send rate to accommodate the
 congestion, as well as raising the rate when congestion subsides.
 Since overhead is per packet, by allowing for maximal fixed-size
-packets and varying the send rate we minimize transport overhead.
+packets and varying the send rate transport overhead is minimized.
 
 The output of the congestion control algorithm will adjust the rate
 at which the ingress sends packets. While this document does not
@@ -281,14 +296,14 @@ requirements of IP-TFS (i.e., designed for fixed-size packet and send
 rate varied based on congestion) is documented in [[RFC4342]].
 
 The required inputs for the TCP friendly rate control algorithm
-described in [[RFC5348]] are the receivers loss event rate and the
-senders estimated round-trip time (RTT). These values are provided by
+described in [[RFC5348]] are the receiver's loss event rate and the
+sender's estimated round-trip time (RTT). These values are provided by
 IP-TFS using the congestion information header fields described in
 [[Congestion Information]]. In particular these values are sufficient to
 implement the algorithm described in [[RFC5348]].
 
 At a minimum, the congestion information must be sent, from the
-receiver as well as from the sender, at least once per RTT. Prior to
+receiver and from the sender, at least once per RTT. Prior to
 establishing an RTT the information SHOULD be sent constantly from
 the sender and the receiver so that an RTT estimate can be
 established. The lack of receiving this information over multiple
@@ -741,10 +756,10 @@ then non-congestion controlled mode use should be considered instead.
 ** I-D.iab-wire-image
 * Example Of An Encapsulated IP Packet Flow
 
-Below we show an example inner IP packet flow within the
-encapsulating tunnel packet stream. Notice how encapsulated IP
-packets can start and end anywhere, and more than one or less than 1
-may occur in a single encapsulating packet.
+Below an example inner IP packet flow within the encapsulating tunnel
+packet stream is shown. Notice how encapsulated IP packets can start
+and end anywhere, and more than one or less than 1 may occur in a
+single encapsulating packet.
 
 # XXX Consider doing a timing diagram showing random paced input going
 # into fixed rate output, maybe Y axis
@@ -775,8 +790,8 @@ completion of the continued 4000 octet packet.
 
 The current best practice indicates that congestion control should be
 done in a TCP friendly way. A TCP friendly congestion control
-algorithm is described in [[RFC5348]]. For our use case (as with [[RFC4342]])
-we consider our (fixed) packet size the segment size for the
+algorithm is described in [[RFC5348]]. For this IP-TFS use case (as with
+[[RFC4342]]) the (fixed) packet size is used as the segment size for the
 algorithm. The formula for the send rate is then as follows:
 
 #+begin_example
@@ -944,16 +959,16 @@ is the percentage of overhead in the same MTU sized packet.
 Another way to compare the two solutions is to look at the amount of
 available bandwidth each solution provides. The following sections
 consider and compare the percentage of available bandwidth. For the
-sake of providing a well understood baseline we will also include
-normal (unencrypted) Ethernet as well as normal ESP values.
+sake of providing a well understood baseline normal (unencrypted)
+Ethernet as well as normal ESP values are included.
 
 *** Ethernet
 
-In order to calculate the available bandwidth we first calculate the
-per packet overhead in bits. The total overhead of Ethernet is 14+4
-octets of header and CRC plus and additional 20 octets of framing
-(preamble, start, and inter-packet gap) for a total of 48 octets.
-Additionally the minimum payload is 46 octets.
+In order to calculate the available bandwidth the per packet overhead
+is calculated first. The total overhead of Ethernet is 14+4 octets of
+header and CRC plus and additional 20 octets of framing (preamble,
+start, and inter-packet gap) for a total of 38 octets. Additionally
+the minimum payload is 46 octets.
 
 # *** IP-TFS Bandwidth
 # *** ESP with Padding Bandwidth
@@ -1081,7 +1096,8 @@ bandwidth, in some cases even exceeding native Ethernet, ESP with
 padding often greatly reduces available bandwidth.
 
 * Acknowledgements
-We would like to thank Don Fedyk for help in reviewing this work.
+We would like to thank Don Fedyk for help in reviewing and editing
+this work.
 
 * Contributors
 The following people made significant contributions to this document.
