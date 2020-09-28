@@ -69,7 +69,7 @@ in [[RFC4301]].
 * The IP-TFS Tunnel
 
 As mentioned in [[Introduction]] IP-TFS utilizes an IPsec [[RFC4303]] tunnel
-(SA) as it's transport. To provide for full TFC fixed-sized
+(SA) as it's transport. To provide for full TFC, fixed-sized
 encapsulating packets are sent at a constant rate on the tunnel.
 
 The primary input to the tunnel algorithm is the requested bandwidth
@@ -186,17 +186,20 @@ padding.
 
 *** Fragmentation, Sequence Numbers and All-Pad Payloads
 
-When an inner packet is fragmented across multiple IP-TFS payloads
-the inner packet fragments MUST be sent in order. The fragments MUST
-also be sent using consecutive sequence numbers with one exception.
-Within an inner packet fragment sequence the sender is allowed to
-insert "all-pad" IP-TFS payloads (i.e., payloads with a ~BlockOffset~
-of zero and a single pad ~DataBlock~). This all-pad exception allows
-for the insertion of "all-pad" payloads within the inner packet
-fragment stream to maintain correct timing regardless of any
-encapsulation computational requirements. When a receiver is
-reassembling an inner packet and it receives an "all-pad" payload it
-simply increments the next fragment expected sequence number.
+In order for a receiver to be able to reassemble fragmented
+inner-packets, the sender MUST send the inner-packet fragments
+back-to-back in the logical IP-TFS packet stream (i.e., using
+consecutive ESP sequence numbers). However, the sender is allowed to
+insert "all-pad" IP-TFS packets (i.e., packets having payloads with a
+~BlockOffset~ of zero and a single pad ~DataBlock~) in between the
+IP-TFS packets carrying the inner-packet fragment payloads. This
+possible interleaving of all-pad packets allows the sender to always
+be able to send an IP-TFS tunnel packet, regardless of the
+encapsulation computational requirements.
+
+When a receiver is reassembling an inner-packet, and it receives an
+"all-pad" IP-TFS tunnel packet, it increments the expected sequence
+number that the next inner-packet fragment is expected to arrive in.
 
 *** Empty Payload
 
