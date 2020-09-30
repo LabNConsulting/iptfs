@@ -217,7 +217,7 @@ Don't-Fragment (DF) bit ([[RFC0791]] and [[RFC8200]]), the Differentiated
 Services (DS) field [[RFC2474]] and the Explicit Congestion Notification
 (ECN) field [[RFC3168]]. Unlike [[RFC4301]], IP-TFS may and often will be
 encapsulating more than one IP packet per ESP packet. To deal with
-this, these mappings mappings are restricted further. In particular
+this, these mappings are restricted further. In particular
 IP-TFS never maps the inner DF bit as it is unrelated to the IP-TFS
 tunnel functionality; IP-TFS never IP fragments the inner packets and
 the inner packets will not affect the fragmentation of the outer
@@ -241,20 +241,12 @@ algorithm work in the presence of sequence number skips in the IP-TFS
 payload stream, the added complexity is not deemed worthwhile. Other
 IPsec uses can configure and use their own SAs.
 
-** Initiating IP-TFS Operation On The SA.
+** Zero-Conf Receive-Side Operation On The SA.
 
-While a user will normally configure their IPsec tunnel (SA) to
-operate using IP-TFS at startup, IP-TFS operation is allowed to be
-enabled post-SA creation while in use. This late-enabling may be
-useful for debugging or other purposes. To support this late-enabled
-operation the receiver switches to IP-TFS operation on receipt of the
-first ESP payload with the IPTFS_PROTOCOL indicated as the payload
-type which also contains a data block (i.e., a non-empty IP-TFS
-payload). The the receipt of an empty IPTFS_PROTOCOL payload (i.e.,
-one without any data blocks) is used to communicate congestion
-control information from the receiver back to the sender on a
-non-IP-TFS enabled SA, and MUST NOT cause IP-TFS to be enabled on
-that SA.
+Receive-side operation of IP-TFS does not require any per-SA
+configuration on the receiver; as such, an IP-TFS implementation
+SHOULD support the option of switching to IP-TFS receive-side
+operation on receipt of the first IP-TFS payload.
 
 ** Modes of Operation
 
