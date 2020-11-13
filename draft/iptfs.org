@@ -23,7 +23,7 @@ security by adding traffic flow confidentiality to encrypted IP
 encapsulated traffic. Traffic flow confidentiality is provided by
 obscuring the size and frequency of IP traffic using a fixed-sized,
 constant-send-rate IPsec tunnel. The solution allows for congestion
-control as well.
+control as well as non-constant send-rate usage.
 #+end_abstract
 
 * Introduction
@@ -46,7 +46,9 @@ bandwidth limitation. This is accomplished by using a
 constant-send-rate IPsec [[RFC4303]] tunnel with fixed-sized
 encapsulating packets; however, these fixed-sized packets can contain
 partial, whole or multiple IP packets to maximize the bandwidth of
-the tunnel.
+the tunnel. A non-constant send-rate is allowed, but the
+confidentiality properties of its use are outside the scope of this
+document.
 
 For a comparison of the overhead of IP-TFS with the RFC4303
 prescribed TFC solution see [[Comparisons of IP-TFS]].
