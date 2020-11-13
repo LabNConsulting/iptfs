@@ -308,11 +308,13 @@ example, [[RFC4342]] calls this the "no feedback timeout" and it is equal
 to 4 RTT intervals. When a "no feedback timeout" has occurred [[RFC4342]]
 halves the sending rate.
 
-An implementation could choose to always include the congestion
+An implementation MAY choose to always include the congestion
 information in it's IP-TFS payload header if sending on an IP-TFS
 enabled SA. Since IP-TFS normally will operate with a large packet
 size, the congestion information should represent a small portion of
-the available tunnel bandwidth.
+the available tunnel bandwidth. An implementation choosing to always
+send the data MAY also choose to only update the ~LossEventRate~
+and ~RTT~ header field values it sends every ~RTT~ though.
 
 # XXX [[Deriving TFRC Parameters]] describes how the data provided by
 # IP-TFS congestion information may be used to derive the values
@@ -356,14 +358,32 @@ receiver needs to have a round-trip time estimate. Thus the sender
 communicates this estimate in the ~RTT~ header field. On startup this
 value will be zero as no RTT estimate is yet known.
 
-In order to allow the sender to calculate the ~RTT~ value, the
-receiver communicates the last sequence number it has seen to the
-sender in the ~LastSeqNum~ header field. In addition to the
-~LastSeqNum~ value, the receiver sends an estimate of the amount of
-time between receiving the ~LastSeqNum~ packet and transmitting
-the ~LastSeqNum~ value back to the sender in the congestion
-information. It places this time estimate in the ~Delay~ header
-field along with the ~LastSeqNum~.
+In order for the sender to estimate it's ~RTT~ value, the sender
+places a timestamp value in the ~TVal~ header field. On first receipt
+of this ~TVal~, the receiver records the new ~TVal~ value along with
+the time it arrived locally, subsequent receipt of the same ~TVal~
+MUST not update the recorded time. When the receiver sends it's CC
+header it places this latest recorded value in the ~TEcho~ header
+field, along with 2 delay values, ~Echo Delay~ and ~Transmit Delay~.
+The ~Echo Delay~ value is the time delta from the recorded arrival
+time of ~TVal~ and the current clock in microseconds. The second
+value, ~Transmit Delay~, is the receiver's current transmission delay
+on the tunnel (i.e., the average time between sending packets on it's
+half of the IP-TFS tunnel). When the sender receives back it's ~TVal~
+in the ~TEcho~ header field it calculates 2 RTT estimates. The first
+is the actual delay found by subtracting the ~TEcho~ value from it's
+current clock and then subtracting ~Echo Delay~ as well. The second
+RTT estimate is found by adding the received ~Transmit Delay~ header
+value to the senders own transmission delay (i.e., the average time
+between sending packets on it's half of the IP-TFS tunnel). The
+larger of these 2 RTT estimates SHOULD be used as the ~RTT~ value.
+The two estimates are required to handle different combinations of
+faster or slow tunnel packet paths with fast or slow fixed tunnel
+rates. Choosing the larger of the two values guarantees that the
+~RTT~ is never considered faster than the aggregate transmission
+delay based on the IP-TFS tunnel rate (the second estimate), as well
+as never being considered faster than the actual RTT along the tunnel
+packet path (the first estimate).
 
 The receiver also calculates, and communicates in the ~LossEventRate~
 header field, the loss event rate for use by the sender. This is
@@ -524,11 +544,15 @@ shown below.
  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  |  Sub-type (1) |  Reserved   |E|          BlockOffset          |
  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- |              RTT              |             Delay             |
- +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  |                          LossEventRate                        |
  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- |                           LastSeqNum                          |
+ |                      RTT                  |   Echo Delay ...
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      ... Echo Delay   |           Transmit Delay                |
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ |                              TVal                             |
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ |                             TEcho                             |
  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  |       DataBlocks ...
  +-+-+-+-+-+-+-+-+-+-+-
@@ -543,25 +567,34 @@ shown below.
        reported ~LossEventRate~.
 - BlockOffset :: The same value as the non-congestion controlled
                  payload format value.
-- RTT :: A 16 bit value specifying the sender's current round-trip
-         time estimate in milliseconds. The value MAY be zero prior
-         to the sender having calculated a round-trip time estimate.
-         The value SHOULD be set to zero on non-IP-TFS enabled SAs.
-- Delay :: A 16 bit value specifying the delay in milliseconds
-           incurred between the receiver receiving the ~LastSeqNum~
-           packet and the sending of this acknowledgement of it.
 - LossEventRate :: A 32 bit value specifying the inverse of the
                    current loss event rate as calculated by the
                    receiver. A value of zero indicates no loss.
                    Otherwise the loss event rate is
                    ~1/LossEventRate~.
-- LastSeqNum :: A 32 bit value containing the lower 32 bits of the
-                largest sequence number last received. This is the
-                latest in the sequence not necessarily the most
-                recent (in the case of re-ordering of packets it may
-                be less recent). When determining largest and 64 bit
-                extended sequence numbers are in use, the upper 32
-                bits should be used during the comparison.
+- RTT :: A 22 bit value specifying the sender's current round-trip
+         time estimate in microseconds. The value MAY be zero prior
+         to the sender having calculated a round-trip time estimate.
+         The value SHOULD be set to zero on non-IP-TFS enabled SAs.
+         If the value is equal to or larger than ~0x3FFFFF~ it MUST
+         be set to ~0x3FFFFF~.
+- Echo Delay :: A 21 bit value specifying the delay in microseconds
+           incurred between the receiver first receiving the ~TVal~
+           value which it is sending back in ~TEcho~. If the value
+           is equal to or larger than ~0x1FFFFF~ it MUST be set to
+           ~0x1FFFFF~.
+- Transmit Delay :: A 21 bit value specifying the transmission delay in
+           microseconds. This is the fixed (or average) delay on the
+           receiver between it sending packets on the IPTFS tunnel.
+           If the value is equal to or larger than ~0x1FFFFF~ it MUST
+           be set to ~0x1FFFFF~.
+- TVal :: An opaque 32 bit value that will be echoed back by the
+          receiver in later packets in the ~TEcho~ field, along with a
+          ~Delay~ value of how long that echo took.
+- TEcho :: The opaque 32 bit value from a received packet's ~TVal~
+           field. The received ~TVal~ is placed in ~TEcho~ along with
+           a ~Delay~ value indicating how long it has been since
+           receiving the ~TVal~ value.
 - DataBlocks :: Variable number of octets that begins with the start
                 of a data block, or the continuation of a previous
                 data block, followed by zero or more additional data
@@ -783,33 +816,37 @@ completion of the continued 4000 octet packet.
 
 * A Send and Loss Event Rate Calculation
 
-The current best practice indicates that congestion control should be
-done in a TCP friendly way. A TCP friendly congestion control
-algorithm is described in [[RFC5348]]. For this IP-TFS use case (as with
-[[RFC4342]]) the (fixed) packet size is used as the segment size for the
-algorithm. The formula for the send rate is then as follows:
+The current best practice indicates that congestion control SHOULD be
+done in a TCP friendly way. A TCP friendly congestion control algorithm
+is described in [[RFC5348]]. For this IP-TFS use case (as with [[RFC4342]]) the
+(fixed) packet size is used as the segment size for the algorithm. The
+main formula in the algorithm for the send rate is then as follows:
 
 #+begin_example
-                                1
-   X_Pps = -----------------------------------------------
-           R * (sqrt(2*p/3) + 12*sqrt(3*p/8)*p*(1+32*p^2))
+                              1
+   X = -----------------------------------------------
+       R * (sqrt(2*p/3) + 12*sqrt(3*p/8)*p*(1+32*p^2))
 #+end_example
 
-Where ~X_Pps~ is the send rate in packets per second, ~R~ is the
+Where ~X~ is the send rate in packets per second, ~R~ is the
 round trip time estimate and ~p~ is the loss event rate (the inverse
 of which is provided by the receiver).
 
-The IP-TFS receiver, having the RTT estimate from the sender MAY use
-the same method as described in [[RFC4342]] to collect the loss intervals
-and calculate the loss event rate value using the weighted average as
-indicated. The receiver communicates the inverse of this value back
-to the sender in the IPTFS_PROTOCOL payload header field
+In addition the algorithm in [[RFC5348]] also uses an ~X_recv~ value (the
+receiver's receive rate). For IP-TFS one MAY set this value according to
+the sender's current tunnel send-rate (~X~).
+
+The IP-TFS receiver, having the RTT estimate from the sender can use the
+same method as described in [[RFC5348]] and [[RFC4342]] to collect the loss
+intervals and calculate the loss event rate value using the weighted
+average as indicated. The receiver communicates the inverse of this
+value back to the sender in the IPTFS_PROTOCOL payload header field
 ~LossEventRate~.
 
-The IP-TFS sender now has both the ~R~ and ~p~ values and can
-calculate the correct sending rate (~X_Pps~). If following [[RFC5348]]
-the sender SHOULD also use the slow start mechanism described therein
-when the IP-TFS SA is first established.
+The IP-TFS sender now has both the ~R~ and ~p~ values and can calculate
+the correct sending rate. If following [[RFC5348]] the sender SHOULD also
+use the slow start mechanism described therein when the IP-TFS SA is
+first established.
 
 * Comparisons of IP-TFS
   :PROPERTIES:
