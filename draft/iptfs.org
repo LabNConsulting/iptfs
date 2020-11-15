@@ -105,13 +105,13 @@ the time of tunnel packet transmission, or if fragmentation has been
 disabled by the receiver.
 
 This is accomplished using a new Encapsulating Security Payload (ESP,
-[[RFC4303]]) type which is identified by the IP protocol number
-IPTFS_PROTOCOL (TBD1).
+[[RFC4303]]) type which is identified by the number IPTFS_PROTOCOL
+([[IP-TFS Payload]]).
 
 ** IPTFS_PROTOCOL Payload Content
 
 The IPTFS_PROTOCOL payload content defined in this document is
-comprised of a 4 or 16 octet header followed by either a partial, a
+comprised of a 4 or 24 octet header followed by either a partial, a
 full or multiple partial or full data blocks. The following diagram
 illustrates this IPTFS_PROTOCOL payload within the ESP packet. See
 [[IP-TFS Payload]] for the exact formats of the IPTFS_PROTOCOL payload.
@@ -242,13 +242,6 @@ protocol TBD1) payloads. While it's possible to envision making the
 algorithm work in the presence of sequence number skips in the IP-TFS
 payload stream, the added complexity is not deemed worthwhile. Other
 IPsec uses can configure and use their own SAs.
-
-** Zero-Conf Receive-Side Operation On The SA.
-
-Receive-side operation of IP-TFS does not require any per-SA
-configuration on the receiver; as such, an IP-TFS implementation
-SHOULD support the option of switching to IP-TFS receive-side
-operation on receipt of the first IP-TFS payload.
 
 ** Modes of Operation
 
@@ -484,8 +477,10 @@ USE_IPTFS Notification Message]].
 
 ** IP-TFS Payload
 
-An IP-TFS payload is identified by the IP protocol number
-IPTFS_PROTOCOL (TBD1). The first octet of this payload indicates the
+   ESP Payload Type: 0x5
+
+An IP-TFS payload is identified by the ESP payload type IPTFS_PROTOCOL
+which has the value 0x5. The first octet of this payload indicates the
 format of the remaining payload data.
 
 #+begin_example
@@ -536,7 +531,7 @@ shown below.
 
 *** Congestion Control IPTFS_PROTOCOL Payload Format
 
-The congestion control IPTFS_PROTOCOL payload is comprised of a 16
+The congestion control IPTFS_PROTOCOL payload is comprised of a 24
 octet header followed by a variable amount of ~DataBlocks~ data as
 shown below.
 
