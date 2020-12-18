@@ -8,7 +8,7 @@
 #
 #+RFC_NAME: draft-ietf-ipsecme-iptfs
 #+RFC_SHORT_TITLE: IP Traffic Flow Security
-#+RFC_VERSION: 04
+#+RFC_VERSION: 05
 #+RFC_XML_VERSION: 2
 #+RFC_ASCII_TABLE: t
 #
