@@ -11,9 +11,9 @@ SHELL := /bin/bash
 
 # If you have docker you can avoid having to install anything by leaving this.
 ifeq ($(CIRCLECI),)
-export DOCKRUN ?= docker run --network=host -v $$(pwd):/work labn/org-rfc
+export DOCKRUN ?= docker run --user $(shell id -u) --network=host -v $$(pwd):/work labn/org-rfc
 endif
-EMACSCMD := $(DOCKRUN) emacs -Q --batch --debug-init --eval '(setq org-confirm-babel-evaluate nil)' -l ./ox-rfc.el
+EMACSCMD := $(DOCKRUN) emacs -Q --batch --debug-init --eval '(setq-default indent-tabs-mode nil)' --eval '(setq org-confirm-babel-evaluate nil)' -l ./ox-rfc.el
 
 all: $(LBASE).xml $(LBASE).txt $(LBASE).html # $(LBASE).pdf
 
@@ -30,7 +30,7 @@ publish: git-clean-check $(VBASE).xml $(VBASE).txt $(VBASE).html
 	cp $(VBASE).xml $(VBASE).txt $(VBASE).html publish
 	git checkout -b $(PBRANCH)
 	git tag -m "yank.mk publish-$(DTYPE)-$(VERSION)" bp-$(PBRANCH)
-	git push --tags
+	git push -f --tags
 	git add $(PBASE).xml $(PBASE).txt $(PBASE).html
 	git commit -m "yank.mk publish-$(DTYPE)-$(VERSION)"
 	git push origin $(PBRANCH)
@@ -56,13 +56,13 @@ $(VBASE).xml: $(ORG) ox-rfc.el test
 	mv $(BASE).xml $@
 
 %-$(VERSION).txt: %-$(VERSION).xml
-	$(DOCKRUN) xml2rfc --text $< > $@
+	$(DOCKRUN) xml2rfc --cache /tmp --text $< > $@
 
 %-$(VERSION).html: %-$(VERSION).xml
-	$(DOCKRUN) xml2rfc --html $< > $@
+	$(DOCKRUN) xml2rfc --cache /tmp --html $< > $@
 
 %-$(VERSION).pdf: %-$(VERSION).xml
-	$(DOCKRUN) xml2rfc --pdf $< > $@
+	$(DOCKRUN) xml2rfc --cache /tmp --pdf $< > $@
 
 $(LBASE).%: $(VBASE).%
 	cp $< $@
