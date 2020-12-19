@@ -80,7 +80,7 @@ used by the tunnel. Two values are then required to provide for this
 bandwidth, the fixed size of the encapsulating packets, and rate at
 which to send them.
 
-The fixed packet size may either be specified manually or could be
+The fixed packet size MAY either be specified manually or could be
 determined through the other methods such as the Packetization Layer
 MTU Discovery (PLMTUD) ([[RFC4821]], [[RFC8899]]) or Path MTU discovery
 (PMTUD) ([[RFC1191]], [[RFC8201)]]. PMTUD is known to have issues so PLMTUD
@@ -222,20 +222,20 @@ older ESP packets whose sequence numbers the window has passed by are
 dropped. A good choice for the size of this window depends on the
 amount of re-ordering the user may normally experience. As the amount
 of reordering that may be present is hard to predict the window size
-SHOULD be configurable by the user. Finally, we note that as IP-TFS
-is sending a continuous stream of packets there is no requirement for
-timers (although there's no prohibition either) as newly arrived
-packets will cause the window to advance and older packets will then
-be processed as they leave the window.
+SHOULD be configurable by the user. Implementations MAY also
+dynamically adjust the reordering window based on actual reordering
+seen in arriving packets. Finally, we note that as IP-TFS is sending
+a continuous stream of packets there is no requirement for timers
+(although there's no prohibition either) as newly arrived packets
+will cause the window to advance and older packets will then be
+processed as they leave the window.
 
 **** Optional Extra Padding
 
-It has been suggested that when an IP-TFS tunnel's bandwidth is not
-being fully utilized, an implementation could use an algorithm which
-would delay sending inner packets some amount of time in order to
-avoid fragmentation (i.e., pad-out the current encapsulating packet
-in order to delivery the inner packet un-fragmented in the next outer
-packet). The benefit would be to avoid inner-packet fragmentation in
+When the tunnel bandwidth is not being fully utilized, an
+implementation MAY pad-out the current encapsulating packet in order
+to deliver an inner packet un-fragmented in the following outer
+packet. The benefit would be to avoid inner-packet fragmentation in
 the presence of a bursty offered load (non-bursty traffic will
 naturally not fragment). The cost is complexity and added delay of
 inner traffic. The main advantage to avoiding fragmentation is to
@@ -245,6 +245,12 @@ required, given different inner traffic shapes and utilization, for
 this to make sense), and what values to use for the allowable/added
 delay may be worth researching, but is outside the scope of this
 document.
+
+While clever use of padding to avoid fragmentation does not impact
+interoperability, used inappropriately it can reduce the effective
+throughput of a tunnel. Implementations experimenting with the above
+approach will need to take care to not reduce the effective capacity,
+and overall utility, of the tunnel through the overuse of padding.
 
 *** Empty Payload
 
@@ -474,7 +480,7 @@ required.
 ** Fixed Packet Size
 
 The fixed packet size to be used for the tunnel encapsulation packets
-can be configured manually or can be automatically determined using
+MAY be configured manually or can be automatically determined using
 other methods such as PLMTUD ([[RFC4821]], [[RFC8899]]) or PMTUD ([[RFC1191]],
 [[RFC8201]]). As PMTUD is known to have issues, PLMTUD is considered the
 more robust option. No standardized configuration method is required.
