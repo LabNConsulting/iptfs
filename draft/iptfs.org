@@ -83,7 +83,7 @@ which to send them.
 The fixed packet size MAY either be specified manually or could be
 determined through the other methods such as the Packetization Layer
 MTU Discovery (PLMTUD) ([[RFC4821]], [[RFC8899]]) or Path MTU discovery
-(PMTUD) ([[RFC1191]], [[RFC8201)]]. PMTUD is known to have issues so PLMTUD
+(PMTUD) ([[RFC1191]], [[RFC8201]]). PMTUD is known to have issues so PLMTUD
 is considered the more robust option.
 
 Given the encapsulating packet size and the requested tunnel used
@@ -246,9 +246,9 @@ this to make sense), and what values to use for the allowable/added
 delay may be worth researching, but is outside the scope of this
 document.
 
-While clever use of padding to avoid fragmentation does not impact
+While use of padding to avoid fragmentation does not impact
 interoperability, used inappropriately it can reduce the effective
-throughput of a tunnel. Implementations experimenting with the above
+throughput of a tunnel. Implementations implementing the above
 approach will need to take care to not reduce the effective capacity,
 and overall utility, of the tunnel through the overuse of padding.
 
@@ -279,6 +279,23 @@ the DS field SHOULD NOT be copied although an implementation MAY
 choose to allow for configuration to override this behavior. An
 implementation SHOULD also allow the DS value to be set by
 configuration.
+
+*** IP Time-To-Live (TTL) and Tunnel errors
+
+[[RFC4301]] specifies how to modify the inner packet TTL ([[RFC0791]]).
+
+Any errors (e.g., ICMP errors arriving back at the tunnel ingress due
+to tunnel traffic) should be handled the same as with non IP-TFS
+IPsec tunnels.
+
+*** Effective MTU of the Tunnel
+
+Unlike [[RFC4301]], there is normally no effective MTU (EMTU) on an
+IP-TFS tunnel as all IP packet sizes are properly transmitted without
+requiring IP fragmentation prior to tunnel ingress.
+
+If IP-TFS fragmentation has been disabled, then the tunnel's EMTU and
+behaviors are the same as normal IPsec tunnels ([[RFC4301]]).
 
 ** Exclusive SA Use
 
