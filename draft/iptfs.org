@@ -1,7 +1,7 @@
 # -*- fill-column: 69; org-confirm-babel-evaluate: nil -*-
 #+STARTUP: align entitiespretty hidestars inlineimages latexpreview noindent showall
 #
-#+TITLE: IP Traffic Flow Security Using Aggregation and Fragmentation
+#+TITLE: IP-TFS: IP Traffic Flow Security Using Aggregation and Fragmentation
 #+AUTHOR: Christian Hopps
 #+EMAIL: chopps@chopps.org
 #+AFFILIATION: LabN Consulting, L.L.C.
@@ -214,21 +214,46 @@ the next inner-packet fragment is expected to arrive in.
 
 Given the above, the receiver will need to handle out-of-order
 arrival of outer ESP packets prior to reassembly processing. ESP
-already provides for detecting replay attacks (normally) utilizing a
-window. A similar sequence number based sliding window can be used to
-correct re-ordering of the outer packet stream. Receiving a larger
-(newer) sequence number packet advances the window, and received
-older ESP packets whose sequence numbers the window has passed by are
-dropped. A good choice for the size of this window depends on the
-amount of re-ordering the user may normally experience. As the amount
-of reordering that may be present is hard to predict the window size
-SHOULD be configurable by the user. Implementations MAY also
-dynamically adjust the reordering window based on actual reordering
-seen in arriving packets. Finally, we note that as IP-TFS is sending
-a continuous stream of packets there is no requirement for timers
-(although there's no prohibition either) as newly arrived packets
-will cause the window to advance and older packets will then be
-processed as they leave the window.
+already provides for optionally detecting replay attacks. Detecting
+replay attacks normally utilizes a window method. A similar sequence
+number based sliding window can be used to correct re-ordering of the
+outer packet stream. Receiving a larger (newer) sequence number
+packet advances the window, and received older ESP packets whose
+sequence numbers the window has passed by are dropped. A good choice
+for the size of this window depends on the amount of re-ordering the
+user may normally experience.
+
+As the amount of reordering that may be present is hard to predict
+the window size SHOULD be configurable by the user. Implementations
+MAY also dynamically adjust the reordering window based on actual
+reordering seen in arriving packets. Finally, we note that as IP-TFS
+is sending a continuous stream of packets there is no requirement for
+timers (although there's no prohibition either) as newly arrived
+packets will cause the window to advance and older packets will then
+be processed as they leave the window. Implementations that are
+concerned about memory use when packets are delayed (e.g., when an SA
+deletion is delayed) can of course use timers to drop packets as
+well.
+
+While ESP guarantees an increasing sequence number with subsequently
+sent packets, it does not actually require the sequence numbers to be
+generated with no gaps (e.g., sending only even numbered sequence
+numbers would be allowed as long as they are always increasing). Gaps
+in the sequence numbers will not work for this specification so the
+sequence number stream is further restricted to not contain gaps
+(i.e., each subsequent outer packet must be sent with the sequence
+number incremented by 1).
+
+When using the AGGFRAG_PAYLOAD in conjunction with replay detection,
+the window size for both MAY be reduced to share the smaller of the
+two window sizes. This is b/c packets outside of the smaller window
+but inside the larger would still be dropped by the mechanism with
+the smaller window size.
+
+Finally, as sequence numbers are reset during a re-keying of a child
+SA, an implementation SHOULD NOT send initial fragments of an inner
+packet in the old child SA and subsequent fragments in the new
+re-keyed child SA.
 
 **** Optional Extra Padding
 
@@ -251,6 +276,15 @@ interoperability, used inappropriately it can reduce the effective
 throughput of a tunnel. Implementations implementing the above
 approach will need to take care to not reduce the effective capacity,
 and overall utility, of the tunnel through the overuse of padding.
+
+It has also been suggested that an implementation could allow for a
+minimum initial fragment size (or percentage of the AGGFRAG_PAYLOAD
+payload size). If so configured, and when the first fragment of an
+inner packet would be below the configured size, the current
+encapsulating payload would be padded out, and the whole inner packet
+would be sent in the subsequent payload. Using this method can
+reduce the capacity of the tunnel up to the configured minimum
+initial fragment size.
 
 *** Empty Payload
 
@@ -280,6 +314,9 @@ choose to allow for configuration to override this behavior. An
 implementation SHOULD also allow the DS value to be set by
 configuration.
 
+It is worth noting that an implementation MAY still set the ECN value of
+inner packets based on the normal ECN specification ([[RFC3168]]).
+
 *** IP Time-To-Live (TTL) and Tunnel errors
 
 [[RFC4301]] specifies how to modify the inner packet TTL ([[RFC0791]]).
@@ -292,7 +329,9 @@ IPsec tunnels.
 
 Unlike [[RFC4301]], there is normally no effective MTU (EMTU) on an
 IP-TFS tunnel as all IP packet sizes are properly transmitted without
-requiring IP fragmentation prior to tunnel ingress.
+requiring IP fragmentation prior to tunnel ingress. That said, an
+implementation MAY allow for explicitly configuring an MTU for the
+tunnel.
 
 If IP-TFS fragmentation has been disabled, then the tunnel's EMTU and
 behaviors are the same as normal IPsec tunnels ([[RFC4301]]).
@@ -304,10 +343,13 @@ of an AGGFRAG_PAYLOAD enabled SA. In other words, an SA that has
 AGGFRAG_PAYLOAD enabled MUST NOT have non-AGGFRAG_PAYLOAD payloads
 such as IP (IP protocol 4), TCP transport (IP protocol 6), or ESP pad
 packets (protocol 59) intermixed with non-empty AGGFRAG_PAYLOAD
-payloads. While it's possible to envision making the algorithm work
-in the presence of sequence number skips in the AGGFRAG_PAYLOAD
-payload stream, the added complexity is not deemed worthwhile. Other
-IPsec uses can configure and use their own SAs.
+payloads. Empty AGGFRAG_PAYLOAD payloads ([[Empty Payload]]) are used to
+transmit congestion control information on non-IP-TFS enabled SAs, so
+intermixing is allowed in this specific case. While it's possible to
+envision making the algorithm work in the presence of sequence number
+skips in the AGGFRAG_PAYLOAD payload stream, the added complexity is
+not deemed worthwhile. Other IPsec uses can configure and use their
+own SAs.
 
 ** Modes of Operation
 
@@ -531,7 +573,9 @@ child SA.
 
 The USE_AGGFRAG notification MUST NOT be sent, and MUST be ignored,
 during a CREATE_CHILD_SA rekeying exchange as it is not allowed to
-change use of the AGGFRAG_PAYLOAD payload type during rekeying.
+change use of the AGGFRAG_PAYLOAD payload type during rekeying. A new
+child SA due to re-keying inherits the use of AGGFRAG_PAYLOAD from
+the re-keyed child SA.
 
 The USE_AGGFRAG notification contains a 1 octet payload of flags that
 specify any requirements from the sender of the message. If any
