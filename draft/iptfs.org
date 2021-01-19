@@ -250,10 +250,10 @@ two window sizes. This is b/c packets outside of the smaller window
 but inside the larger would still be dropped by the mechanism with
 the smaller window size.
 
-Finally, as sequence numbers are reset during a re-keying of a child
-SA, an implementation SHOULD NOT send initial fragments of an inner
-packet in the old child SA and subsequent fragments in the new
-re-keyed child SA.
+Finally, as sequence numbers are reset when switching SAs (e.g., when
+re-keying a child SA), an implementation SHOULD NOT send initial
+fragments of an inner packet using one SA and subsequent fragments in
+a different SA.
 
 **** Optional Extra Padding
 
@@ -262,29 +262,24 @@ implementation MAY pad-out the current encapsulating packet in order
 to deliver an inner packet un-fragmented in the following outer
 packet. The benefit would be to avoid inner-packet fragmentation in
 the presence of a bursty offered load (non-bursty traffic will
-naturally not fragment). The cost is complexity and added delay of
-inner traffic. The main advantage to avoiding fragmentation is to
-minimize inner packet loss in the presence of outer packet loss. When
-this is worthwhile (e.g., how much loss and what type of loss is
-required, given different inner traffic shapes and utilization, for
-this to make sense), and what values to use for the allowable/added
-delay may be worth researching, but is outside the scope of this
-document.
+naturally not fragment). An implementation MAY also choose to allow
+for a minimum fragment size to be configured (e.g., as a percentage
+of the AGGFRAG_PAYLOAD payload size) to avoid fragmentation at the
+cost of tunnel bandwidth. The cost with these methods is complexity
+and added delay of inner traffic. The main advantage to avoiding
+fragmentation is to minimize inner packet loss in the presence of
+outer packet loss. When this is worthwhile (e.g., how much loss and
+what type of loss is required, given different inner traffic shapes
+and utilization, for this to make sense), and what values to use for
+the allowable/added delay may be worth researching, but is outside
+the scope of this document.
 
 While use of padding to avoid fragmentation does not impact
 interoperability, used inappropriately it can reduce the effective
-throughput of a tunnel. Implementations implementing the above
-approach will need to take care to not reduce the effective capacity,
-and overall utility, of the tunnel through the overuse of padding.
-
-It has also been suggested that an implementation could allow for a
-minimum initial fragment size (or percentage of the AGGFRAG_PAYLOAD
-payload size). If so configured, and when the first fragment of an
-inner packet would be below the configured size, the current
-encapsulating payload would be padded out, and the whole inner packet
-would be sent in the subsequent payload. Using this method can
-reduce the capacity of the tunnel up to the configured minimum
-initial fragment size.
+throughput of a tunnel. Implementations implementing either of the
+above approaches will need to take care to not reduce the effective
+capacity, and overall utility, of the tunnel through the overuse of
+padding.
 
 *** Empty Payload
 
