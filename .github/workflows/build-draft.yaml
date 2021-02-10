@@ -1,0 +1,24 @@
+on: push
+
+defaults:
+  run:
+    shell: bash
+    working-directory: draft
+
+jobs:
+  build-doc:
+    runs-on: ubuntu-latest
+    container: "labn/org-rfc"
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - run: ls -lR
+      - run: "curl -fLO 'https://raw.githubusercontent.com/choppsv1/org-rfc-export/master/ox-rfc.el'"
+      - run: make CIRCLECI=1
+      - run: make test CIRCLECI=1
+      - run: make idnits CIRCLECI=1
+      - name: Upload built documents
+        uses: actions/upload-artifact@v2
+        with:
+          name: built-documents
+          path: draft/draft/*
