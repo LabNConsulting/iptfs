@@ -1,0 +1,18 @@
+version: 2.1
+
+jobs:
+  build:
+    description: "Build documents"
+    docker:
+      - image: "labn/org-rfc"
+    working_directory: ~/project
+    steps:
+      - checkout
+      - run:
+          command: "make -C draft"
+      - run:
+          command: "make -C draft test"
+      - run:
+          command: "make -C draft idnits"
+      - store_artifacts:
+          path: ~/project/draft/draft
