@@ -20,11 +20,13 @@
 
 #+begin_abstract
 This document describes a mechanism to enhance IPsec traffic flow
-security by adding traffic flow confidentiality to encrypted IP
-encapsulated traffic. Traffic flow confidentiality is provided by
+security (IP-TFS) by adding traffic flow confidentiality to encrypted
+IP encapsulated traffic. Traffic flow confidentiality is provided by
 obscuring the size and frequency of IP traffic using a fixed-sized,
 constant-send-rate IPsec tunnel. The solution allows for congestion
-control as well as non-constant send-rate usage.
+control as well as non-constant send-rate usage. The mechanisms
+defined in this document are generic with the intent of allowing for
+non-TFS uses, but such uses are outside the scope of this document.
 #+end_abstract
 
 * Introduction
@@ -58,6 +60,10 @@ Additionally, IP-TFS provides for operating fairly within congested
 networks [[RFC2914]]. This is important for when the IP-TFS user is not
 in full control of the domain through which the IP-TFS tunnel path
 flows.
+
+The mechanisms defined in this document are generic with the intent
+of allowing for non-TFS uses, but such uses are outside the scope of
+this document.
 
 ** Terminology & Concepts
 
@@ -337,17 +343,13 @@ behaviors are the same as normal IPsec tunnels [[RFC4301]].
 ** Exclusive SA Use
 
 This document does not specify mixed use of an AGGFRAG_PAYLOAD
-enabled SA. In other words, an SA that has
-AGGFRAG_PAYLOAD enabled MUST NOT have non-AGGFRAG_PAYLOAD payloads
-such as IP (IP protocol 4), TCP transport (IP protocol 6), or ESP pad
-packets (protocol 59) intermixed with non-empty AGGFRAG_PAYLOAD
-payloads. Empty AGGFRAG_PAYLOAD payloads ([[Empty Payload]]) are used to
-transmit congestion control information on non-IP-TFS enabled SAs, so
-intermixing is allowed in this specific case. While it's possible to
-envision making the algorithm work in the presence of sequence number
-skips in the AGGFRAG_PAYLOAD payload stream, the added complexity is
-not deemed worthwhile. Other IPsec uses can configure and use their
-own SAs.
+enabled SA. In other words, an SA that has AGGFRAG_PAYLOAD enabled
+MUST NOT have non-AGGFRAG_PAYLOAD payloads such as IP (IP protocol
+4), TCP transport (IP protocol 6), or ESP pad packets (protocol 59)
+intermixed with non-empty AGGFRAG_PAYLOAD payloads. Empty
+AGGFRAG_PAYLOAD payloads ([[Empty Payload]]) are used to transmit
+congestion control information on non-IP-TFS enabled SAs, so
+intermixing is allowed in this specific case.
 
 ** Modes of Operation
 
@@ -577,7 +579,7 @@ for non-transport mode tunnels, the USE_AGGFRAG notification MUST NOT
 be combined with USE_TRANSPORT notification.
 
 The USE_AGGFRAG notification contains a 1 octet payload of flags that
-specify requirements from the sender of the message. If any
+specify requirements from the sender of the notification. If any
 requirement flags are not understood or cannot be supported by the
 receiver then the receiver SHOULD NOT enable use of AGGFRAG_PAYLOAD
 (either by not responding with the USE_AGGFRAG notification, or in
@@ -589,13 +591,18 @@ USE_AGGFRAG Notification Message]].
 
 * Packet and Data Formats
 
+The packet and data formats defined below are generic with the intent
+of allowing for non-IP-TFS uses, but such uses are outside the scope of
+this document.
+
 ** AGGFRAG_PAYLOAD Payload
 
    ESP Next Header value: 0x5
 
 An IP-TFS payload is identified by the ESP Next Header value
-AGGFRAG_PAYLOAD which has the value 0x5. The first octet of this
-payload indicates the format of the remaining payload data.
+AGGFRAG_PAYLOAD which has the value 0x5. The value 5 was chosen to not
+conflict with other used values. The first octet of this payload
+indicates the format of the remaining payload data.
 
 #+begin_example
   0 1 2 3 4 5 6 7
