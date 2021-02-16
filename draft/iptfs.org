@@ -20,9 +20,9 @@
 
 #+begin_abstract
 This document describes a mechanism to enhance IPsec traffic flow
-security (IP-TFS) by adding traffic flow confidentiality to encrypted
-IP encapsulated traffic. Traffic flow confidentiality is provided by
-obscuring the size and frequency of IP traffic using a fixed-sized,
+security (IP-TFS) by adding Traffic Flow Confidentiality (TFC) to
+encrypted IP encapsulated traffic. TFC is provided by obscuring the
+size and frequency of IP traffic using a fixed-sized,
 constant-send-rate IPsec tunnel. The solution allows for congestion
 control as well as non-constant send-rate usage. The mechanisms
 defined in this document are generic with the intent of allowing for
@@ -73,8 +73,8 @@ The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
 14 [[RFC2119]] [[RFC8174]] when, and only when, they appear in all capitals,
 as shown here.
 
-This document assumes familiarity with IP security concepts described
-in [[RFC4301]].
+This document assumes familiarity with IP security concepts including
+TFC as described in [[RFC4301]].
 
 * The IP-TFS Tunnel
 
@@ -98,10 +98,10 @@ used, the corresponding packet send rate can be calculated. The
 packet send rate is the requested bandwidth to be used divided by the
 size of the encapsulating packet.
 
-The egress (receiving) of the IP-TFS tunnel MUST allow for and expect
-the ingress (sending) side of the IP-TFS tunnel to vary the size and
-rate of sent encapsulating packets, unless constrained by other
-policy.
+The egress (receiving) side of the IP-TFS tunnel MUST allow for and
+expect the ingress (sending) side of the IP-TFS tunnel to vary the
+size and rate of sent encapsulating packets, unless constrained by
+other policy.
 
 ** Tunnel Content
 
@@ -306,20 +306,27 @@ Don't-Fragment (DF) bit ([[RFC0791]] and [[RFC8200]]), the Differentiated
 Services (DS) field [[RFC2474]] and the Explicit Congestion Notification
 (ECN) field [[RFC3168]]. Unlike [[RFC4301]], IP-TFS may and often will be
 encapsulating more than one IP packet per ESP packet. To deal with
-this, these mappings are restricted further. In particular
-IP-TFS never maps the inner DF bit as it is unrelated to the IP-TFS
-tunnel functionality; IP-TFS never IP fragments the inner packets and
-the inner packets will not affect the fragmentation of the outer
-encapsulation packets. Likewise, the ECN value need not be mapped as
-any congestion related to the constant-send-rate IP-TFS tunnel is
-unrelated (by design) to the inner traffic flow. Finally, by default
-the DS field SHOULD NOT be copied although a sender MAY
-choose to allow for configuration to override this behavior. A
-sender SHOULD also allow the DS value to be set by
-configuration.
+this, these mappings are restricted further.
 
-It is worth noting that a sender MAY still set the ECN value of
-inner packets based on the normal ECN specification [[RFC3168]].
+**** DF bit
+
+IP-TFS never maps the inner DF bit as it is unrelated to the IP-TFS
+tunnel functionality; IP-TFS never needs to IP fragment the inner packets and
+the inner packets will not affect the fragmentation of the outer
+encapsulation packets.
+
+**** ECN value
+
+The ECN value need not be mapped as any congestion related to the
+constant-send-rate IP-TFS tunnel is unrelated (by design) to the
+inner traffic flow. The sender MAY still set the ECN value of inner
+packets based on the normal ECN specification [[RFC3168]].
+
+**** DS field
+
+By default the DS field SHOULD NOT be copied, although a sender MAY
+choose to allow for configuration to override this behavior. A sender
+SHOULD also allow the DS value to be set by configuration.
 
 *** IP Time-To-Live (TTL) and Tunnel errors
 
@@ -468,22 +475,26 @@ In order for the sender to estimate its ~RTT~ value, the sender
 places a timestamp value in the ~TVal~ header field. On first receipt
 of this ~TVal~, the receiver records the new ~TVal~ value along with
 the time it arrived locally, subsequent receipt of the same ~TVal~
-MUST NOT update the recorded time. When the receiver sends its CC
-header it places this latest recorded value in the ~TEcho~ header
-field, along with 2 delay values, ~Echo Delay~ and ~Transmit Delay~.
-The ~Echo Delay~ value is the time delta from the recorded arrival
-time of ~TVal~ and the current clock in microseconds. The second
-value, ~Transmit Delay~, is the receiver's current transmission delay
-on the tunnel (i.e., the average time between sending packets on its
-half of the IP-TFS tunnel). When the sender receives back its ~TVal~
-in the ~TEcho~ header field it calculates 2 RTT estimates. The first
-is the actual delay found by subtracting the ~TEcho~ value from its
-current clock and then subtracting ~Echo Delay~ as well. The second
-RTT estimate is found by adding the received ~Transmit Delay~ header
-value to the senders own transmission delay (i.e., the average time
-between sending packets on its half of the IP-TFS tunnel). The
-larger of these 2 RTT estimates SHOULD be used as the ~RTT~ value.
-The two estimates are required to handle different combinations of
+MUST NOT update the recorded time.
+
+When the receiver sends its CC header it places this latest recorded
+~TVal~ in the ~TEcho~ header field, along with 2 delay values, ~Echo
+Delay~ and ~Transmit Delay~. The ~Echo Delay~ value is the time delta
+from the recorded arrival time of ~TVal~ and the current clock in
+microseconds. The second value, ~Transmit Delay~, is the receiver's
+current transmission delay on the tunnel (i.e., the average time
+between sending packets on its half of the IP-TFS tunnel).
+
+When the sender receives back its ~TVal~ in the ~TEcho~ header field
+it calculates 2 RTT estimates. The first is the actual delay found by
+subtracting the ~TEcho~ value from its current clock and then
+subtracting ~Echo Delay~ as well. The second RTT estimate is found by
+adding the received ~Transmit Delay~ header value to the senders own
+transmission delay (i.e., the average time between sending packets on
+its half of the IP-TFS tunnel). The larger of these 2 RTT estimates
+SHOULD be used as the ~RTT~ value.
+
+The two RTT estimates are required to handle different combinations of
 faster or slower tunnel packet paths with faster or slower fixed
 tunnel rates. Choosing the larger of the two values guarantees that
 the ~RTT~ is never considered faster than the aggregate transmission
