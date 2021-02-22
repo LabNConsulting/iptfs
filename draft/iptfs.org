@@ -442,6 +442,26 @@ wish to enable congestion information reports even when using the
 non-congestion controlled mode of operation. The definition of
 circuit breakers are outside the scope of this document.
 
+** Summary of Receiver Processing
+
+An IP-TFS receiver has a few tasks to perform.
+
+The receiver first reorders, possibly out-of-order ESP packets
+received on an SA into in-sequence-order AGGFRAG_PAYLOAD payloads
+([[Fragmentation, Sequence Numbers and All-Pad Payloads]]). If congestion
+control is enabled, the receiver considers a packet lost when it's
+sequence number is abandoned (e.g., pushed out of the re-ordering
+window, or timed-out) by the reordering algorithm.
+
+Additionally, if congestion control is enabled, the receiver sends
+congestion control data ([[Congestion Control AGGFRAG_PAYLOAD Payload
+Format]]) back to the sender as described in [[Congestion Controlled Mode]]
+and [[Congestion Information]].
+
+Finally, the receiver processes the now in-order AGGFRAG_PAYLOAD
+payload stream to extract the inner-packets ([[Fragmentation, Sequence
+Numbers and All-Pad Payloads]], [[AGGFRAG_PAYLOAD Payload]]).
+
 * Congestion Information
 
 In order to support the congestion control mode, the sender needs to
@@ -901,6 +921,8 @@ then non-congestion controlled mode use should be considered instead.
 ** RFC8229
 ** RFC8546
 ** RFC8899
+
+
 * Example Of An Encapsulated IP Packet Flow
 
 Below an example inner IP packet flow within the encapsulating tunnel
