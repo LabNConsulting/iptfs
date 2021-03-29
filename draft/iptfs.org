@@ -1,7 +1,7 @@
 # -*- fill-column: 69; org-confirm-babel-evaluate: nil -*-
 #+STARTUP: align entitiespretty hidestars inlineimages latexpreview noindent showall
 #
-#+TITLE: IP-TFS: IP Traffic Flow Security Using Aggregation and Fragmentation
+#+TITLE: Aggregation and Fragmentation Mode for ESP and its Use for IP Traffic Flow Security (IP-TFS)
 #+AUTHOR: Christian Hopps
 #+EMAIL: chopps@chopps.org
 #+AFFILIATION: LabN Consulting, L.L.C.
@@ -19,14 +19,16 @@
 
 
 #+begin_abstract
-This document describes a mechanism to enhance IPsec traffic flow
-security (IP-TFS) by adding Traffic Flow Confidentiality (TFC) to
-encrypted IP encapsulated traffic. TFC is provided by obscuring the
-size and frequency of IP traffic using a fixed-sized,
-constant-send-rate IPsec tunnel. The solution allows for congestion
-control as well as non-constant send-rate usage. The mechanisms
-defined in this document are generic with the intent of allowing for
-non-TFS uses, but such uses are outside the scope of this document.
+This document describes a mechanism for for aggregation and
+fragmentation of IP packets when they are being encapsulated in ESP
+payload. This new payload type can be used for various purposes such
+as decreasing encapsulation overhead for small IP packets; however,
+the focus in this document is to enhance IPsec traffic flow security
+(IP-TFS) by adding Traffic Flow Confidentiality (TFC) to encrypted IP
+encapsulated traffic. TFC is provided by obscuring the size and
+frequency of IP traffic using a fixed-sized, constant-send-rate IPsec
+tunnel. The solution allows for congestion control as well as
+non-constant send-rate usage.
 #+end_abstract
 
 * Introduction
@@ -44,14 +46,15 @@ IP packets and allowing for transmission of all-pad packets
 (indicated using protocol 59). This method has the major limitation
 that it can significantly under-utilize the available bandwidth.
 
-The IP-TFS (IP Traffic Flow Security) solution provides for full TFC
-without the aforementioned bandwidth limitation. This is accomplished
-by using a constant-send-rate IPsec [[RFC4303]] tunnel with fixed-sized
-encapsulating packets; however, these fixed-sized packets can contain
-partial, whole or multiple IP packets to maximize the bandwidth of
-the tunnel. A non-constant send-rate is allowed, but the
-confidentiality properties of its use are outside the scope of this
-document.
+This document defines an aggregation and fragmentation (AGGFRAG) mode
+for ESP, and its use for IP Traffic Flow Security (IP-TFS). This
+solution provides for full TFC without the aforementioned bandwidth
+limitation. This is accomplished by using a constant-send-rate IPsec
+[[RFC4303]] tunnel with fixed-sized encapsulating packets; however, these
+fixed-sized packets can contain partial, whole or multiple IP packets
+to maximize the bandwidth of the tunnel. A non-constant send-rate is
+allowed, but the confidentiality properties of its use are outside
+the scope of this document.
 
 For a comparison of the overhead of IP-TFS with the RFC4303
 prescribed TFC solution see [[Comparisons of IP-TFS]].
@@ -61,9 +64,9 @@ networks [[RFC2914]]. This is important for when the IP-TFS user is not
 in full control of the domain through which the IP-TFS tunnel path
 flows.
 
-The mechanisms defined in this document are generic with the intent
-of allowing for non-TFS uses, but such uses are outside the scope of
-this document.
+The mechanisms, such as the AGGFRAG mode, defined in this document
+are generic with the intent of allowing for non-TFS uses, but such
+uses are outside the scope of this document.
 
 ** Terminology & Concepts
 
@@ -76,11 +79,11 @@ as shown here.
 This document assumes familiarity with IP security concepts including
 TFC as described in [[RFC4301]].
 
-* The IP-TFS Tunnel
+* The AGGFRAG Tunnel
 
-As mentioned in [[Introduction]] IP-TFS utilizes an IPsec [[RFC4303]] tunnel
-as its transport. To provide for full TFC, fixed-sized encapsulating
-packets are sent at a constant rate on the tunnel.
+As mentioned in [[Introduction]], AGGFRAG mode utilizes an IPsec [[RFC4303]] tunnel
+as its transport. For the purpose of IP-TFS, fixed-sized encapsulating
+packets are sent at a constant rate on the AGGFRAG tunnel.
 
 The primary input to the tunnel algorithm is the requested bandwidth
 to be used by the tunnel. Two values are then required to provide for
@@ -100,8 +103,8 @@ used, the corresponding packet send rate can be calculated. The
 packet send rate is the requested bandwidth to be used divided by the
 size of the encapsulating packet.
 
-The egress (receiving) side of the IP-TFS tunnel MUST allow for and
-expect the ingress (sending) side of the IP-TFS tunnel to vary the
+The egress (receiving) side of the AGGFRAG tunnel MUST allow for and
+expect the ingress (sending) side of the AGGFRAG tunnel to vary the
 size and rate of sent encapsulating packets, unless constrained by
 other policy.
 
@@ -110,10 +113,12 @@ other policy.
 As previously mentioned, one issue with the TFC padding solution in
 [[RFC4303]] is the large amount of wasted bandwidth as only one IP
 packet can be sent per encapsulating packet. In order to maximize
-bandwidth, IP-TFS breaks this one-to-one association.
+bandwidth, IP-TFS breaks this one-to-one association by introducing
+an AGGFRAG mode for ESP.
 
-IP-TFS aggregates as well as fragments the inner IP traffic flow into
-fixed-sized encapsulating IPsec tunnel packets. Padding is only added
+AGGFRAG mode aggregates as well as fragments the inner IP traffic
+flow into encapsulating IPsec tunnel packets. For IP-TFS, the IPsec
+encapsulating tunnel packets are a fixed size. Padding is only added
 to the the tunnel packets if there is no data available to be sent at
 the time of tunnel packet transmission, or if fragmentation has been
 disabled by the receiver.
@@ -122,11 +127,10 @@ This is accomplished using a new Encapsulating Security Payload (ESP,
 [[RFC4303]]) Next Header field value AGGFRAG_PAYLOAD
 ([[AGGFRAG_PAYLOAD Payload]]).
 
-Other non-IP-TFS uses of this aggregation and fragmentation
-encapsulation have been identified, such as increased performance
-through packet aggregation, as well as handling MTU issues using
-fragmentation. These uses are not defined here, but are also not
-restricted by this document.
+Other non-IP-TFS uses of this AGGFRAG mode have been suggested, such
+as increased performance through packet aggregation, as well as
+handling MTU issues using fragmentation. These uses are not defined
+here, but are also not restricted by this document.
 
 ** Payload Content
 
@@ -137,7 +141,7 @@ The following diagram illustrates this payload within the ESP packet.
 See [[AGGFRAG_PAYLOAD Payload]] for the exact formats of the
 AGGFRAG_PAYLOAD payload.
 
-#+CAPTION: Layout of an IP-TFS IPsec Packet
+#+CAPTION: Layout of an AGGFRAG mode IPsec Packet
 #+begin_example
  . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
  . Outer Encapsulating Header ...                                .
@@ -173,7 +177,7 @@ Having the ~BlockOffset~ always point at the next available data
 block allows for recovering the next inner packet in the
 presence of outer encapsulating packet loss.
 
-An example IP-TFS packet flow can be found in [[Example Of An
+An example AGGFRAG mode packet flow can be found in [[Example Of An
 Encapsulated IP Packet Flow]].
 
 *** Data Blocks
@@ -228,14 +232,14 @@ user may normally experience.
 As the amount of reordering that may be present is hard to predict,
 the window size SHOULD be configurable by the user. Implementations
 MAY also dynamically adjust the reordering window based on actual
-reordering seen in arriving packets. Finally, note that as IP-TFS
-is sending a continuous stream of packets there is no requirement for
+reordering seen in arriving packets. Finally, note that as IP-TFS is
+sending a continuous stream of packets there is no requirement for
 timers (although there's no prohibition either) as newly arrived
 packets will cause the window to advance and older packets will then
 be processed as they leave the window. Implementations that are
 concerned about memory use when packets are delayed (e.g., when an SA
-deletion is delayed) can of course use timers to drop packets as
-well.
+deletion is delayed), or non-IP-TFS uses of AGGFRAG mode, can of
+course use timers to drop packets as well.
 
 While ESP guarantees an increasing sequence number with subsequently
 sent packets, it does not actually require the sequence numbers to be
@@ -246,8 +250,8 @@ sequence number stream MUST increase monotonically by 1 for each
 subsequent packet.
 
 When using the AGGFRAG_PAYLOAD in conjunction with replay detection,
-the window size for both MAY be reduced to share the smaller of the
-two window sizes. This is because packets outside of the smaller window
+the window size for both SHOULD be reduced to the smaller of the two
+window sizes. This is because packets outside of the smaller window
 but inside the larger would still be dropped by the mechanism with
 the smaller window size.
 
@@ -284,10 +288,10 @@ padding.
 *** Empty Payload
 
 To support reporting of congestion control information (described
-later) on a non-AGGFRAG_PAYLOAD enabled SA, IP-TFS allows for the
-sending of an AGGFRAG_PAYLOAD payload with no data blocks (i.e., the
-ESP payload length is equal to the AGGFRAG_PAYLOAD header length).
-This special payload is called an empty payload.
+later) using a non-AGGFRAG_PAYLOAD enabled SA, it is allowed to send
+an AGGFRAG_PAYLOAD payload with no data blocks (i.e., the ESP payload
+length is equal to the AGGFRAG_PAYLOAD header length). This special
+payload is called an empty payload.
 
 Currently this situation is only applicable in non-IKEv2 use cases.
 
@@ -297,16 +301,16 @@ Currently this situation is only applicable in non-IKEv2 use cases.
 from an inner IP header to the outer encapsulating header, namely the
 Don't-Fragment (DF) bit ([[RFC0791]] and [[RFC8200]]), the Differentiated
 Services (DS) field [[RFC2474]] and the Explicit Congestion Notification
-(ECN) field [[RFC3168]]. Unlike [[RFC4301]], IP-TFS may and often will be
+(ECN) field [[RFC3168]]. Unlike [[RFC4301]], AGGFRAG mode may and often will be
 encapsulating more than one IP packet per ESP packet. To deal with
 this, these mappings are restricted further.
 
 **** DF bit
 
-IP-TFS never maps the inner DF bit as it is unrelated to the IP-TFS
-tunnel functionality; IP-TFS never needs to IP fragment the inner packets and
-the inner packets will not affect the fragmentation of the outer
-encapsulation packets.
+AGGFRAG mode never maps the inner DF bit as it is unrelated to the
+AGGFRAG tunnel functionality; AGGFRAG mode never needs to IP fragment
+the inner packets and the inner packets will not affect the
+fragmentation of the outer encapsulation packets.
 
 **** ECN value
 
@@ -326,41 +330,42 @@ SHOULD also allow the DS value to be set by configuration.
 [[RFC4301]] specifies how to modify the inner packet TTL [[RFC0791]].
 
 Any errors (e.g., ICMP errors arriving back at the tunnel ingress due
-to tunnel traffic) are handled the same as with non IP-TFS
+to tunnel traffic) are handled the same as with non-AGGFRAG
 IPsec tunnels.
 
 *** Effective MTU of the Tunnel
 
 Unlike [[RFC4301]], there is normally no effective MTU (EMTU) on an
-IP-TFS tunnel as all IP packet sizes are properly transmitted without
+AGGFRAG tunnel as all IP packet sizes are properly transmitted without
 requiring IP fragmentation prior to tunnel ingress. That said, a
 sender MAY allow for explicitly configuring an MTU for the
 tunnel.
 
-If IP-TFS fragmentation has been disabled, then the tunnel's EMTU and
-behaviors are the same as normal IPsec tunnels [[RFC4301]].
+If fragmentation has been disabled on the AGGFRAG tunnel, then the
+tunnel's EMTU and behaviors are the same as normal IPsec tunnels
+[[RFC4301]].
 
 ** Exclusive SA Use
 
 This document does not specify mixed use of an AGGFRAG_PAYLOAD
 enabled SA. A sender MUST only send AGGFRAG_PAYLOAD payloads over an
-SA configured for AGGFRAG_PAYLOAD use.
+SA configured for AGGFRAG mode.
 
 ** Modes of Operation
 
-Just as with normal IPsec/ESP tunnels, IP-TFS tunnels are
+Just as with normal IPsec/ESP tunnels, AGGFRAG tunnels are
 unidirectional. Bidirectional IP-TFS functionality is achieved by
-setting up 2 IP-TFS tunnels, one in either direction.
+setting up 2 AGGFRAG tunnels, one in either direction.
 
-An IP-TFS tunnel can operate in 2 modes, a non-congestion controlled
-mode and congestion controlled mode.
+An AGGFRAG tunnel used for IP-TFS can operate in 2 modes, a
+non-congestion controlled mode and congestion controlled mode.
 
 *** Non-Congestion Controlled Mode
 
 In the non-congestion controlled mode, IP-TFS sends fixed-sized
-packets at a constant rate. The packet send rate is constant and is
-not automatically adjusted regardless of any network congestion
-(e.g., packet loss).
+packets over an AGGFRAG tunnel at a constant rate. The packet send
+rate is constant and is not automatically adjusted regardless of any
+network congestion (e.g., packet loss).
 
 For similar reasons as given in [[RFC7510]] the non-congestion
 controlled mode should only be used where the user has full
@@ -410,7 +415,7 @@ to 4 RTT intervals. When a "no feedback timeout" has occurred [[RFC4342]]
 halves the sending rate.
 
 An implementation MAY choose to always include the congestion
-information in its IP-TFS payload header if sending on an IP-TFS
+information in its AGGFRAG payload header if sending on an IP-TFS
 enabled SA. Since IP-TFS normally will operate with a large packet
 size, the congestion information should represent a small portion of
 the available tunnel bandwidth. An implementation choosing to always
@@ -427,7 +432,7 @@ of IP traffic, and so per packet ACKs are not required and are not
 provided.
 
 It is worth noting that the variable send-rate of a congestion
-controlled IP-TFS tunnel, is not private; however, this send-rate is
+controlled AGGFRAG tunnel, is not private; however, this send-rate is
 being driven by network congestion, and as long as the encapsulated
 (inner) traffic flow shape and timing are not directly affecting the
 (outer) network congestion, the variations in the tunnel rate will
@@ -444,7 +449,7 @@ circuit breakers are outside the scope of this document.
 
 ** Summary of Receiver Processing
 
-An IP-TFS receiver has a few tasks to perform.
+An AGGFRAG enabled SA receiver has a few tasks to perform.
 
 The receiver first reorders, possibly out-of-order ESP packets
 received on an SA into in-sequence-order AGGFRAG_PAYLOAD payloads
@@ -491,7 +496,7 @@ Delay~ and ~Transmit Delay~. The ~Echo Delay~ value is the time delta
 from the recorded arrival time of ~TVal~ and the current clock in
 microseconds. The second value, ~Transmit Delay~, is the receiver's
 current transmission delay on the tunnel (i.e., the average time
-between sending packets on its half of the IP-TFS tunnel).
+between sending packets on its half of the AGGFRAG tunnel).
 
 When the sender receives back its ~TVal~ in the ~TEcho~ header field
 it calculates 2 RTT estimates. The first is the actual delay found by
@@ -499,14 +504,14 @@ subtracting the ~TEcho~ value from its current clock and then
 subtracting ~Echo Delay~ as well. The second RTT estimate is found by
 adding the received ~Transmit Delay~ header value to the senders own
 transmission delay (i.e., the average time between sending packets on
-its half of the IP-TFS tunnel). The larger of these 2 RTT estimates
+its half of the AGGFRAG tunnel). The larger of these 2 RTT estimates
 SHOULD be used as the ~RTT~ value.
 
 The two RTT estimates are required to handle different combinations of
 faster or slower tunnel packet paths with faster or slower fixed
 tunnel rates. Choosing the larger of the two values guarantees that
 the ~RTT~ is never considered faster than the aggregate transmission
-delay based on the IP-TFS tunnel rate (the second estimate), as well
+delay based on the IP-TFS send rate (the second estimate), as well
 as never being considered faster than the actual RTT along the tunnel
 packet path (the first estimate).
 
@@ -521,7 +526,7 @@ receiver to update it.
 
 ** ECN Support
 
-In additional to normal packet loss information IP-TFS supports use
+In additional to normal packet loss information AGGFRAG mode supports use
 of the ECN bits in the encapsulating IP header [[RFC3168]] for
 identifying congestion. If ECN use is enabled and a packet arrives at
 the egress (receiving) side with the Congestion Experienced (CE) value set,
@@ -541,7 +546,7 @@ As noted in [[RFC3168]] the ECN bits are not protected by IPsec and
 thus may constitute a covert channel. For this reason, ECN use SHOULD
 NOT be enabled by default.
 
-* Configuration
+* Configuration of AGGFRAG Tunnels for IP-TFS
 
 IP-TFS is meant to be deployable with a minimal amount of
 configuration. All IP-TFS specific configuration should be
@@ -575,7 +580,7 @@ configuration method is required.
 
 ** USE_AGGFRAG Notification Message
 
-As mentioned previously IP-TFS tunnels utilize ESP payloads of type
+As mentioned previously AGGFRAG tunnels utilize ESP payloads of type
 AGGFRAG_PAYLOAD.
 
 When using IKEv2, a new "USE_AGGFRAG" Notification Message enables
@@ -618,7 +623,7 @@ this document.
 
    ESP Next Header value: 0x5
 
-An IP-TFS payload is identified by the ESP Next Header value
+An AGGFRAG payload is identified by the ESP Next Header value
 AGGFRAG_PAYLOAD which has the value 0x5. The value 5 was chosen to not
 conflict with other used values. The first octet of this payload
 indicates the format of the remaining payload data.
@@ -875,12 +880,12 @@ the "IKEv2 Notify Message Types - Status Types" registry.
 
 * Security Considerations
 
-This document describes a mechanism to add TFC to IP traffic. Use of
-this mechanism is expected to increase the security of the traffic
-being transported. Other than the additional security afforded by
-using this mechanism, IP-TFS utilizes the security protocols [[RFC4303]]
-and [[RFC7296]] and so their security considerations apply to IP-TFS as
-well.
+This document describes an aggregation and fragmentation mechanism
+and it use to add TFC to IP traffic. The use described is expected to
+increase the security of the traffic being transported. Other than
+the additional security afforded by using this mechanism, IP-TFS
+utilizes the security protocols [[RFC4303]] and [[RFC7296]] and so their
+security considerations apply to IP-TFS as well.
 
 As noted in ([[ECN Support]]) the ECN bits are not protected by IPsec and
 thus may constitute a covert channel. For this reason, ECN use SHOULD
@@ -944,10 +949,10 @@ The encapsulated IP packet flow (lengths include IP header and
 payload) is as follows: an 800 octet packet, an 800 octet packet, a 60
 octet packet, a 240 octet packet, a 4000 octet packet.
 
-The ~BlockOffset~ values in the 4 IP-TFS payload headers for this
+The ~BlockOffset~ values in the 4 AGGFRAG payload headers for this
 packet flow would thus be: 0, 100, 2900, 1400 respectively. The first
 encapsulating packet ESP1 has a zero ~BlockOffset~ which points at the
-IP data block immediately following the IP-TFS header. The following
+IP data block immediately following the AGGFRAG header. The following
 packet ESP2s ~BlockOffset~ points inward 100 octets to the start of the
 60 octet data block. The third encapsulating packet ESP3 contains the
 middle portion of the 4000 octet data block so the offset points past
@@ -996,7 +1001,7 @@ first established.
 
 ** Comparing Overhead
 
-For comparing overhead the overhead of ESP for both normal and IP-TFS
+For comparing overhead the overhead of ESP for both normal and AGGFRAG
 tunnel packets must be calculated, and so an algorithm for encryption
 and authentication must be chosen. For the data below AES-GCM-256 was
 selected. This leads to an IP+ESP overhead of 54.
@@ -1010,7 +1015,7 @@ headers were chosen which adds 4 octets for a total overhead of 58.
 
 *** IP-TFS Overhead
 
-For comparison the overhead of IP-TFS is 58 octets per outer packet.
+For comparison the overhead of AGGFRAG payload is 58 octets per outer packet.
 Therefore the octet overhead per inner packet is 58 divided by the
 number of outer packets required (fractional allowed). The overhead
 as a percentage of inner packet size is a constant based on the Outer
@@ -1252,7 +1257,7 @@ the minimum payload is 46 octets.
 #+TBLFM: $1=remote(pps,$1)::@1$2..@3$>=remote(pps,@@#$$#)::@4$2..@>$9=(100*$1*remote(pps,@@#$$#))/(1e10/8);%.2f%%
 #+END_CENTER
 
-A sometimes unexpected result of using IP-TFS (or any packet
+A sometimes unexpected result of using an AGGFRAG tunnel (or any packet
 aggregating tunnel) is that, for small to medium sized packets, the
 available bandwidth is actually greater than native Ethernet. This is
 due to the reduction in Ethernet framing overhead. This increased
@@ -1285,9 +1290,10 @@ padding often greatly reduces available bandwidth.
 
 * Acknowledgements
 We would like to thank Don Fedyk for help in reviewing and editing
-this work. We would also like to thank Sean Turner and Valery Smyslov
-for reviews and many suggestions for improvements, as well as Joseph
-Touch for the transport area review and suggested improvements.
+this work. We would also like to thank Michael Richardson, Sean
+Turner and Valery Smyslov for reviews and many suggestions for
+improvements, as well as Joseph Touch for the transport area review
+and suggested improvements.
 
 * Contributors
 The following people made significant contributions to this document.
