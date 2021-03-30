@@ -1,7 +1,7 @@
 # -*- fill-column: 69; org-confirm-babel-evaluate: nil -*-
 #+STARTUP: align entitiespretty hidestars inlineimages latexpreview noindent showall
 #
-#+TITLE: Aggregation and Fragmentation Mode for ESP and its Use for IP Traffic Flow Security (IP-TFS)
+#+TITLE: IP-TFS: Aggregation and Fragmentation Mode for ESP and its Use for IP Traffic Flow Security
 #+AUTHOR: Christian Hopps
 #+EMAIL: chopps@chopps.org
 #+AFFILIATION: LabN Consulting, L.L.C.
@@ -19,7 +19,7 @@
 
 
 #+begin_abstract
-This document describes a mechanism for for aggregation and
+This document describes a mechanism for aggregation and
 fragmentation of IP packets when they are being encapsulated in ESP
 payload. This new payload type can be used for various purposes such
 as decreasing encapsulation overhead for small IP packets; however,
@@ -250,7 +250,7 @@ sequence number stream MUST increase monotonically by 1 for each
 subsequent packet.
 
 When using the AGGFRAG_PAYLOAD in conjunction with replay detection,
-the window size for both SHOULD be reduced to the smaller of the two
+the window size for both can be reduced to the smaller of the two
 window sizes. This is because packets outside of the smaller window
 but inside the larger would still be dropped by the mechanism with
 the smaller window size.
