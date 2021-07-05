@@ -250,10 +250,16 @@ sequence number stream MUST increase monotonically by 1 for each
 subsequent packet.
 
 When using the AGGFRAG_PAYLOAD in conjunction with replay detection,
-the window size for both can be reduced to the smaller of the two
+the window size for both MAY be reduced to the smaller of the two
 window sizes. This is because packets outside of the smaller window
 but inside the larger would still be dropped by the mechanism with
-the smaller window size.
+the smaller window size. However, there is also no requirement to
+make these values the same. Indeed, in some cases, such as slow
+tunnels where a very small or zero reorder window size is
+appropriate, the user may want a large replay detection window to log
+replayed packets. Additionally, large replay windows can be
+implemented with very little overhead compared to large reorder
+windows.
 
 Finally, as sequence numbers are reset when switching SAs (e.g., when
 re-keying a child SA), senders MUST NOT send initial fragments of an
