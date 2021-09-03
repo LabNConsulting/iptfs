@@ -232,14 +232,16 @@ user may normally experience.
 As the amount of reordering that may be present is hard to predict,
 the window size SHOULD be configurable by the user. Implementations
 MAY also dynamically adjust the reordering window based on actual
-reordering seen in arriving packets. Finally, note that as IP-TFS is
-sending a continuous stream of packets there is no requirement for
-timers (although there's no prohibition either) as newly arrived
-packets will cause the window to advance and older packets will then
-be processed as they leave the window. Implementations that are
-concerned about memory use when packets are delayed (e.g., when an SA
-deletion is delayed), or non-IP-TFS uses of AGGFRAG mode, can of
-course use timers to drop packets as well.
+reordering seen in arriving packets.
+
+Please note when IP-TFS sends a continuous stream of packets, there
+is no requirement for an explicit drop timer; however, using a drop
+timer is RECOMMENDED. If an implementation does not use a drop timer
+and only considers an outer packet lost when the reorder window moves
+by it, the inner traffic can be delayed by up to the reorder window
+size times the per packet send rate. This amount of delay could be
+significant for slower send rates or when larger reorder window sizes
+are in use.
 
 While ESP guarantees an increasing sequence number with subsequently
 sent packets, it does not actually require the sequence numbers to be
@@ -256,8 +258,8 @@ but inside the larger would still be dropped by the mechanism with
 the smaller window size. However, there is also no requirement to
 make these values the same. Indeed, in some cases, such as slow
 tunnels where a very small or zero reorder window size is
-appropriate, the user may want a large replay detection window to log
-replayed packets. Additionally, large replay windows can be
+appropriate, the user may still want a large replay detection window
+to log replayed packets. Additionally, large replay windows can be
 implemented with very little overhead compared to large reorder
 windows.
 
