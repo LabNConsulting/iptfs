@@ -464,7 +464,11 @@ received on an SA into in-sequence-order AGGFRAG_PAYLOAD payloads
 ([[Fragmentation, Sequence Numbers and All-Pad Payloads]]). If congestion
 control is enabled, the receiver considers a packet lost when it's
 sequence number is abandoned (e.g., pushed out of the re-ordering
-window, or timed-out) by the reordering algorithm.
+window, or timed-out) by the reordering algorithm. As an optional
+optimization (e.g., to handle very lossy and/or reordered tunnel
+paths), the receiver MAY transmit any fully formed inner packets
+contained within the AGGFRAG_PAYLOADs prior to re-ordering the outer
+packets.
 
 Additionally, if congestion control is enabled, the receiver sends
 congestion control data ([[Congestion Control AGGFRAG_PAYLOAD Payload
@@ -474,6 +478,7 @@ and [[Congestion Information]].
 Finally, the receiver processes the now in-order AGGFRAG_PAYLOAD
 payload stream to extract the inner-packets ([[Fragmentation, Sequence
 Numbers and All-Pad Payloads]], [[AGGFRAG_PAYLOAD Payload]]).
+
 
 * Congestion Information
 
@@ -1093,7 +1098,7 @@ MTU sizes in order to compare them. The first table is the number of
 octets of overhead for a given L3 MTU sized packet. The second table
 is the percentage of overhead in the same MTU sized packet.
 
-XXX rerun these.
+# XXX rerun these.
 
 #+CONSTANTS: etho=38 ipo=20 espoh=34 ipso=54 tfso=58
 
@@ -1299,9 +1304,9 @@ padding often greatly reduces available bandwidth.
 * Acknowledgements
 We would like to thank Don Fedyk for help in reviewing and editing
 this work. We would also like to thank Michael Richardson, Sean
-Turner and Valery Smyslov for reviews and many suggestions for
-improvements, as well as Joseph Touch for the transport area review
-and suggested improvements.
+Turner, Valery Smyslov and Tero Kivinen for reviews and many
+suggestions for improvements, as well as Joseph Touch for the
+transport area review and suggested improvements.
 
 * Contributors
 The following people made significant contributions to this document.
