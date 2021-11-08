@@ -226,22 +226,24 @@ number based sliding window can be used to correct re-ordering of the
 outer packet stream. Receiving a larger (newer) sequence number
 packet advances the window, and received older ESP packets whose
 sequence numbers the window has passed by are dropped. A good choice
-for the size of this window depends on the amount of re-ordering the
+for the size of this window depends on the amount of misordering the
 user may normally experience.
 
-As the amount of reordering that may be present is hard to predict,
+As the amount of misordering that may be present is hard to predict,
 the window size SHOULD be configurable by the user. Implementations
 MAY also dynamically adjust the reordering window based on actual
-reordering seen in arriving packets.
+misordering seen in arriving packets.
 
 Please note when IP-TFS sends a continuous stream of packets, there
-is no requirement for an explicit drop timer; however, using a drop
-timer is RECOMMENDED. If an implementation does not use a drop timer
-and only considers an outer packet lost when the reorder window moves
-by it, the inner traffic can be delayed by up to the reorder window
-size times the per packet send rate. This amount of delay could be
-significant for slower send rates or when larger reorder window sizes
-are in use.
+is no requirement for an explicit lost packet timer; however, using a
+lost packet timer is RECOMMENDED. If an implementation does not use a
+lost packet timer and only considers an outer packet lost when the
+reorder window moves by it, the inner traffic can be delayed by up to
+the reorder window size times the per packet send rate. This amount
+of delay could be significant for slower send rates or when larger
+reorder window sizes are in use. As the lost packet timer affects
+delay of inner packet delivery, one could choose to set it
+proportionate to the tunnel rate.
 
 While ESP guarantees an increasing sequence number with subsequently
 sent packets, it does not actually require the sequence numbers to be
@@ -459,26 +461,37 @@ circuit breakers are outside the scope of this document.
 
 An AGGFRAG enabled SA receiver has a few tasks to perform.
 
-The receiver first reorders, possibly out-of-order ESP packets
-received on an SA into in-sequence-order AGGFRAG_PAYLOAD payloads
-([[Fragmentation, Sequence Numbers and All-Pad Payloads]]). If congestion
-control is enabled, the receiver considers a packet lost when it's
-sequence number is abandoned (e.g., pushed out of the re-ordering
-window, or timed-out) by the reordering algorithm. As an optional
-optimization (e.g., to handle very lossy and/or reordered tunnel
-paths), the receiver MAY transmit any fully formed inner packets
-contained within the AGGFRAG_PAYLOADs prior to re-ordering the outer
-packets.
+The receiver MAY process incoming AGGFRAG_PAYLOAD payloads as soon as
+they arrive as much as it can. I.e., if the incoming AGGFRAG_PAYLOAD
+packet contains complete inner packet(s), the receiver should extract
+and transmit them immediately. For partial packets the receiver needs
+to keep the partial packets in the memory until the they fall out
+from the reordering window, or until the missing parts of the packets
+are received, in which case it will reassemble and transmit them. If
+AGGFRAG_PAYLOAD payload contains multiple packets they SHOULD be sent
+out in the order they are in the AGGFRAG_PAYLOAD (i.e., keep the
+original order they were received on the other end). The cost of
+using this method is that an amplification of out-of-order delivery
+of inner packets can occur due to inner packet aggregation.
+
+Instead of the method described in the previous paragraph, the
+receiver MAY reorder out-of-order AGGFRAG_PAYLOAD payloads received
+into in-sequence-order AGGFRAG_PAYLOAD payloads ([[Fragmentation,
+Sequence Numbers and All-Pad Payloads]]), and only after it has
+in-order AGGFRAG_PAYLOAD payload stream, the receiver transmits the
+inner-packets. Using this method will make sure the packets are sent
+in-order, i.e., there is no reordering possible, but the cost is that
+a lost packet will cause delay of up to the lost packet timer
+interval (or the full reorder window if no lost packet timer is
+used), and there will be extra burstiness in the output stream (when
+lost packet is dropped out from the re-order window, all outer
+packets received after that are then immediately processed, and sent
+out back to back).
 
 Additionally, if congestion control is enabled, the receiver sends
 congestion control data ([[Congestion Control AGGFRAG_PAYLOAD Payload
 Format]]) back to the sender as described in [[Congestion Controlled Mode]]
 and [[Congestion Information]].
-
-Finally, the receiver processes the now in-order AGGFRAG_PAYLOAD
-payload stream to extract the inner-packets ([[Fragmentation, Sequence
-Numbers and All-Pad Payloads]], [[AGGFRAG_PAYLOAD Payload]]).
-
 
 * Congestion Information
 
