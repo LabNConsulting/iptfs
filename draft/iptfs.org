@@ -134,8 +134,8 @@ here, but are also not restricted by this document.
 
 ** Payload Content
 
-The AGGFRAG_PAYLOAD payload content defined in this document is
-comprised of a 4 or 24 octet header followed by either a partial
+The AGGFRAG_PAYLOAD payload content defined in this document
+consists of a 4 or 24 octet header followed by either a partial
 datablock, a full datablock, or multiple partial or full datablocks.
 The following diagram illustrates this payload within the ESP packet.
 See [[AGGFRAG_PAYLOAD Payload]] for the exact formats of the
@@ -465,7 +465,7 @@ The receiver MAY process incoming AGGFRAG_PAYLOAD payloads as soon as
 they arrive as much as it can. I.e., if the incoming AGGFRAG_PAYLOAD
 packet contains complete inner packet(s), the receiver should extract
 and transmit them immediately. For partial packets the receiver needs
-to keep the partial packets in the memory until the they fall out
+to keep the partial packets in the memory until they fall out
 from the reordering window, or until the missing parts of the packets
 are received, in which case it will reassemble and transmit them. If
 AGGFRAG_PAYLOAD payload contains multiple packets they SHOULD be sent
@@ -668,7 +668,7 @@ are defined in the following sections.
 
 *** Non-Congestion Control AGGFRAG_PAYLOAD Payload Format
 
-The non-congestion control AGGFRAG_PAYLOAD payload is comprised of a 4
+The non-congestion control AGGFRAG_PAYLOAD payload consists of a 4
 octet header followed by a variable amount of ~DataBlocks~ data as
 shown below.
 
@@ -704,7 +704,7 @@ shown below.
 
 *** Congestion Control AGGFRAG_PAYLOAD Payload Format
 
-The congestion control AGGFRAG_PAYLOAD payload is comprised of a 24
+The congestion control AGGFRAG_PAYLOAD payload consists of a 24
 octet header followed by a variable amount of ~DataBlocks~ data as
 shown below.
 
