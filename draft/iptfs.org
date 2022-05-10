@@ -907,7 +907,7 @@ the "IKEv2 Notify Message Types - Status Types" registry.
 * Security Considerations
 
 This document describes an aggregation and fragmentation mechanism
-and it use to add TFC to IP traffic. The use described is expected to
+and its use to add TFC to IP traffic. The use described is expected to
 increase the security of the traffic being transported. Other than
 the additional security afforded by using this mechanism, IP-TFS
 utilizes the security protocols [[RFC4303]] and [[RFC7296]] and so their
@@ -918,7 +918,7 @@ thus may constitute a covert channel. For this reason, ECN use SHOULD
 NOT be enabled by default.
 
 As noted previously in [[Congestion Controlled Mode]], for TFC to be
-fully maintained the encapsulated traffic flow should not be
+maintained the encapsulated traffic flow should not be
 affecting network congestion in a predictable way, and if it would be
 then non-congestion controlled mode use should be considered instead.
 
