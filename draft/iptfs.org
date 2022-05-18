@@ -580,6 +580,9 @@ specified at the unidirectional tunnel ingress (sending) side. It
 is intended that non-IKEv2 operation is supported, at least, with
 local static configuration.
 
+YANG and MIB documents have been defined for IP-TFS in
+[[I-D.ietf-ipsecme-yang-iptfs]] and [[I-D.ietf-ipsecme-mib-iptfs]].
+
 ** Bandwidth
 
 Bandwidth is a local configuration option. For non-congestion
@@ -952,6 +955,8 @@ then non-congestion controlled mode use should be considered instead.
 ** RFC8229
 ** RFC8546
 ** RFC8899
+** I-D.ietf-ipsecme-mib-iptfs
+** I-D.ietf-ipsecme-yang-iptfs
 
 
 * Example Of An Encapsulated IP Packet Flow
@@ -1027,7 +1032,7 @@ first established.
 
 ** Comparing Overhead
 
-For comparing overhead the overhead of ESP for both normal and AGGFRAG
+For comparing the overhead of ESP for both normal and AGGFRAG
 tunnel packets must be calculated, and so an algorithm for encryption
 and authentication must be chosen. For the data below AES-GCM-256 was
 selected. This leads to an IP+ESP overhead of 54.
