@@ -35,10 +35,10 @@ non-constant send-rate usage.
 
 Traffic Analysis ([[RFC4301]], [[AppCrypt]]) is the act of extracting
 information about data being sent through a network. While directly
-obscuring the data with encryption [[RFC4303]], the traffic pattern
-itself exposes information due to variations in its shape and timing
-([[RFC8546]], [[AppCrypt]]). Hiding the size and frequency of
-traffic is referred to as Traffic Flow Confidentiality (TFC) per
+obscuring the data with encryption [[RFC4303]], fully, the patterns in
+the message traffic may expose information due to variations in its
+shape and timing ([[RFC8546]], [[AppCrypt]]). Hiding the size and frequency
+of traffic is referred to as Traffic Flow Confidentiality (TFC) per
 [[RFC4303]].
 
 [[RFC4303]] provides for TFC by allowing padding to be added to encrypted
@@ -119,7 +119,7 @@ an AGGFRAG mode for ESP.
 AGGFRAG mode aggregates as well as fragments the inner IP traffic
 flow into encapsulating IPsec tunnel packets. For IP-TFS, the IPsec
 encapsulating tunnel packets are a fixed size. Padding is only added
-to the the tunnel packets if there is no data available to be sent at
+to the tunnel packets if there is no data available to be sent at
 the time of tunnel packet transmission, or if fragmentation has been
 disabled by the receiver.
 
@@ -499,7 +499,7 @@ In order to support the congestion control mode, the sender needs to
 know the loss event rate and to approximate the RTT [[RFC5348]]. In order
 to obtain these values, the receiver sends congestion control
 information on it's SA back to the sender. Thus, to support
-congestion control the receiver must have a paired SA back to the
+congestion control the receiver MUST have a paired SA back to the
 sender (this is always the case when the tunnel was created using
 IKEv2). If the SA back to the sender is a non-AGGFRAG_PAYLOAD enabled
 SA then an AGGFRAG_PAYLOAD empty payload (i.e., header only) is used
@@ -869,7 +869,7 @@ later specifications.
   packets MUST be sent using a single ~Data Block~). This value only
   applies to what the sender is capable of receiving; the sender MAY
   still send packet fragments unless similarly restricted by the
-  receiver in it's USE_AGGFRAG notification.
+  receiver in its USE_AGGFRAG notification.
 
 * IANA Considerations
 
@@ -906,14 +906,14 @@ the "IKEv2 Notify Message Types - Status Types" registry.
 
 * Security Considerations
 
-This document describes an aggregation and fragmentation mechanism
-and its use to add TFC to IP traffic. The use described is expected to
-increase the security of the traffic being transported. Other than
+This document describes an aggregation and fragmentation mechanism to
+efficiently implement TFC for IP traffic. This approach is expected to reduce
+the efficacy of traffic analysis on IPSec communication. Other than
 the additional security afforded by using this mechanism, IP-TFS
 utilizes the security protocols [[RFC4303]] and [[RFC7296]] and so their
 security considerations apply to IP-TFS as well.
 
-As noted in ([[ECN Support]]) the ECN bits are not protected by IPsec and
+As noted in [[ECN Support]], the ECN bits are not protected by IPsec and
 thus may constitute a covert channel. For this reason, ECN use SHOULD
 NOT be enabled by default.
 
