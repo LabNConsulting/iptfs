@@ -15,13 +15,13 @@
 # Do: title, table-of-contents ::fixed-width-sections |tables
 # Do: ^:sup/sub with curly -:special-strings *:emphasis
 # Don't: prop:no-prop-drawers \n:preserve-linebreaks ':use-smart-quotes
-#+OPTIONS: prop:nil title:t toc:t \n:nil ::t |:t ^:{} -:t *:t ':nil
+#+OPTIONS: prop:nil title:t toc:t \n:nil ::t |:t ^:nil -:t *:t ':nil
 
 
 #+begin_abstract
 This document describes a mechanism for aggregation and
 fragmentation of IP packets when they are being encapsulated in ESP
-payload. This new payload type can be used for various purposes such
+payloads. This new payload type can be used for various purposes such
 as decreasing encapsulation overhead for small IP packets; however,
 the focus in this document is to enhance IPsec traffic flow security
 (IP-TFS) by adding Traffic Flow Confidentiality (TFC) to encrypted IP
@@ -148,7 +148,7 @@ AGGFRAG_PAYLOAD payload.
  . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
  . ESP Header...                                                 .
  +---------------------------------------------------------------+
- |   [AGGFRAG subtype/flags]    :           BlockOffset          |
+ |   [AGGFRAG sub-type/flags]   :           BlockOffset          |
  +---------------------------------------------------------------+
  :                  [Optional Congestion Info]                   :
  +---------------------------------------------------------------+
@@ -177,7 +177,7 @@ Having the ~BlockOffset~ always point at the next available data
 block allows for recovering the next inner packet in the
 presence of outer encapsulating packet loss.
 
-An example AGGFRAG mode packet flow can be found in [[Example Of An
+An example AGGFRAG mode packet flow can be found in [[Example of An
 Encapsulated IP Packet Flow]].
 
 *** Data Blocks
@@ -204,19 +204,19 @@ this end padding a ~Pad Data Block~ is used.
 
 *** Fragmentation, Sequence Numbers and All-Pad Payloads
 
-In order for a receiver to reassemble fragmented inner-packets, the
-sender MUST send the inner-packet fragments back-to-back in the
+In order for a receiver to reassemble fragmented inner packets, the
+sender MUST send the inner packet fragments back-to-back in the
 logical outer packet stream (i.e., using consecutive ESP sequence
 numbers). However, the sender is allowed to insert "all-pad" payloads
 (i.e., payloads with a ~BlockOffset~ of zero and a single pad
-~DataBlock~) in between the packets carrying the inner-packet
+~DataBlock~) in between the packets carrying the inner packet
 fragment payloads. This interleaving of all-pad payloads allows the
 sender to always send a tunnel packet, regardless of the
 encapsulation computational requirements.
 
-When a receiver is reassembling an inner-packet, and it receives an
+When a receiver is reassembling an inner packet, and it receives an
 "all-pad" payload, it increments the expected sequence number that
-the next inner-packet fragment is expected to arrive in.
+the next inner packet fragment is expected to arrive in.
 
 Given the above, the receiver will need to handle out-of-order
 arrival of outer ESP packets prior to reassembly processing. ESP
@@ -234,20 +234,20 @@ the window size SHOULD be configurable by the user. Implementations
 MAY also dynamically adjust the reordering window based on actual
 misordering seen in arriving packets.
 
-Please note when IP-TFS sends a continuous stream of packets, there
+Please note, when IP-TFS sends a continuous stream of packets, there
 is no requirement for an explicit lost packet timer; however, using a
 lost packet timer is RECOMMENDED. If an implementation does not use a
 lost packet timer and only considers an outer packet lost when the
 reorder window moves by it, the inner traffic can be delayed by up to
-the reorder window size times the per packet send rate. This amount
-of delay could be significant for slower send rates or when larger
+the reorder window size times the per packet send rate. This
+delay could be significant for slower send rates or when larger
 reorder window sizes are in use. As the lost packet timer affects
-delay of inner packet delivery, one could choose to set it
+delay of inner packet delivery, an implementation or user could choose to set it
 proportionate to the tunnel rate.
 
 While ESP guarantees an increasing sequence number with subsequently
 sent packets, it does not actually require the sequence numbers to be
-generated with no gaps (e.g., sending only even numbered sequence
+generated consecutively (e.g., sending only even numbered sequence
 numbers would be allowed as long as they are always increasing). Gaps
 in the sequence numbers will not work for this document so the
 sequence number stream MUST increase monotonically by 1 for each
@@ -274,7 +274,7 @@ inner packet using one SA and subsequent fragments in a different SA.
 When the tunnel bandwidth is not being fully utilized, a
 sender MAY pad-out the current encapsulating packet in order
 to deliver an inner packet un-fragmented in the following outer
-packet. The benefit would be to avoid inner-packet fragmentation in
+packet. The benefit would be to avoid inner packet fragmentation in
 the presence of a bursty offered load (non-bursty traffic will
 naturally not fragment). Senders MAY also choose to allow
 for a minimum fragment size to be configured (e.g., as a percentage
@@ -285,7 +285,7 @@ fragmentation is to minimize inner packet loss in the presence of
 outer packet loss. When this is worthwhile (e.g., how much loss and
 what type of loss is required, given different inner traffic shapes
 and utilization, for this to make sense), and what values to use for
-the allowable/added delay may be worth researching, but is outside
+the allowable/added delay may be worth researching but is outside
 the scope of this document.
 
 While use of padding to avoid fragmentation does not impact
@@ -298,7 +298,7 @@ padding.
 *** Empty Payload
 
 To support reporting of congestion control information (described
-later) using a non-AGGFRAG_PAYLOAD enabled SA, it is allowed to send
+later) using a non-AGGFRAG_PAYLOAD-enabled SA, it is allowed to send
 an AGGFRAG_PAYLOAD payload with no data blocks (i.e., the ESP payload
 length is equal to the AGGFRAG_PAYLOAD header length). This special
 payload is called an empty payload.
@@ -331,7 +331,7 @@ packets based on the normal ECN specification [[RFC3168]].
 
 **** DS field
 
-By default the DS field SHOULD NOT be copied, although a sender MAY
+By default, the DS field SHOULD NOT be copied, although a sender MAY
 choose to allow for configuration to override this behavior. A sender
 SHOULD also allow the DS value to be set by configuration.
 
@@ -357,9 +357,9 @@ tunnel's EMTU and behaviors are the same as normal IPsec tunnels
 
 ** Exclusive SA Use
 
-This document does not specify mixed use of an AGGFRAG_PAYLOAD
-enabled SA. A sender MUST only send AGGFRAG_PAYLOAD payloads over an
-SA configured for AGGFRAG mode.
+This document does not specify mixed use of an
+AGGFRAG_PAYLOAD-enabled SA. A sender MUST only send AGGFRAG_PAYLOAD
+payloads over an SA configured for AGGFRAG mode.
 
 ** Modes of Operation
 
@@ -368,34 +368,34 @@ unidirectional. Bidirectional IP-TFS functionality is achieved by
 setting up 2 AGGFRAG tunnels, one in either direction.
 
 An AGGFRAG tunnel used for IP-TFS can operate in 2 modes, a
-non-congestion controlled mode and congestion controlled mode.
+non-congestion-controlled mode and congestion-controlled mode.
 
-*** Non-Congestion Controlled Mode
+*** Non-Congestion-Controlled Mode
 
-In the non-congestion controlled mode, IP-TFS sends fixed-sized
+In the non-congestion-controlled mode, IP-TFS sends fixed-sized
 packets over an AGGFRAG tunnel at a constant rate. The packet send
 rate is constant and is not automatically adjusted regardless of any
 network congestion (e.g., packet loss).
 
-For similar reasons as given in [[RFC7510]] the non-congestion
-controlled mode should only be used where the user has full
-administrative control over the path the tunnel will take. This is
-required so the user can guarantee the bandwidth and also be sure as
-to not be negatively affecting network congestion [[RFC2914]]. In this
-case packet loss should be reported to the administrator (e.g.,
-via syslog, YANG notification, SNMP traps, etc) so that any
-failures due to a lack of bandwidth can be corrected.
+For similar reasons as given in [[RFC7510]] the non-congestion-controlled
+mode should only be used where the user has full administrative
+control over the path the tunnel will take. This is required so the
+user can guarantee the bandwidth and also be sure as to not be
+negatively affecting network congestion [[RFC2914]]. In this case, packet
+loss should be reported to the administrator (e.g., via syslog, YANG
+notification, SNMP traps, etc.) so that any failures due to a lack of
+bandwidth can be corrected.
 
-Non-congestion control mode is also appropriate if ESP over TCP is in
+Non-congestion-controlled mode is also appropriate if ESP over TCP is in
 use [[RFC8229]].
 
-*** Congestion Controlled Mode
+*** Congestion-Controlled Mode
 
-With the congestion controlled mode, IP-TFS adapts to network
+With the congestion-controlled mode, IP-TFS adapts to network
 congestion by lowering the packet send rate to accommodate the
 congestion, as well as raising the rate when congestion subsides.
 Since overhead is per packet, by allowing for maximal fixed-size
-packets and varying the send rate transport overhead is minimized.
+packets and varying the send rate, transport overhead is minimized.
 
 The output of the congestion control algorithm will adjust the rate
 at which the ingress sends packets. While this document does not
@@ -403,8 +403,8 @@ require a specific congestion control algorithm, best current
 practice RECOMMENDS that the algorithm conform to [[RFC5348]]. Congestion
 control principles are documented in [[RFC2914]] as well. [[RFC4342]]
 provides an example of the [[RFC5348]] algorithm which matches the
-requirements of IP-TFS (i.e., designed for fixed-size packet and send
-rate varied based on congestion.
+requirements of IP-TFS (i.e., designed for fixed-size packets and send
+rate varied based on congestion).
 
 The required inputs for the TCP friendly rate control algorithm
 described in [[RFC5348]] are the receiver's loss event rate and the
@@ -425,8 +425,8 @@ to 4 RTT intervals. When a "no feedback timeout" has occurred [[RFC4342]]
 halves the sending rate.
 
 An implementation MAY choose to always include the congestion
-information in its AGGFRAG payload header if sending on an IP-TFS
-enabled SA. Since IP-TFS normally will operate with a large packet
+information in its AGGFRAG payload header if sending on an IP-TFS-enabled
+SA. Since IP-TFS normally will operate with a large packet
 size, the congestion information should represent a small portion of
 the available tunnel bandwidth. An implementation choosing to always
 send the data MAY also choose to only update the ~LossEventRate~
@@ -437,16 +437,17 @@ and ~RTT~ header field values it sends every ~RTT~ though.
 # required in [[RFC5348]].
 
 When choosing a congestion control algorithm (or a selection of
-algorithms) note that IP-TFS is not providing for reliable delivery
+algorithms), note that IP-TFS is not providing for reliable delivery
 of IP traffic, and so per packet ACKs are not required and are not
 provided.
 
-It is worth noting that the variable send-rate of a congestion
-controlled AGGFRAG tunnel, is not private; however, this send-rate is
-being driven by network congestion, and as long as the encapsulated
-(inner) traffic flow shape and timing are not directly affecting the
-(outer) network congestion, the variations in the tunnel rate will
-not weaken the provided inner traffic flow confidentiality.
+It is worth noting that the variable send-rate of a
+congestion-controlled AGGFRAG tunnel, is not private; however, this
+send-rate is being driven by network congestion, and as long as the
+encapsulated (inner) traffic flow shape and timing are not directly
+affecting the (outer) network congestion, the variations in the
+tunnel rate will not weaken the provided inner traffic flow
+confidentiality.
 
 **** Circuit Breakers
 
@@ -454,21 +455,20 @@ In additional to congestion control, implementations MAY choose to
 define and implement circuit breakers [[RFC8084]] as a recovery method
 of last resort. Enabling circuit breakers is also a reason a user may
 wish to enable congestion information reports even when using the
-non-congestion controlled mode of operation. The definition of
-circuit breakers are outside the scope of this document.
+non-congestion-controlled mode of operation.
 
 ** Summary of Receiver Processing
 
-An AGGFRAG enabled SA receiver has a few tasks to perform.
+An AGGFRAG-enabled SA receiver has a few tasks to perform.
 
 The receiver MAY process incoming AGGFRAG_PAYLOAD payloads as soon as
 they arrive as much as it can. I.e., if the incoming AGGFRAG_PAYLOAD
 packet contains complete inner packet(s), the receiver should extract
-and transmit them immediately. For partial packets the receiver needs
+and transmit them immediately. For partial packets, the receiver needs
 to keep the partial packets in the memory until they fall out
 from the reordering window, or until the missing parts of the packets
 are received, in which case it will reassemble and transmit them. If
-AGGFRAG_PAYLOAD payload contains multiple packets they SHOULD be sent
+the AGGFRAG_PAYLOAD payload contains multiple packets they SHOULD be sent
 out in the order they are in the AGGFRAG_PAYLOAD (i.e., keep the
 original order they were received on the other end). The cost of
 using this method is that an amplification of out-of-order delivery
@@ -477,28 +477,28 @@ of inner packets can occur due to inner packet aggregation.
 Instead of the method described in the previous paragraph, the
 receiver MAY reorder out-of-order AGGFRAG_PAYLOAD payloads received
 into in-sequence-order AGGFRAG_PAYLOAD payloads ([[Fragmentation,
-Sequence Numbers and All-Pad Payloads]]), and only after it has
-in-order AGGFRAG_PAYLOAD payload stream, the receiver transmits the
-inner-packets. Using this method will make sure the packets are sent
-in-order, i.e., there is no reordering possible, but the cost is that
-a lost packet will cause delay of up to the lost packet timer
-interval (or the full reorder window if no lost packet timer is
-used), and there will be extra burstiness in the output stream (when
-lost packet is dropped out from the re-order window, all outer
-packets received after that are then immediately processed, and sent
-out back to back).
+Sequence Numbers and All-Pad Payloads]]), and only after it has an
+in-order AGGFRAG_PAYLOAD payload stream would the receiver transmits
+the inner packets. Using this method will ensure the inner packets
+are sent in order. The cost of this method is that a lost packet will
+cause a delay of up to the lost packet timer interval (or the full
+reorder window if no lost packet timer is used). Additionally, there
+can be extra burstiness in the output stream. This burstiness can
+happen when a lost packet is dropped from the re-order window,
+and the remaining outer packets in the re-order window are immediately
+processed and sent out back to back.
 
 Additionally, if congestion control is enabled, the receiver sends
 congestion control data ([[Congestion Control AGGFRAG_PAYLOAD Payload
-Format]]) back to the sender as described in [[Congestion Controlled Mode]]
+Format]]) back to the sender as described in [[Congestion-Controlled Mode]]
 and [[Congestion Information]].
 
 * Congestion Information
 
-In order to support the congestion control mode, the sender needs to
+In order to support the congestion-controlled mode, the sender needs to
 know the loss event rate and to approximate the RTT [[RFC5348]]. In order
 to obtain these values, the receiver sends congestion control
-information on it's SA back to the sender. Thus, to support
+information on its SA back to the sender. Thus, to support
 congestion control the receiver MUST have a paired SA back to the
 sender (this is always the case when the tunnel was created using
 IKEv2). If the SA back to the sender is a non-AGGFRAG_PAYLOAD enabled
@@ -513,10 +513,10 @@ value will be zero as no RTT estimate is yet known.
 In order for the sender to estimate its ~RTT~ value, the sender
 places a timestamp value in the ~TVal~ header field. On first receipt
 of this ~TVal~, the receiver records the new ~TVal~ value along with
-the time it arrived locally, subsequent receipt of the same ~TVal~
+the time it arrived locally. Subsequent receipt of the same ~TVal~
 MUST NOT update the recorded time.
 
-When the receiver sends its CC header it places this latest recorded
+When the receiver sends its congestion control header it places this latest recorded
 ~TVal~ in the ~TEcho~ header field, along with 2 delay values, ~Echo
 Delay~ and ~Transmit Delay~. The ~Echo Delay~ value is the time delta
 from the recorded arrival time of ~TVal~ and the current clock in
@@ -528,7 +528,7 @@ When the sender receives back its ~TVal~ in the ~TEcho~ header field
 it calculates 2 RTT estimates. The first is the actual delay found by
 subtracting the ~TEcho~ value from its current clock and then
 subtracting ~Echo Delay~ as well. The second RTT estimate is found by
-adding the received ~Transmit Delay~ header value to the senders own
+adding the received ~Transmit Delay~ header value to the sender's own
 transmission delay (i.e., the average time between sending packets on
 its half of the AGGFRAG tunnel). The larger of these 2 RTT estimates
 SHOULD be used as the ~RTT~ value.
@@ -585,11 +585,11 @@ YANG and MIB documents have been defined for IP-TFS in
 
 ** Bandwidth
 
-Bandwidth is a local configuration option. For non-congestion
-controlled mode, the bandwidth SHOULD be configured. For
-congestion controlled mode, the bandwidth can be configured
-or the congestion control algorithm discovers and uses the
-maximum bandwidth available. No standardized configuration method is
+Bandwidth is a local configuration option. For
+non-congestion-controlled mode, the bandwidth SHOULD be configured.
+For congestion-controlled mode, the bandwidth can be configured or
+the congestion control algorithm discovers and uses the maximum
+bandwidth available. No standardized configuration method is
 required.
 
 ** Fixed Packet Size
@@ -657,6 +657,7 @@ AGGFRAG_PAYLOAD which has the value 0x5. The value 5 was chosen to not
 conflict with other used values. The first octet of this payload
 indicates the format of the remaining payload data.
 
+#+caption: AGGFRAG_PAYLOAD payload format
 #+begin_example
   0 1 2 3 4 5 6 7
  +-+-+-+-+-+-+-+-+-+-+-
@@ -671,10 +672,11 @@ are defined in the following sections.
 
 *** Non-Congestion Control AGGFRAG_PAYLOAD Payload Format
 
-The non-congestion control AGGFRAG_PAYLOAD payload consists of a 4
-octet header followed by a variable amount of ~DataBlocks~ data as
+The non-congestion control AGGFRAG_PAYLOAD payload consists of a
+4-octet header followed by a variable amount of ~DataBlocks~ data as
 shown below.
 
+#+caption: Non-congestion control payload format
 #+begin_example
                       1                   2                   3
   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
@@ -687,7 +689,7 @@ shown below.
 
 - Sub-type :: An octet indicating the payload format. For this
               non-congestion control format, the value is 0.
-- Reserved :: An octet set to 0 on generation, and ignored on
+- Reserved :: An octet set to 0 on generation and ignored on
               receipt.
 - BlockOffset :: A 16-bit unsigned integer counting the number of
                  octets of ~DataBlocks~ data before the start of a
@@ -711,6 +713,7 @@ The congestion control AGGFRAG_PAYLOAD payload consists of a 24
 octet header followed by a variable amount of ~DataBlocks~ data as
 shown below.
 
+#+caption: Congestion control payload format
 #+begin_example
                       1                   2                   3
   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
@@ -733,16 +736,16 @@ shown below.
 
 - Sub-type :: An octet indicating the payload format. For this
               congestion control format, the value is 1.
-- Reserved :: A 6-bit field set to 0 on generation, and ignored on
+- Reserved :: A 6-bit field set to 0 on generation and ignored on
               receipt.
-- P :: A 1-bit value if set indicates that PLMTUD probing is in
+- P :: A 1-bit value that if set indicates that PLMTUD probing is in
        progress. This information can be used to avoid treating
        missing packets as loss events by the CC algorithm when
        running the PLMTUD probe algorithm.
-- E :: A 1-bit value if set indicates that Congestion Experienced
+- E :: A 1-bit value that if set indicates that Congestion Experienced
        (CE) ECN bits were received and used in deriving the
        reported ~LossEventRate~.
-- BlockOffset :: The same value as the non-congestion controlled
+- BlockOffset :: The same value as the non-congestion-controlled
                  payload format value.
 - LossEventRate :: A 32-bit value specifying the inverse of the
                    current loss event rate as calculated by the
@@ -752,19 +755,19 @@ shown below.
 - RTT :: A 22-bit value specifying the sender's current round-trip
          time estimate in microseconds. The value MAY be zero prior
          to the sender having calculated a round-trip time estimate.
-         The value SHOULD be set to zero on non-AGGFRAG_PAYLOAD
-         enabled SAs. If the value is equal to or larger than
-         ~0x3FFFFF~ it MUST be set to ~0x3FFFFF~.
+         The value SHOULD be set to zero on
+         non-AGGFRAG_PAYLOAD-enabled SAs. If the RTT is equal to or
+         larger than ~0x3FFFFF~ the value MUST be set to ~0x3FFFFF~.
 - Echo Delay :: A 21-bit value specifying the delay in microseconds
            incurred between the receiver first receiving the ~TVal~
-           value which it is sending back in ~TEcho~. If the value
-           is equal to or larger than ~0x1FFFFF~ it MUST be set to
-           ~0x1FFFFF~.
+           value which it is sending back in ~TEcho~. If the delay
+           is equal to or larger than ~0x1FFFFF~ the value MUST be
+           set to ~0x1FFFFF~.
 - Transmit Delay :: A 21-bit value specifying the transmission delay in
            microseconds. This is the fixed (or average) delay on the
            receiver between it sending packets on the IPTFS tunnel.
-           If the value is equal to or larger than ~0x1FFFFF~ it MUST
-           be set to ~0x1FFFFF~.
+           If the delay is equal to or larger than ~0x1FFFFF~ the
+           value MUST be set to ~0x1FFFFF~.
 - TVal :: An opaque 32-bit value that will be echoed back by the
           receiver in later packets in the ~TEcho~ field, along with
           an ~Echo Delay~ value of how long that echo took.
@@ -776,10 +779,11 @@ shown below.
                 of a data block, or the continuation of a previous
                 data block, followed by zero or more additional data
                 blocks. For the special case of sending congestion
-                control information on an non-IP-TFS enabled SA this
-                value MUST be empty (i.e., be zero octets long).
+                control information on a non-IP-TFS enabled SA this
+                field MUST be empty (i.e., be zero octets long).
 
 *** Data Blocks
+#+caption: Data Block format
 #+begin_example
                       1                   2                   3
   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
@@ -793,6 +797,7 @@ shown below.
           data block.
 
 **** IPv4 Data Block
+#+caption: IPv4 Data Block format
 #+begin_example
                       1                   2                   3
   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
@@ -813,6 +818,7 @@ the encapsulated IP packet.
                  the IPv4 inner packet.
 
 **** IPv6 Data Block
+#+caption: IPv6 Data Block format
 #+begin_example
                       1                   2                   3
   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
@@ -833,6 +839,7 @@ the encapsulated IP packet.
                    of the inner IPv6 inner packet.
 
 **** Pad Data Block
+#+caption: Pad Data Block format
 #+begin_example
                       1                   2                   3
   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
@@ -856,13 +863,14 @@ The notification payload contains 1 octet of requirement flags. There
 are currently 2 requirement flags defined. This may be revised by
 later specifications.
 
+#+caption: USE_AGGFRAG requirement flags
 #+begin_example
  +-+-+-+-+-+-+-+-+
  |0|0|0|0|0|0|C|D|
  +-+-+-+-+-+-+-+-+
 #+end_example
 
-- 0 :: 6 bits - reserved, MUST be zero on send, unless defined by
+- 0 :: 6 bits - Reserved MUST be zero on send, unless defined by
   later specifications.
 - C :: Congestion Control bit. If set, then the sender is requiring
   that congestion control information MUST be returned to it
@@ -911,7 +919,7 @@ the "IKEv2 Notify Message Types - Status Types" registry.
 
 This document describes an aggregation and fragmentation mechanism to
 efficiently implement TFC for IP traffic. This approach is expected to reduce
-the efficacy of traffic analysis on IPSec communication. Other than
+the efficacy of traffic analysis on IPsec communication. Other than
 the additional security afforded by using this mechanism, IP-TFS
 utilizes the security protocols [[RFC4303]] and [[RFC7296]] and so their
 security considerations apply to IP-TFS as well.
@@ -920,10 +928,10 @@ As noted in [[ECN Support]], the ECN bits are not protected by IPsec and
 thus may constitute a covert channel. For this reason, ECN use SHOULD
 NOT be enabled by default.
 
-As noted previously in [[Congestion Controlled Mode]], for TFC to be
-maintained the encapsulated traffic flow should not be
-affecting network congestion in a predictable way, and if it would be
-then non-congestion controlled mode use should be considered instead.
+As noted previously in [[Congestion-Controlled Mode]], for TFC to be
+maintained, the encapsulated traffic flow should not be
+affecting network congestion in a predictable way, and if it would be,
+then non-congestion-controlled mode use should be considered instead.
 
 * Normative References
 ** RFC2119
@@ -959,9 +967,9 @@ then non-congestion controlled mode use should be considered instead.
 ** I-D.ietf-ipsecme-yang-iptfs
 
 
-* Example Of An Encapsulated IP Packet Flow
+* Example of An Encapsulated IP Packet Flow
 
-Below an example inner IP packet flow within the encapsulating tunnel
+Below, an example inner IP packet flow within the encapsulating tunnel
 packet stream is shown. Notice how encapsulated IP packets can start
 and end anywhere, and more than one or less than 1 may occur in a
 single encapsulating packet.
@@ -969,33 +977,35 @@ single encapsulating packet.
 # XXX Consider doing a timing diagram showing random paced input going
 # into fixed rate output, maybe Y axis
 
-#+CAPTION: Inner and Outer Packet Flow
+#+CAPTION: Inner and outer packet flow
 #+begin_example
-  Offset: 0        Offset: 100    Offset: 2900    Offset: 1400
- [ ESP1  (1500) ][ ESP2  (1500) ][ ESP3  (1500) ][ ESP4  (1500) ]
- [--800--][--800--][60][-240-][--4000----------------------][pad]
+  Offset: 0        Offset: 100    Offset: 2000    Offset: 600
+ [ ESP1  (1404) ][ ESP2  (1404) ][ ESP3  (1404) ][ ESP4  (1404) ]
+ [--750--][--750--][60][-240-][--3000----------------------][pad]
 #+end_example
 
+Each outer encapsulating ESPupayload space is a fixed-size of 1404
+octets the first 4 octets of which contains the AGGFRAG header.
 The encapsulated IP packet flow (lengths include IP header and
-payload) is as follows: an 800 octet packet, an 800 octet packet, a 60
-octet packet, a 240 octet packet, a 4000 octet packet.
+payload) is as follows: a 750-octet packet, a 750-octet packet, a
+60-octet packet, a 240-octet packet, a 3000-octet packet.
 
 The ~BlockOffset~ values in the 4 AGGFRAG payload headers for this
-packet flow would thus be: 0, 100, 2900, 1400 respectively. The first
-encapsulating packet ESP1 has a zero ~BlockOffset~ which points at the
+packet flow would thus be: 0, 100, 2000, 600 respectively. The first
+encapsulating packet (ESP1) has a zero ~BlockOffset~ which points at the
 IP data block immediately following the AGGFRAG header. The following
-packet ESP2s ~BlockOffset~ points inward 100 octets to the start of the
-60 octet data block. The third encapsulating packet ESP3 contains the
-middle portion of the 4000 octet data block so the offset points past
-its end and into the forth encapsulating packet. The fourth packet
-ESP4s offset is 1400 pointing at the padding which follows the
-completion of the continued 4000 octet packet.
+packet's (ESP2) ~BlockOffset~ points inward 100 octets to the start of the
+60-octet data block. The third encapsulating packet (ESP3) contains the
+middle portion of the 3000-octet data block so the offset points past
+its end and into the fourth encapsulating packet. The fourth packet's
+(ESP4) offset is 600, pointing at the padding which follows the
+completion of the continued 3000-octet packet.
 
 * A Send and Loss Event Rate Calculation
 
 The current best practice indicates that congestion control SHOULD be
-done in a TCP friendly way. A TCP friendly congestion control algorithm
-is described in [[RFC5348]]. For this IP-TFS use case (as with [[RFC4342]]) the
+done in a TCP-friendly way. A TCP-friendly congestion control algorithm
+is described in [[RFC5348]]. For this IP-TFS use case (as with [[RFC4342]]), the
 (fixed) packet size is used as the segment size for the algorithm. The
 main formula in the algorithm for the send rate is then as follows:
 
@@ -1009,7 +1019,7 @@ Where ~X~ is the send rate in packets per second, ~R~ is the
 round trip time estimate and ~p~ is the loss event rate (the inverse
 of which is provided by the receiver).
 
-In addition the algorithm in [[RFC5348]] also uses an ~X_recv~ value (the
+In addition, the algorithm in [[RFC5348]] also uses an ~X_recv~ value (the
 receiver's receive rate). For IP-TFS one MAY set this value according to
 the sender's current tunnel send-rate (~X~).
 
@@ -1021,7 +1031,7 @@ value back to the sender in the AGGFRAG_PAYLOAD payload header field
 ~LossEventRate~.
 
 The IP-TFS sender now has both the ~R~ and ~p~ values and can calculate
-the correct sending rate. If following [[RFC5348]] the sender should also
+the correct sending rate. If following [[RFC5348]], the sender should also
 use the slow start mechanism described therein when the IP-TFS SA is
 first established.
 
@@ -1032,7 +1042,7 @@ first established.
 
 ** Comparing Overhead
 
-For comparing the overhead of ESP for both normal and AGGFRAG
+For comparing overhead, the overhead of ESP for both normal and AGGFRAG
 tunnel packets must be calculated, and so an algorithm for encryption
 and authentication must be chosen. For the data below AES-GCM-256 was
 selected. This leads to an IP+ESP overhead of 54.
@@ -1046,9 +1056,9 @@ headers were chosen which adds 4 octets for a total overhead of 58.
 
 *** IP-TFS Overhead
 
-For comparison the overhead of AGGFRAG payload is 58 octets per outer packet.
-Therefore the octet overhead per inner packet is 58 divided by the
-number of outer packets required (fractional allowed). The overhead
+For comparison, the overhead of an AGGFRAG payload is 58 octets per outer packet.
+Therefore, the octet overhead per inner packet is 58 divided by the
+number of outer packets required (fractions allowed). The overhead
 as a percentage of inner packet size is a constant based on the Outer
 MTU size.
 
@@ -1088,7 +1098,7 @@ times the difference of the Outer Payload Size and the IP Overhead
 minus the Inner Payload Size. So:
 
 #+begin_example
-  Inner Paylaod Size = IP Packet Size - IP Overhead
+  Inner Payload Size = IP Packet Size - IP Overhead
   Outer Payload Size = MTU - IPsec Overhead
 
                 Inner Payload Size
@@ -1183,15 +1193,15 @@ is the percentage of overhead in the same MTU sized packet.
 Another way to compare the two solutions is to look at the amount of
 available bandwidth each solution provides. The following sections
 consider and compare the percentage of available bandwidth. For the
-sake of providing a well understood baseline normal (unencrypted)
+sake of providing a well-understood baseline normal (unencrypted)
 Ethernet as well as normal ESP values are included.
 
 *** Ethernet
 
 In order to calculate the available bandwidth the per packet overhead
 is calculated first. The total overhead of Ethernet is 14+4 octets of
-header and CRC plus and additional 20 octets of framing (preamble,
-start, and inter-packet gap) for a total of 38 octets. Additionally
+header and CRC plus an additional 20 octets of framing (preamble,
+start, and inter-packet gap), for a total of 38 octets. Additionally,
 the minimum payload is 46 octets.
 
 # *** IP-TFS Bandwidth
@@ -1289,7 +1299,7 @@ the minimum payload is 46 octets.
 #+END_CENTER
 
 A sometimes unexpected result of using an AGGFRAG tunnel (or any packet
-aggregating tunnel) is that, for small to medium sized packets, the
+aggregating tunnel) is that, for small- to medium-sized packets, the
 available bandwidth is actually greater than native Ethernet. This is
 due to the reduction in Ethernet framing overhead. This increased
 bandwidth is paid for with an increase in latency. This latency is
