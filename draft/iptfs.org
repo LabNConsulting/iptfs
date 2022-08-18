@@ -269,6 +269,14 @@ Finally, as sequence numbers are reset when switching SAs (e.g., when
 re-keying a child SA), senders MUST NOT send initial fragments of an
 inner packet using one SA and subsequent fragments in a different SA.
 
+A note on ~BlockOffset~ values, senders MUST encode the ~BlockOffset~
+consistent with the immediately preceding non-all-pad payload packet.
+Specifically, if the immediately preceding non-all-pad payload packet
+ended with a Pad Data Block, this ~BlockOffset~ MUST be zero, as Pad
+Data Blocks are never fragmented. The ~BlockOffset~ MUST be
+consistent with the remaining size implied by the native length
+encoding of the fragmented inner packet.
+
 **** Optional Extra Padding
 
 When the tunnel bandwidth is not being fully utilized, a
@@ -492,6 +500,12 @@ Additionally, if congestion control is enabled, the receiver sends
 congestion control data ([[Congestion Control AGGFRAG_PAYLOAD Payload
 Format]]) back to the sender as described in [[Congestion-Controlled Mode]]
 and [[Congestion Information]].
+
+Finally, a note on receiving incorrect ~BlockOffset~ values. To account
+for misbehaving senders, a receiver SHOULD gracefully handle the case
+where the ~BlockOffset~ of consecutive packets, and/or the inner
+packet they share, do not agree. It MAY drop the inner packet, or one
+or both of the outer packets.
 
 * Congestion Information
 
