@@ -345,13 +345,15 @@ By default, the DS field SHOULD NOT be copied, although a sender MAY
 choose to allow for configuration to override this behavior. A sender
 SHOULD also allow the DS value to be set by configuration.
 
-*** IP Time-To-Live (TTL) and Tunnel errors
+*** IPv4 Time-To-Live (TTL), IPv6 Hop Limit, and Tunnel errors
 
-[[RFC4301]] specifies how to modify the inner packet TTL [[RFC0791]].
+[[RFC4301]] specifies how to modify the inner packet IPv4 TTL [[RFC0791]] or
+IPv6 Hop Limit [[RFC8200]].
 
-Any errors (e.g., ICMP errors arriving back at the tunnel ingress due
-to tunnel traffic) are handled the same as with non-AGGFRAG
-IPsec tunnels.
+Any errors (e.g., ICMP errors) are handled the same as with
+non-AGGFRAG IPsec tunnels. This applies to both the outer traffic as
+well as the inner traffic prior to it entering the tunnel, see
+[[RFC4301]].
 
 *** Effective MTU of the Tunnel
 
