@@ -335,7 +335,8 @@ fragmentation of the outer encapsulation packets.
 The ECN value need not be mapped as any congestion related to the
 constant-send-rate IP-TFS tunnel is unrelated (by design) to the
 inner traffic flow. The sender MAY still set the ECN value of inner
-packets based on the normal ECN specification [[RFC3168]].
+packets based on the normal ECN specification [[RFC3168]], [[RFC4301]] and
+[[RFC6040]].
 
 **** DS field
 
@@ -929,6 +930,102 @@ the "IKEv2 Notify Message Types - Status Types" registry.
 # ^IANA-IKECA^
 # https://www.iana.org/assignments/ikev2-parameters/ikev2-parameters.xhtml#ikev2-parameters-21
 
+* Implementation Status
+
+[ RFC Ed.: please remove this entire section as well as the reference to
+RFC7942 prior to publication. ]
+
+[Section added during IESG review to help with evaluation]
+
+This section records the status of known implementations of the
+protocol defined by this specification at the time of posting of this
+Internet-Draft, and is based on a proposal described in [[RFC7942]]. The
+description of implementations in this section is intended to assist
+the IETF in its decision processes in progressing drafts to RFCs.
+Please note that the listing of any individual implementation here
+does not imply endorsement by the IETF. This is not intended as, and
+must not be construed to be, a catalog of available implementations
+or their features. Readers are advised to note that other
+implementations may exist.
+
+According to RFC 7942, "this will allow reviewers and working groups
+to assign due consideration to documents that have the benefit of
+running code, which may serve as evidence of valuable experimentation
+and feedback that have made the implemented protocols more mature. It
+is up to the individual working groups to use this information as
+they see fit".
+
+Currently the author and contributors are aware of 1 full and completed
+implementation and 1 underway implementation of IP-TFS as defined in
+this document. These 2 are described below.
+
+** Reference Implementation - VPP + Strongswan
+
+The entire IP-TFS protocol including optional congestion control has
+been implemented in VPP (Vector Packet Processor), and published to
+github with an Open Source (Apache 2) License. VPP is a highly
+efficient forwarding plane implemented in user-space utlizing direct
+control and polling of physical devices to provide high speed
+low-latency forwarding in Linux. By pinning packet processing threads
+directly to CPU cores for their exclusive use a high degree of
+control is given to the protocol designer.
+
+The IKEv2 additions were implemented in Strongswan and are licensed
+using the GNU public license used by the Strongswan project.
+
+Finally, an extensive automation suite was also created and is
+included with the open source implementation, which tests the
+functionality as well as the performance of the implementation, and
+most importantly verifies, through precise timing tracing and
+time-stamping, the decoupling of the users offered load from the
+tunnel packets (i.e., the Traffic Flow Security).
+
+The verification process utilized the [[https://trex-tgn.cisco.com/][TREX]] packet generator for high
+bandwidth testing as well as other tools such as iperf. The test
+hardware included large servers with 10GE, 40GE and 100GE network
+interfaces, as well as small SoC (system on a chip) network
+appliances, and also cloud deployments.
+
+Tested IP-TFS tunnel rates ranged from 10M all the way to 10GE on the
+small network appliance, for the large servers multiple 10GE tunnel
+rates were tested as well.
+
+Offered loads included partial, full and oversubscribed bandwidths
+from various flow types consisting of small packets, large packets,
+random sized packets, sequential sized packets, and multiple IMIX
+variations sized flows. Timing analysis was done with variable rate
+traffic, impulse traffic and random bursty traffic.
+
+The quality of the reference implementation should be considered
+production level as it underwent extensive testing and verification.
+
+The organization responsible for this implementation is LabN
+Consulting, L.L.C.
+
+URLs to the implementation follow.
+
+  - [[https://github.com/LabNConsulting/vpp/tree/labn-stable/2009-public][VPP+IPTFS]], [[https://github.com/LabNConsulting/vpp/tree/labn-stable/2009-public/src/plugins/iptfs][iptfs plugin]]
+  - [[https://github.com/LabNConsulting/strongswan/tree/labn-5.8-public][Strongswan IKEv2]]
+
+The implementation was last updated April, 2021.
+
+** In Progress Linux Kernel Implementation.
+
+A second open source implementation has begun by LabN Consulting
+L.L.C., within the Linux IPsec xfrm stack. Development has also been
+coordinated with the Linux IPsec community, and was being
+worked by the same during the most recent IETF 114 hackathon.
+
+Currently the quality is alpha level with aggregation-only complete and
+fragmentation support underway with congestion control to follow.
+
+This implementation is licensed under the GNU public license and can
+be found at the following URLs
+
+- development environment: https://github.com/LabNConsulting/iptfs-dev
+- linux kernel source: https://github.com/LabNConsulting/iptfs-linux
+- iproute2 source: https://github.com/LabNConsulting/iptfs-iproute2
+
 * Security Considerations
 
 This document describes an aggregation and fragmentation mechanism to
@@ -968,8 +1065,10 @@ then non-congestion-controlled mode use should be considered instead.
 ** RFC4342
 ** RFC4821
 ** RFC5348
+** RFC6040
 ** RFC7120
 ** RFC7510
+** RFC7942
 ** RFC8084
 ** RFC8126
 ** RFC8200
