@@ -461,11 +461,15 @@ confidentiality.
 
 **** Circuit Breakers
 
-In additional to congestion control, implementations MAY choose to
-define and implement circuit breakers [[RFC8084]] as a recovery method
-of last resort. Enabling circuit breakers is also a reason a user may
-wish to enable congestion information reports even when using the
-non-congestion-controlled mode of operation.
+In additional to congestion control, implementations that support
+non-congestion control mode SHOULD implement circuit breakers [[RFC8084]]
+as a recovery method of last resort. When circuit breakers are
+enabled an implementation SHOULD also enable congestion control
+reports so that circuit breakers have information to act on.
+
+The pseudowire congestion considerations [[RFC7893]] are equally
+applicable to the mechanisms defined in this document, notably the
+text on inellastic traffic.
 
 ** Summary of Receiver Processing
 
@@ -584,9 +588,13 @@ derived from a CE value being considered.
 # the CE indication. This additional immediate send SHOULD only be done
 # once per normal congestion information sending interval though.
 
-As noted in [[RFC3168]] the ECN bits are not protected by IPsec and
-thus may constitute a covert channel. For this reason, ECN use SHOULD
-NOT be enabled by default.
+[[RFC3168]] and [[RFC4301]] define behaviors for marking ECN based on the
+ingress and egress of the inner packet. These RFCs were later updated
+by [[RFC6040]]. The methods defined in [[RFC6040]] SHOULD be followed with
+the addition that if multiple inner packets are being encapsulated in
+an AGGFRAG mode outer packet, the ECN value from a congestion
+indicating packet should be the source of the copied value.
+
 
 * Configuration of AGGFRAG Tunnels for IP-TFS
 
@@ -1069,6 +1077,7 @@ then non-congestion-controlled mode use should be considered instead.
 ** RFC6040
 ** RFC7120
 ** RFC7510
+** RFC7893
 ** RFC7942
 ** RFC8084
 ** RFC8126
