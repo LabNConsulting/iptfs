@@ -227,7 +227,8 @@ outer packet stream. Receiving a larger (newer) sequence number
 packet advances the window, and received older ESP packets whose
 sequence numbers the window has passed by are dropped. A good choice
 for the size of this window depends on the amount of misordering the
-user may normally experience.
+user is experiencing; however, a value of 3 has been suggested as a
+default when no more informed choice exists.
 
 As the amount of misordering that may be present is hard to predict,
 the window size SHOULD be configurable by the user. Implementations
@@ -372,9 +373,9 @@ payloads over an SA configured for AGGFRAG mode.
 
 ** Modes of Operation
 
-Just as with normal IPsec/ESP tunnels, AGGFRAG tunnels are
+Just as with normal IPsec/ESP SAs, AGGFRAG SAs are
 unidirectional. Bidirectional IP-TFS functionality is achieved by
-setting up 2 AGGFRAG tunnels, one in either direction.
+setting up 2 AGGFRAG SAs, one in either direction.
 
 An AGGFRAG tunnel used for IP-TFS can operate in 2 modes, a
 non-congestion-controlled mode and congestion-controlled mode.
@@ -961,14 +962,14 @@ this document. These 2 are described below.
 
 ** Reference Implementation - VPP + Strongswan
 
-The entire IP-TFS protocol including optional congestion control has
-been implemented in VPP (Vector Packet Processor), and published to
-github with an Open Source (Apache 2) License. VPP is a highly
-efficient forwarding plane implemented in user-space utlizing direct
-control and polling of physical devices to provide high speed
-low-latency forwarding in Linux. By pinning packet processing threads
-directly to CPU cores for their exclusive use a high degree of
-control is given to the protocol designer.
+The entire IP-TFS protocol including congestion control mode has been
+implemented in VPP (Vector Packet Processor), and published to github
+with an Open Source (Apache 2) License. VPP is a highly efficient
+forwarding plane implemented in user-space utlizing direct control
+and polling of physical devices to provide high speed low-latency
+forwarding in Linux. By pinning packet processing threads directly to
+CPU cores for their exclusive use a high degree of control is given
+to the protocol designer.
 
 The IKEv2 additions were implemented in Strongswan and are licensed
 using the GNU public license used by the Strongswan project.
