@@ -390,16 +390,33 @@ rate is constant and is not automatically adjusted regardless of any
 network congestion (e.g., packet loss).
 
 For similar reasons as given in [[RFC7510]] the non-congestion-controlled
-mode should only be used where the user has full administrative
-control over the path the tunnel will take. This is required so the
-user can guarantee the bandwidth and also be sure as to not be
-negatively affecting network congestion [[RFC2914]]. In this case, packet
-loss should be reported to the administrator (e.g., via syslog, YANG
-notification, SNMP traps, etc.) so that any failures due to a lack of
-bandwidth can be corrected.
+mode MUST only be used where the user has full administrative control
+over any path the tunnel will take, and MUST NOT be used if this is
+not the case. This is required so the user can guarantee the
+bandwidth and also be sure as to not be negatively affecting network
+congestion [[RFC2914]]. In this case, packet loss should be reported to
+the administrator (e.g., via syslog, YANG notification, SNMP traps,
+etc.) so that any failures due to a lack of bandwidth can be
+corrected. The use of circuit breakers is also RECOMMENDED ([[Circuit
+Breakers]]).
 
-Non-congestion-controlled mode is also appropriate if ESP over TCP is in
-use [[RFC8229]].
+Users that choose the non-congestion-controlled mode need to
+understand that this mode will send packets at a constant rate
+utilizing a constant fixed bandwidth and will not adjust based on
+congestion. Thus, if they do not guarantee the bandwidth required by
+the tunnel, the tunnel's operation, as well as the rest of their
+network, may be negatively impacted.
+
+One expected use case for non-congestion-controlled mode is to
+guarantee the full tunnel bandwidth is available and preferred over
+other non-tunnel traffic. In fact, a typical site-to-site use case
+might have all of the user traffic utilizing the IP-TFS tunnel.
+
+Non-congestion-controlled mode is also appropriate if ESP over TCP is
+in use [[RFC8229]]. However, the use of TCP is considered a highly
+non-preferred, and a fall-back only solution for IPsec. This is also
+one of the reasons that TCP was not chosen as the encapsulation for
+IP-TFS instead of AGGFRAG.
 
 *** Congestion-Controlled Mode
 
@@ -472,6 +489,15 @@ reports so that circuit breakers have information to act on.
 The pseudowire congestion considerations [[RFC7893]] are equally
 applicable to the mechanisms defined in this document, notably the
 text on inellastic traffic.
+
+One example of a simple slow-trip circuit breaker (CB) an
+implementation may provide would utilize 2 values, the amount of
+persistent loss rate required to trip the CB, and the required length
+of time this persistent loss rate must be seen to trip the CB. These
+2 value are required configuration from the user. When the CB is
+tripped the tunnel traffic is disabled, and an appropriate log
+message or other management type alarm is triggered indicating
+operate intervention is required.
 
 ** Summary of Receiver Processing
 
@@ -909,6 +935,17 @@ later specifications.
   receiver in its USE_AGGFRAG notification.
 
 * IANA Considerations
+
+** ESP Next Header Value
+
+Per the INT area directors direction, this document requests IANA
+allocate an IP protocol number from "Protocol Numbers - Assigned
+Internet Protocol Numbers" registry
+
+  - Value :: TBD1
+  - Keyword :: AGGFRAG
+  - Protocol :: AGGFRAG encapsulation payload for ESP
+  - Reference :: This document
 
 ** AGGFRAG_PAYLOAD Sub-Type Registry
 
