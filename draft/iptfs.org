@@ -705,11 +705,11 @@ this document.
 
 ** AGGFRAG_PAYLOAD Payload
 
-   ESP Next Header value: 0x5
+   ESP Next Header value: 144
 
 An AGGFRAG payload is identified by the ESP Next Header value
-AGGFRAG_PAYLOAD which has the value 0x5. The value 5 was chosen to not
-conflict with other used values. The first octet of this payload
+AGGFRAG_PAYLOAD which has the value 144, which has been reserved in
+the IP protocol numbers space. The first octet of the payload
 indicates the format of the remaining payload data.
 
 #+caption: AGGFRAG_PAYLOAD payload format
@@ -912,7 +912,7 @@ As discussed in [[USE_AGGFRAG Notification Message]], a notification
 message USE_AGGFRAG is used to negotiate use of the ESP AGGFRAG_PAYLOAD
 Next Header value.
 
-The USE_AGGFRAG Notification Message State Type is (TBD2).
+The USE_AGGFRAG Notification Message State Type is 16442
 
 The notification payload contains 1 octet of requirement flags. There
 are currently 2 requirement flags defined. This may be revised by
@@ -945,9 +945,9 @@ Per the INT area directors direction, this document requests IANA
 allocate an IP protocol number from "Protocol Numbers - Assigned
 Internet Protocol Numbers" registry
 
-  - Value :: TBD1
+  - Decimal :: 144
   - Keyword :: AGGFRAG
-  - Protocol :: AGGFRAG encapsulation payload for ESP
+  - Protocol :: AGGFRAG encapsulation payload for ESP (TEMPORARY - registered 2022-08-26, document sent to IESG Evaluation 2022-07-14)
   - Reference :: This document
 
 ** AGGFRAG_PAYLOAD Sub-Type Registry
@@ -974,7 +974,7 @@ This initial content for this registry is as follows:
 This document requests a status type USE_AGGFRAG be allocated from
 the "IKEv2 Notify Message Types - Status Types" registry.
 
-  - Value :: TBD2
+  - Decimal :: 16442
   - Name :: USE_AGGFRAG
   - Reference :: This document
 
