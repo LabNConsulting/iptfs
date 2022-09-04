@@ -345,15 +345,38 @@ By default, the DS field SHOULD NOT be copied, although a sender MAY
 choose to allow for configuration to override this behavior. A sender
 SHOULD also allow the DS value to be set by configuration.
 
-*** IPv4 Time-To-Live (TTL), IPv6 Hop Limit, and Tunnel errors
+*** IPv4 Time-To-Live (TTL), IPv6 Hop Limit, and ICMP Messages
 
 [[RFC4301]] specifies how to modify the inner packet IPv4 TTL [[RFC0791]] or
 IPv6 Hop Limit [[RFC8200]].
 
-Any errors (e.g., ICMP errors) are handled the same as with
-non-AGGFRAG IPsec tunnels. This applies to both the outer traffic as
-well as the inner traffic prior to it entering the tunnel, see
+[[RFC4301]] also specifies how to apply policy to authenticated and
+unauthenticated ICMP error packets (e.g., Destination Unreachable)
+arriving at or being forwarded through the endpoint. In particular,
+whether to process, ignore or forward said packets. With one
+exception this document does not change the handling of these
+packets, they should be handled as specified in [[RFC4301]].
+
+The one way in which an AGGFRAG tunnel differs in ICMP error packet
+mechanics is with PMTU. When fragmentation is enabled on the AGGFRAG
+tunnel, then no ICMP "too-big" errors need to be generated for
+arriving ingress traffic as the arriving inner packets will be
+naturally fragmented by the AGGFRAG encapsultation.
+
+Otherwise, when fragmentation has been disabled on the AGGFRAG tunnel,
+then the treatment of arriving inner traffic exactly maps to that of
+a non-AGGFRAG ESP tunnel. Explicitly, IPv4 with DF set and IPv6
+packets which cannot fit in it's own outer packet payload will
+generate the appropriate ICMP "too-big" error as directed by [[RFC4301]],
+and IPv4 packets without DF set will be IP fragmented as directed by
 [[RFC4301]].
+
+Packets egressing the tunnel continue to be handled as specified in
+[[RFC4301]].
+
+All other aspects of PMTU and the handling of ICMP "Too Big" messages
+(i.e., with regards to the outer AGGFRAG/ESP tunnel packet size)
+also remain unchanged from [[RFC4301]].
 
 *** Effective MTU of the Tunnel
 
